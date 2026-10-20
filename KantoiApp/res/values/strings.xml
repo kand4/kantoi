@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kantoi</string>
+    <string name="app_tagline">Scammer Call, Terus Kantoi</string>
+    <string name="title_dashboard">🛡️ PENGESAHAN &amp; PERTAHANAN SCAMMER</string>
+    <string name="screening_service_label">Kantoi Spam Call Screener</string>
+</resources>
