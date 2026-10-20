@@ -73,6 +73,8 @@ def send_changelog_message():
         "5️⃣ 🪟 <b>Papar Di Atas Aplikasi Lain (Display Over Other Apps):</b> Wajib dibenarkan agar paparan amaran radar panggilan masuk dapat muncul di skrin.\n"
         "6️⃣ 🛡️ <b>Tetapkan Sebagai Aplikasi Pemanggil & Spam Lalai (Default Caller ID & Spam App):</b> Memberikan kuasa kepada KANTOI untuk menyekat panggilan scammer serta-merta.\n"
         "7️⃣ 🔋 <b>Pengoptimuman Bateri (Battery Optimization):</b> Pilih <i>'Tidak Dihadkan' (Unrestricted)</i> supaya sistem Android tidak mematikan perkhidmatan amaran di latar belakang.\n\n"
+        "🌐 <b>Repositori Kod Sumber Terbuka (GitHub):</b>\n"
+        "👉 https://github.com/kand4/kantoi\n\n"
         "📲 <i>Fail APK rasmi dimuat naik di bawah untuk kemaskini segera.</i>"
     )
     
@@ -108,6 +110,7 @@ def upload_apk():
         f"📌 <b>Binaan:</b> <code>{os.path.basename(APK_PATH)}</code>\n"
         f"🔢 <b>Version Code:</b> <code>{VERSION_CODE}</code> (SemVer v{VERSION_NAME})\n"
         f"🛡️ <b>Ciri Baharu:</b> Kunci Komuniti VirusTotal Terbina (Multi-Layer Obfuscated), Model Hibrid BYOK, Enjin Heuristik Trojan Tempatan (0ms Offline), Penjaga Muat Turun (Download Sentry), dan 'Kongsi ke KANTOI'.\n"
+        f"🌐 <b>Kod Sumber (GitHub):</b> https://github.com/kand4/kantoi\n"
         f"🔑 <b>Status Tandatangan:</b> Android APK Signature Scheme v2 & v3 (Disahkan & Zipalign)\n\n"
         f"⚠️ <b>PERINGATAN SELEPAS PASANG:</b> Sila <b>BENARKAN (ALLOW) SEMUA KEBENARAN</b> (Telefon, SMS, Kenalan, Storan, Papar di Atas Aplikasi Lain & Tiada Sekatan Bateri) di tetapan telefon anda agar perisai KANTOI berfungsi 100%!"
     )
