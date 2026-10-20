@@ -1,0 +1,58 @@
+# ==========================================
+# KANTOI Anti-Scam Android Project .gitignore
+# ==========================================
+
+# Android Build & Compiled outputs
+build/
+**/build/
+**/build_classes/
+**/classes10_build/
+bin/
+gen/
+out/
+
+# Bytecode & Binary files
+*.apk
+*.ap_
+*.dex
+*.class
+*.zip
+*.idsig
+*.xlsx
+
+# Old decompilation, dumps & scratch folders
+smali_*/
+_base_backup/
+harvested_data/
+src_patch/
+test_*
+test_*.*
+announce_*.py
+post_telegram_guide.py
+lowyat_threats.db
+
+# Android Studio / IntelliJ / Eclipse project files
+.idea/
+.gradle/
+*.iml
+local.properties
+.classpath
+.project
+.settings/
+
+# OS specific & Temp files
+*.tmp
+*.log
+Thumbs.db
+.DS_Store
+*.swp
+*~
+
+# Keystores and private signing keys (Keep local!)
+*.keystore
+*.jks
+temp_*.keystore
+
+# Sensitive config files (if any)
+.env
+local_secrets.py
