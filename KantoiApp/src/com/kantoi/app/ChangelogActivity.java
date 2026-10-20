@@ -1,9 +1,11 @@
 package com.kantoi.app;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -13,6 +15,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class ChangelogActivity extends Activity {
 
@@ -65,8 +68,31 @@ public class ChangelogActivity extends Activity {
         tvSub.setText("Pantau rekod penambahbaikan ciri keselamatan, fungsi sistem, dan pangkalan data ancaman KANTOI.");
         tvSub.setTextColor(0xFF94A3B8);
         tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        tvSub.setPadding(0, 0, 0, dpToPx(14));
+        tvSub.setPadding(0, 0, 0, dpToPx(8));
         root.addView(tvSub);
+
+        Button btnGithub = new Button(this);
+        btnGithub.setText("🌐 LIHAT REPOSITORI KOD SUMBER GITHUB (KAND4/KANTOI)");
+        btnGithub.setTextColor(0xFF38BDF8);
+        btnGithub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btnGithub.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable ghBg = new GradientDrawable();
+        ghBg.setColor(0xFF0F172A);
+        ghBg.setCornerRadius(dpToPx(6));
+        ghBg.setStroke(dpToPx(1), 0xFF0284C7);
+        btnGithub.setBackground(ghBg);
+        btnGithub.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    Intent it = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/kand4/kantoi"));
+                    startActivity(it);
+                } catch (Throwable t) {
+                    Toast.makeText(ChangelogActivity.this, "Ralat: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        root.addView(btnGithub);
 
         // ==================== VERSION 1.13.9 ====================
         LinearLayout cardV1139 = createCard(0xFF1E293B, 0xFF10B981, 12);

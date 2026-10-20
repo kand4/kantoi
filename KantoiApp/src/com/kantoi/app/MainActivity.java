@@ -1726,6 +1726,21 @@ public class MainActivity extends Activity {
         setMarginTop(tvFooter, 24);
         root.addView(tvFooter);
 
+        Button btnGithub = createButton("🌐 REPOSITORI GITHUB (KAND4/KANTOI)", 0xFF0F172A, 0xFF38BDF8);
+        setMarginTop(btnGithub, 8);
+        btnGithub.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    Intent it = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/kand4/kantoi"));
+                    startActivity(it);
+                } catch (Throwable t) {
+                    Toast.makeText(MainActivity.this, "Ralat: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        root.addView(btnGithub);
+
         scrollView.addView(root);
         return scrollView;
     }
