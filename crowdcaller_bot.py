@@ -37,7 +37,9 @@ CHANNEL_ID = "@crowdcaller"
 ADMIN_PASSCODE = "kantoi2026"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "KantoiApp", "assets", "kantoi_threats.db")
+DB_PATH = os.path.join(BASE_DIR, "kantoi_threats.db")
+if not os.path.exists(DB_PATH):
+    DB_PATH = os.path.join(BASE_DIR, "KantoiApp", "assets", "kantoi_threats.db")
 BACKUP_DB_PATH = os.path.join(BASE_DIR, "lowyat_threats.db")
 
 ADMIN_CONFIG_PATH = os.path.join(BASE_DIR, "admin_config.json")
