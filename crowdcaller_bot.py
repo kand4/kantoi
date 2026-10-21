@@ -19,12 +19,13 @@ import time
 import json
 import sqlite3
 import requests
+import html
 
 # Pastikan output konsol Windows menyokong UTF-8 / Emoji
 if sys.stdout and hasattr(sys.stdout, 'buffer'):
     try:
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace', line_buffering=True)
     except Exception:
         pass
 
@@ -207,6 +208,40 @@ def is_likely_report(text):
         
     return False
 
+def extract_batch_reports(text):
+    """
+    Mengekstrak senarai banyak scammer jika pengguna paste senarai berbaris / berangka.
+    Contoh:
+    1. 0177064436 - scammer pr
+    2. 0167443103 - scammer ip
+    """
+    if not text:
+        return []
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    extracted_items = []
+    for line in lines:
+        phones = re.findall(r'(?:\+?60\s?1[0-9][\s\-\.]?\d{7,8}|01[0-9][\s\-\.]?\d{7,8}|\b01[0-9]\d{7,8}\b|\b601[0-9]\d{7,8}\b)', line)
+        if phones:
+            norm_phones = []
+            for p in phones:
+                np = normalize_phone(p)
+                if len(np) in (10, 11) and np not in norm_phones:
+                    norm_phones.append(np)
+            if norm_phones:
+                desc = re.sub(r'^\d+[\.\)]\s*', '', line)
+                for p in phones:
+                    desc = desc.replace(p, '')
+                desc = re.sub(r'[\-\/\:\,]', ' ', desc).strip()
+                extracted_items.append({
+                    'phones': norm_phones,
+                    'desc': desc or 'Scammer dilaporkan pengguna'
+                })
+        elif extracted_items and not line.lower().startswith(('list', 'amaran', 'alert', 'scammer', 'peringatan')):
+            clean_sub = re.sub(r'[\-\/\:\,]', ' ', line).strip()
+            if clean_sub:
+                extracted_items[-1]['desc'] += f" ({clean_sub})"
+    return extracted_items
+
 # ==============================================================================
 # OPERASI PANGKALAN DATA (SQLITE)
 # ==============================================================================
@@ -334,7 +369,10 @@ def api_call(method, payload=None, files=None):
             resp = requests.post(url, data=payload, files=files, timeout=30)
         else:
             resp = requests.post(url, json=payload, timeout=25)
-        return resp.json()
+        res = resp.json()
+        if not res.get("ok"):
+            print(f"[API FAIL] {method}: {res.get('description')}")
+        return res
     except Exception as e:
         print(f"[API ERR] {method}: {e}")
         return {"ok": False, "description": str(e)}
@@ -467,7 +505,8 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
             f"📚 <b>SUMBER SITASI</b>  : Sumbangan Disahkan Admin (Ref: <code>{safe_rep_id}</code>)\n"
             "--------------------------------------------------\n"
             "ℹ️ <i>Laporan disahkan oleh admin komuniti @crowdcaller.</i>\n"
-            "📲 <i>Buka Tab Pertahanan KANTOI & tekan kemaskini untuk perlindungan automatik.</i>\n\n"
+            "📲 <i>Buka Tab Pertahanan KANTOI & tekan kemaskini untuk perlindungan automatik.</i>\n"
+            "🔗 <i>Semak kod sumber projek di: https://github.com/kand4/kantoi</i>\n\n"
             "#KANTOI_UPDATE\n"
             f"{phone_norm} | {safe_suspect} | LAPORAN_KOMUNITI_DISAHKAN | {safe_bank or 'Tiada'}"
         )
@@ -532,6 +571,142 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
         edit_message(admin_chat_id, message_id, f"❌ *LAPORAN DITOLAK*\nRef ID: `{rep_id}`\nOleh Admin: @{admin_username}")
         return "Laporan telah ditolak."
 
+def forward_batch_report_to_admins(batch_id, batch_data):
+    admin_ids = get_admin_ids()
+    if not admin_ids:
+        print(f"[WARN] Tiada admin berdaftar untuk menerima batch {batch_id}!")
+        return
+
+    safe_user = html.escape(str(batch_data.get('username') or 'N/A'))
+    items = batch_data.get("items", [])
+    total_nums = sum(len(it['phones']) for it in items)
+
+    summary_lines = []
+    for idx, it in enumerate(items, 1):
+        p_str = ", ".join(f"<code>{p}</code>" for p in it['phones'])
+        summary_lines.append(f"{idx}. {p_str} — {html.escape(it['desc'])}")
+
+    admin_card = (
+        f"🚨 <b>SENARAI BATCH SCAMMER BAHARU DITERIMA (ID: <code>{batch_id}</code>)</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"👤 <b>Pengirim:</b> @{safe_user}\n"
+        f"📊 <b>Jumlah:</b> {len(items)} entri ({total_nums} nombor telefon)\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        + "\n".join(summary_lines[:10]) +
+        ("\n<i>...dan seterusnya</i>" if len(summary_lines) > 10 else "") +
+        "\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Sila semak maklumat di atas sebelum meluluskan kemasukan pukal ke pangkalan data KANTOI:"
+    )
+
+    markup = {
+        "inline_keyboard": [
+            [
+                {"text": f"✅ LULUSKAN SEMUA ({total_nums} NOMBOR)", "callback_data": f"appb_{batch_id}"},
+                {"text": "❌ TOLAK", "callback_data": f"rejb_{batch_id}"}
+            ]
+        ]
+    }
+
+    photo_id = batch_data.get("photo_file_id")
+    for adm_id in admin_ids:
+        if photo_id:
+            api_call("sendPhoto", {
+                "chat_id": adm_id,
+                "photo": photo_id,
+                "caption": admin_card,
+                "parse_mode": "HTML",
+                "reply_markup": markup
+            })
+        else:
+            api_call("sendMessage", {
+                "chat_id": adm_id,
+                "text": admin_card,
+                "parse_mode": "HTML",
+                "reply_markup": markup,
+                "disable_web_page_preview": True
+            })
+
+def handle_admin_batch_decision(action, batch_id, admin_chat_id, admin_username, message_id):
+    reports = get_pending_reports()
+    batch = reports.get(batch_id)
+    if not batch:
+        return "Ralat: Rekod batch tidak ditemui atau telah diproses."
+
+    if batch.get("status") in ["APPROVED", "REJECTED"]:
+        return f"Batch ini sudah diproses sebelum ini ({batch.get('status')})."
+
+    user_chat_id = batch.get("user_id")
+    items = batch.get("items", [])
+
+    if action == "approve":
+        batch["status"] = "APPROVED"
+        batch["reviewed_by"] = admin_username
+        batch["reviewed_at"] = int(time.time())
+        save_pending_report(batch_id, batch)
+
+        inserted_count = 0
+        channel_threat_tags = []
+
+        for it in items:
+            desc = it.get("desc", "Laporan Komuniti")
+            for p in it.get("phones", []):
+                insert_approved_threat(
+                    phone_norm=p,
+                    suspect_name=desc,
+                    category="LAPORAN_KOMUNITI_DISAHKAN",
+                    bank_accounts="Tiada",
+                    source=f"Batch Komuniti (Ref: {batch_id})"
+                )
+                inserted_count += 1
+                channel_threat_tags.append(f"{p} | {desc} | LAPORAN_KOMUNITI_DISAHKAN | Tiada")
+
+        # Pos ke saluran @crowdcaller
+        post_text = (
+            f"🚨 <b>KEMASKINI PUKAL SCAMMER BAHARU ({inserted_count} NOMBOR DILULUSKAN)</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Laporan pukal komuniti disahkan oleh Admin @{admin_username} (Ref: <code>{batch_id}</code>):\n\n"
+        )
+        for idx, it in enumerate(items, 1):
+            p_str = ", ".join(f"<code>{p}</code>" for p in it['phones'])
+            post_text += f"{idx}. {p_str} — {html.escape(it['desc'])}\n"
+
+        post_text += (
+            f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📲 <i>Semua {inserted_count} nombor kini aktif dilindungi dalam KANTOI.</i>\n"
+            f"🔗 <i>Semak kod sumber projek di: https://github.com/kand4/kantoi</i>\n\n"
+            f"#KANTOI_UPDATE\n"
+            + "\n".join(channel_threat_tags)
+        )
+
+        api_call("sendMessage", {
+            "chat_id": CHANNEL_ID,
+            "text": post_text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True
+        })
+
+        if user_chat_id:
+            api_call("sendMessage", {
+                "chat_id": user_chat_id,
+                "text": f"🎉 <b>TAHNIAH! SEMUA {inserted_count} NOMBOR SCAMMER TELAH DILULUSKAN!</b>\n\nMaklumat telah dimasukkan ke pangkalan data KANTOI dan disiarkan ke saluran @crowdcaller.",
+                "parse_mode": "HTML"
+            })
+
+        edit_message(admin_chat_id, message_id, f"✅ *SEMUA {inserted_count} NOMBOR DILULUSKAN & DISIARKAN*\nRef ID: `{batch_id}`\nOleh Admin: @{admin_username}")
+        return f"Berjaya meluluskan {inserted_count} nombor!"
+
+    elif action == "reject":
+        batch["status"] = "REJECTED"
+        batch["reviewed_by"] = admin_username
+        batch["reviewed_at"] = int(time.time())
+        save_pending_report(batch_id, batch)
+
+        if user_chat_id:
+            send_message(user_chat_id, f"⚠️ *Status Batch (Ref: `{batch_id}`):* Laporan batch anda tidak dapat diluluskan oleh Admin.")
+
+        edit_message(admin_chat_id, message_id, f"❌ *BATCH DITOLAK*\nRef ID: `{batch_id}`\nOleh Admin: @{admin_username}")
+        return "Batch telah ditolak."
+
 # ==============================================================================
 # GELUNG UTAMA BOT (LONG POLLING)
 # ==============================================================================
@@ -544,14 +719,8 @@ def run_bot():
     print(f"[BOT] Admin berdaftar semasa ({len(admins)}): {list(admins)}")
     
     last_update_id = 0
+    processed_msg_ids = set()
     get_updates_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
-
-    try:
-        init_res = requests.get(get_updates_url, params={"offset": -1, "timeout": 2}).json()
-        if init_res.get("result"):
-            last_update_id = init_res["result"][-1]["update_id"]
-    except Exception:
-        pass
 
     print("[BOT] Bot sedia menerima pertanyaan & laporan bebas (Main Tulis Saja)!")
 
@@ -580,10 +749,44 @@ def run_bot():
                     cb_msg_id = callback["message"]["message_id"]
                     username = cb_user.get("username") or str(cb_user.get("id"))
 
-                    # 1. Pengesahan Laporan Bebas oleh Pengguna Sendiri
+                    # 1a. Pengesahan Terus oleh Admin (Satu Klik Luluskan)
+                    if cb_data.startswith("cfrm_direct_"):
+                        admin_ids = get_admin_ids()
+                        if cb_chat_id not in admin_ids:
+                            answer_callback(cb_id, "Akses Ditolak: Anda bukan admin.", alert=True)
+                            continue
+                        tmp_id = cb_data.replace("cfrm_direct_", "")
+                        rep_data = unconfirmed_reports.pop(tmp_id, None) or get_pending_reports().get(tmp_id)
+                        if rep_data:
+                            rep_id = f"REP-{int(time.time()) % 100000:05d}"
+                            rep_data["report_id"] = rep_id
+                            rep_data["created_at"] = int(time.time())
+                            save_pending_report(rep_id, rep_data)
+                            msg = handle_admin_decision("approve", rep_id, cb_chat_id, username, cb_msg_id)
+                            answer_callback(cb_id, msg, alert=True)
+                        else:
+                            answer_callback(cb_id, "Sesi laporan telah tamat tempoh.", alert=True)
+                        continue
+
+                    if cb_data.startswith("cfrmb_direct_"):
+                        admin_ids = get_admin_ids()
+                        if cb_chat_id not in admin_ids:
+                            answer_callback(cb_id, "Akses Ditolak: Anda bukan admin.", alert=True)
+                            continue
+                        batch_id = cb_data.replace("cfrmb_direct_", "")
+                        rep_data = unconfirmed_reports.pop(batch_id, None) or get_pending_reports().get(batch_id)
+                        if rep_data:
+                            save_pending_report(batch_id, rep_data)
+                            msg = handle_admin_batch_decision("approve", batch_id, cb_chat_id, username, cb_msg_id)
+                            answer_callback(cb_id, msg, alert=True)
+                        else:
+                            answer_callback(cb_id, "Sesi batch telah tamat tempoh.", alert=True)
+                        continue
+
+                    # 1b. Pengesahan Laporan Bebas oleh Pengguna Sendiri
                     if cb_data.startswith("cfrm_"):
                         tmp_id = cb_data.replace("cfrm_", "")
-                        rep_data = unconfirmed_reports.pop(tmp_id, None)
+                        rep_data = unconfirmed_reports.pop(tmp_id, None) or get_pending_reports().get(tmp_id)
                         if rep_data:
                             rep_id = f"REP-{int(time.time()) % 100000:05d}"
                             rep_data["report_id"] = rep_id
@@ -606,8 +809,31 @@ def run_bot():
                     elif cb_data.startswith("cncl_"):
                         tmp_id = cb_data.replace("cncl_", "")
                         unconfirmed_reports.pop(tmp_id, None)
+                        reports = get_pending_reports()
+                        if tmp_id in reports:
+                            reports.pop(tmp_id, None)
+                            save_json_file(REPORTS_DATA_PATH, reports)
                         edit_message(cb_chat_id, cb_msg_id, "❌ Laporan telah dibatalkan.")
                         answer_callback(cb_id, "Dibatalkan.", alert=False)
+                        continue
+
+                    # 1c. Pengesahan Laporan Batch oleh Pengguna Sendiri
+                    if cb_data.startswith("cfrmb_"):
+                        batch_id = cb_data.replace("cfrmb_", "")
+                        rep_data = unconfirmed_reports.pop(batch_id, None) or get_pending_reports().get(batch_id)
+                        if rep_data:
+                            save_pending_report(batch_id, rep_data)
+                            edit_message(
+                                cb_chat_id, 
+                                cb_msg_id, 
+                                f"✅ *LAPORAN PUKAL ({len(rep_data.get('items', []))} ENTRI) TELAH DIHANTAR KE BILIK ADMIN KANTOI!*\n"
+                                f"Ref ID: `{batch_id}`\n\n"
+                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih atas sumbangan anda!"
+                            )
+                            forward_batch_report_to_admins(batch_id, rep_data)
+                            answer_callback(cb_id, "Laporan pukal berjaya dihantar ke Admin!", alert=False)
+                        else:
+                            answer_callback(cb_id, "Sesi laporan telah tamat tempoh.", alert=True)
                         continue
 
                     # 2. Tindakan oleh Admin
@@ -623,6 +849,14 @@ def run_bot():
                     elif cb_data.startswith("rej_"):
                         rep_id = cb_data.replace("rej_", "")
                         msg = handle_admin_decision("reject", rep_id, cb_chat_id, username, cb_msg_id)
+                        answer_callback(cb_id, msg, alert=True)
+                    elif cb_data.startswith("appb_"):
+                        batch_id = cb_data.replace("appb_", "")
+                        msg = handle_admin_batch_decision("approve", batch_id, cb_chat_id, username, cb_msg_id)
+                        answer_callback(cb_id, msg, alert=True)
+                    elif cb_data.startswith("rejb_"):
+                        batch_id = cb_data.replace("rejb_", "")
+                        msg = handle_admin_batch_decision("reject", batch_id, cb_chat_id, username, cb_msg_id)
                         answer_callback(cb_id, msg, alert=True)
                     continue
 
@@ -666,9 +900,18 @@ def run_bot():
                 # ------------------------------------------------------------------
                 # C. KENDALIKAN MESEJ BIASA
                 # ------------------------------------------------------------------
-                message = update.get("message")
+                message = update.get("message") or update.get("edited_message")
                 if not message:
                     continue
+
+                msg_id = message.get("message_id")
+                # Jangan proses semula mesej yang sama melainkan kemaskini baru
+                if msg_id in processed_msg_ids and update.get("edited_message"):
+                    continue
+                if msg_id:
+                    processed_msg_ids.add(msg_id)
+                    if len(processed_msg_ids) > 2000:
+                        processed_msg_ids.clear()
 
                 chat_id = message["chat"]["id"]
                 user = message.get("from", {})
@@ -677,6 +920,30 @@ def run_bot():
                 photos = message.get("photo")
 
                 if not text and not photos:
+                    continue
+
+                # Jika pengguna hantar foto tanpa teks dan ada laporan/batch draf yang belum ada foto
+                if photos and not text:
+                    found_key = None
+                    for k, v in reversed(list(unconfirmed_reports.items())):
+                        if v.get("user_id") == chat_id and not v.get("photo_file_id"):
+                            found_key = k
+                            break
+                    if not found_key:
+                        for k, v in reversed(list(get_pending_reports().items())):
+                            if v.get("user_id") == chat_id and not v.get("photo_file_id") and v.get("status") in ["DRAFT", "PENDING"]:
+                                found_key = k
+                                break
+                    if found_key:
+                        if found_key in unconfirmed_reports:
+                            unconfirmed_reports[found_key]["photo_file_id"] = photos[-1]["file_id"]
+                        reports = get_pending_reports()
+                        if found_key in reports:
+                            reports[found_key]["photo_file_id"] = photos[-1]["file_id"]
+                            save_json_file(REPORTS_DATA_PATH, reports)
+                        send_message(chat_id, "📸 *Gambar bukti berjaya dilampirkan pada draf laporan anda!*")
+                    else:
+                        send_message(chat_id, "📸 *Gambar diterima.* Sila sertakan teks nombor telefon atau penerangan scammer.")
                     continue
 
                 # Arahan Pendaftaran Admin: /admin <passcode>
@@ -723,6 +990,70 @@ def run_bot():
                         "💡 _Tip: Anda juga boleh 'main tulis saja' satu cerita penuh terus ke sini tanpa isi borang!_\n"
                         "_(Taip /batal untuk membatalkan)_"
                     )
+                    continue
+
+                # Semak jika teks mengandungi senarai banyak nombor (Batch Report)
+                batch_items = extract_batch_reports(text)
+                if len(batch_items) >= 2 or (len(batch_items) == 1 and len(batch_items[0]['phones']) >= 2):
+                    user_sessions.pop(chat_id, None)
+                    batch_id = f"BAT-{int(time.time()) % 100000:05d}"
+                    photo_file_id = photos[-1]["file_id"] if photos else None
+                    
+                    total_nums = sum(len(it['phones']) for it in batch_items)
+                    rep_data = {
+                        "batch_id": batch_id,
+                        "user_id": chat_id,
+                        "username": username,
+                        "items": batch_items,
+                        "photo_file_id": photo_file_id,
+                        "status": "PENDING",
+                        "created_at": int(time.time())
+                    }
+                    unconfirmed_reports[batch_id] = rep_data
+                    save_pending_report(batch_id, rep_data)
+
+                    summary_preview = []
+                    for idx, it in enumerate(batch_items[:6], 1):
+                        p_str = ", ".join(f"<code>{p}</code>" for p in it['phones'])
+                        clean_desc = html.escape(it['desc'][:45])
+                        summary_preview.append(f"{idx}. {p_str} — <i>{clean_desc}</i>")
+
+                    preview_msg = (
+                        f"🤖 <b>SAYA MENGESAN SENARAI {len(batch_items)} ENTRI ({total_nums} NOMBOR SCAMMER)!</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                        + "\n".join(summary_preview) +
+                        ("\n<i>...dan lain-lain lagi</i>" if len(batch_items) > 6 else "") +
+                        "\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    )
+
+                    is_admin_sender = chat_id in get_admin_ids()
+                    if is_admin_sender:
+                        preview_msg += "⭐ <b>Mod Admin:</b> Anda boleh meluluskan dan menyiarkan senarai ini terus ke @crowdcaller dengan satu klik:"
+                        markup = {
+                            "inline_keyboard": [
+                                [
+                                    {"text": f"⚡ LULUSKAN & SIAR ({total_nums} NOMBOR)", "callback_data": f"cfrmb_direct_{batch_id}"},
+                                    {"text": "❌ BATAL", "callback_data": f"cncl_{batch_id}"}
+                                ]
+                            ]
+                        }
+                    else:
+                        preview_msg += "Adakah anda ingin menghantar senarai pukal ini kepada Admin KANTOI untuk semakan dan kelulusan?"
+                        markup = {
+                            "inline_keyboard": [
+                                [
+                                    {"text": f"🚀 YA, HANTAR SEMUA ({total_nums} NOMBOR)", "callback_data": f"cfrmb_{batch_id}"},
+                                    {"text": "❌ BATAL", "callback_data": f"cncl_{batch_id}"}
+                                ]
+                            ]
+                        }
+                    api_call("sendMessage", {
+                        "chat_id": chat_id,
+                        "text": preview_msg,
+                        "parse_mode": "HTML",
+                        "reply_markup": markup,
+                        "disable_web_page_preview": True
+                    })
                     continue
 
                 # Semak jika pengguna sedang dalam sesi wizard /lapor
@@ -825,6 +1156,7 @@ def run_bot():
                             "status": "PENDING"
                         }
                         unconfirmed_reports[tmp_id] = rep_data
+                        save_pending_report(tmp_id, rep_data)
 
                         preview_msg = (
                             "🤖 *SAYA TELAH MENYUSUN LAPORAN ANDA SECARA AUTOMATIK:*\n"
@@ -837,14 +1169,25 @@ def run_bot():
                             "Adakah maklumat di atas tepat untuk dihantar kepada Admin KANTOI?"
                         )
 
-                        markup = {
-                            "inline_keyboard": [
-                                [
-                                    {"text": "🚀 YA, HANTAR KEPADA ADMIN", "callback_data": f"cfrm_{tmp_id}"},
-                                    {"text": "❌ BATAL", "callback_data": f"cncl_{tmp_id}"}
+                        is_admin_sender = chat_id in get_admin_ids()
+                        if is_admin_sender:
+                            markup = {
+                                "inline_keyboard": [
+                                    [
+                                        {"text": "⚡ LULUSKAN & SIAR TERUS", "callback_data": f"cfrm_direct_{tmp_id}"},
+                                        {"text": "❌ BATAL", "callback_data": f"cncl_{tmp_id}"}
+                                    ]
                                 ]
-                            ]
-                        }
+                            }
+                        else:
+                            markup = {
+                                "inline_keyboard": [
+                                    [
+                                        {"text": "🚀 YA, HANTAR KEPADA ADMIN", "callback_data": f"cfrm_{tmp_id}"},
+                                        {"text": "❌ BATAL", "callback_data": f"cncl_{tmp_id}"}
+                                    ]
+                                ]
+                            }
 
                         send_message(chat_id, preview_msg, reply_markup=markup)
                         print(f"[FREEFORM NLP] Pengesanan pintar berjaya untuk @{username}: {extracted['phone_norm']}")

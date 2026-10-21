@@ -6072,11 +6072,11 @@ public class KantoiThreatEngine {
                                 if (l.isEmpty() || l.startsWith("#")) continue;
 
                                 String[] parts = l.split("\\|");
-                                if (parts.length >= 1) {
+                                if (parts.length >= 2) {
                                     String phone = parts[0].trim();
                                     String norm = normalizeToLocal(phone);
                                     if (norm.length() >= 8) {
-                                        String name = (parts.length > 1) ? parts[1].trim() : "Suspek Scammer (Telegram @" + channelName + ")";
+                                        String name = parts[1].trim();
                                         String tag = (parts.length > 2) ? parts[2].trim() : "TELEGRAM_SYNC";
                                         String bank = (parts.length > 3) ? parts[3].trim() : "";
 
