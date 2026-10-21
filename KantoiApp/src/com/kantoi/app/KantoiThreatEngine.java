@@ -105,6 +105,11 @@ public class KantoiThreatEngine {
     private static final String SCAMMER_CALL_CHANNEL_ID = "scammer_incoming_call_channel";
     private static final String SCAMMER_SMS_CHANNEL_ID = "kantoi_sms_alerts";
     private static final int SCAMMER_SMS_NOTIFICATION_ID = 9002;
+    private static final String OTA_SYNC_CHANNEL_ID = "kantoi_ota_sync_channel";
+    private static final int OTA_SYNC_NOTIFICATION_ID = 9010;
+    private static final String PREF_OTA_NAME = "kantoi_ota_prefs";
+    private static final String PREF_KEY_LAST_SYNC = "last_ota_sync_time";
+    private static final long MIN_AUTO_SYNC_INTERVAL_MS = 2 * 60 * 60 * 1000L; // 2 jam minimum antara semakan automatik
 
     private static volatile KantoiThreatEngine sInstance;
     private static volatile ScammerThreat sLastThreatOnScreen = null;
@@ -3500,6 +3505,50 @@ public class KantoiThreatEngine {
                 root.addView(btnDelete);
             }
 
+            // 9b. Anjuran Lapor ke Telegram Bot @crowdcallerbot (Teks & Bergambar)
+            LinearLayout tgPrompt = new LinearLayout(context);
+            tgPrompt.setOrientation(LinearLayout.VERTICAL);
+            tgPrompt.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
+            GradientDrawable tgBg = new GradientDrawable();
+            tgBg.setColor(0xFF1E293B);
+            tgBg.setCornerRadius(dpToPx(context, 8));
+            tgBg.setStroke(dpToPx(context, 1), 0xFF0284C7);
+            tgPrompt.setBackground(tgBg);
+            LinearLayout.LayoutParams tgLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            tgLp.setMargins(0, dpToPx(context, 10), 0, 0);
+            tgPrompt.setLayoutParams(tgLp);
+
+            TextView tvTgHint = new TextView(context);
+            tvTgHint.setText("💡 Ada Bukti Gambar / Senarai Banyak?\nAnda juga boleh laporkan terus kepada bot rasmi Telegram @crowdcallerbot. Hantar sebarang nombor, akaun bank keldai, atau tangkap layar (screenshot) perbualan/resit scammer untuk diproses oleh pentadbir.");
+            tvTgHint.setTextColor(0xFF38BDF8);
+            tvTgHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            tvTgHint.setLineSpacing(dpToPx(context, 2), 1.0f);
+            tgPrompt.addView(tvTgHint);
+
+            Button btnOpenBot = new Button(context);
+            btnOpenBot.setText("💬 BUKA BOT TELEGRAM @CROWDCALLERBOT");
+            btnOpenBot.setTextColor(Color.WHITE);
+            btnOpenBot.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            btnOpenBot.setTypeface(Typeface.DEFAULT_BOLD);
+            GradientDrawable obBg = new GradientDrawable();
+            obBg.setColor(0xFF0284C7);
+            obBg.setCornerRadius(dpToPx(context, 6));
+            btnOpenBot.setBackground(obBg);
+            LinearLayout.LayoutParams obParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(context, 38));
+            obParams.setMargins(0, dpToPx(context, 6), 0, 0);
+            btnOpenBot.setLayoutParams(obParams);
+            btnOpenBot.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        Intent tgIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/crowdcallerbot"));
+                        context.startActivity(tgIntent);
+                    } catch (Throwable ignored) {}
+                }
+            });
+            tgPrompt.addView(btnOpenBot);
+            root.addView(tgPrompt);
+
             // 10. Butang Batal
             Button btnCancel = new Button(context);
             btnCancel.setText("✕ BATAL");
@@ -6050,6 +6099,7 @@ public class KantoiThreatEngine {
             Matcher matcher = msgPattern.matcher(pageContent);
 
             int inserted = 0;
+            int newlyAdded = 0;
             if (mDb != null && mDb.isOpen()) {
                 mDb.beginTransaction();
                 try {
@@ -6080,6 +6130,20 @@ public class KantoiThreatEngine {
                                         String tag = (parts.length > 2) ? parts[2].trim() : "TELEGRAM_SYNC";
                                         String bank = (parts.length > 3) ? parts[3].trim() : "";
 
+                                        boolean isNew = true;
+                                        Cursor c = null;
+                                        try {
+                                            c = mDb.rawQuery("SELECT 1 FROM threat_numbers WHERE phone_norm = ? LIMIT 1", new String[]{norm});
+                                            if (c != null && c.moveToFirst()) {
+                                                isNew = false;
+                                            }
+                                        } catch (Throwable ignored) {
+                                        } finally {
+                                            if (c != null) {
+                                                try { c.close(); } catch (Throwable ignored) {}
+                                            }
+                                        }
+
                                         ContentValues cv = new ContentValues();
                                         cv.put("phone_norm", norm);
                                         cv.put("profile_id", 9500 + inserted);
@@ -6094,6 +6158,9 @@ public class KantoiThreatEngine {
 
                                         mDb.insertWithOnConflict("threat_numbers", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
                                         inserted++;
+                                        if (isNew) {
+                                            newlyAdded++;
+                                        }
                                     }
                                 }
                             }
@@ -6105,23 +6172,111 @@ public class KantoiThreatEngine {
                 }
             }
 
-            if (inserted > 0) {
+            if (newlyAdded > 0 || inserted > 0) {
                 loadMemoryCache();
             }
 
             result.success = true;
-            result.addedCount = inserted;
+            result.addedCount = newlyAdded;
             result.totalCount = getThreatCount();
-            if (inserted > 0) {
-                result.statusMessage = "✅ Berjaya! " + inserted + " rekod scammer baharu telah disegerakkan daripada saluran @" + channelName + ".";
+            if (newlyAdded > 0) {
+                result.statusMessage = "✅ Berjaya! " + newlyAdded + " rekod scammer baharu telah disegerakkan daripada saluran @" + channelName + ".";
             } else {
-                result.statusMessage = "✅ Pangkalan data anda telah terkini! Saluran @" + channelName + " telah disemak dan tiada rekod baharu ditemui.";
+                result.statusMessage = "✅ Pangkalan data anda telah terkini! Saluran @" + channelName + " telah disemak dan tiada rekod baharu ditemui (" + inserted + " rekod disahkan).";
             }
         } catch (Throwable t) {
             Log.e(TAG, "syncFromTelegram error: " + t.getMessage(), t);
             result.statusMessage = "Ralat sambungan: " + t.getMessage();
         }
         return result;
+    }
+
+    public void showDatabaseUpdatedNotification(Context context, int newRecordsCount, String channelName) {
+        if (context == null || newRecordsCount <= 0) return;
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                    OTA_SYNC_CHANNEL_ID,
+                    "Kantoi Kemaskini Pangkalan Data (OTA)",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                );
+                channel.setDescription("Notifikasi apabila pangkalan data scammer baharu berjaya disegerakkan secara automatik");
+                nm.createNotificationChannel(channel);
+            }
+
+            Intent openApp = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            PendingIntent pi = null;
+            if (openApp != null) {
+                openApp.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                openApp.putExtra("extra_open_defense_tab", true);
+                pi = PendingIntent.getActivity(
+                    context, 106, openApp,
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? (PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE) : PendingIntent.FLAG_UPDATE_CURRENT
+                );
+            }
+
+            String title = "🛡️ Pangkalan Data KANTOI Dikemaskini!";
+            String shortMsg = newRecordsCount + " rekod scammer baharu berjaya dilindungi secara automatik.";
+            String bigMsg = "Sistem risikan KANTOI telah mengesan dan menyegerakkan " + newRecordsCount + 
+                            " nombor penipu baharu dari saluran komuniti @" + (channelName != null ? channelName : "crowdcaller") + 
+                            " ke peranti anda.\n\n" +
+                            "💡 Bantu lindungi komuniti: Laporkan sebarang nombor telefon atau akaun bank scammer (secara teks atau tangkap layar gambar) ke @crowdcallerbot di Telegram.";
+
+            Notification.Builder nb = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    ? new Notification.Builder(context, OTA_SYNC_CHANNEL_ID)
+                    : new Notification.Builder(context);
+
+            nb.setSmallIcon(android.R.drawable.stat_notify_sync)
+              .setContentTitle(title)
+              .setContentText(shortMsg)
+              .setStyle(new Notification.BigTextStyle().bigText(bigMsg))
+              .setPriority(Notification.PRIORITY_DEFAULT)
+              .setAutoCancel(true);
+
+            if (pi != null) nb.setContentIntent(pi);
+
+            nm.notify(OTA_SYNC_NOTIFICATION_ID, nb.build());
+            Log.i(TAG, "showDatabaseUpdatedNotification: " + newRecordsCount + " new threats notified.");
+        } catch (Throwable t) {
+            Log.e(TAG, "showDatabaseUpdatedNotification error: " + t.getMessage(), t);
+        }
+    }
+
+    public void checkAndAutoSyncTelegramAsync(final Context context, final boolean forceCheck) {
+        if (context == null) return;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    SharedPreferences prefs = context.getSharedPreferences(PREF_OTA_NAME, Context.MODE_PRIVATE);
+                    long lastSync = prefs.getLong(PREF_KEY_LAST_SYNC, 0L);
+                    long now = System.currentTimeMillis();
+
+                    if (!forceCheck && (now - lastSync < MIN_AUTO_SYNC_INTERVAL_MS)) {
+                        Log.d(TAG, "Auto-sync ditangguhkan: Semakan terakhir dibuat " + ((now - lastSync) / 60000) + " minit lepas.");
+                        return;
+                    }
+
+                    Log.i(TAG, "Menjalankan auto-sync latar belakang dari @crowdcaller...");
+                    TelegramSyncResult res = syncFromTelegram("crowdcaller");
+
+                    // Rekod masa semakan terkini
+                    prefs.edit().putLong(PREF_KEY_LAST_SYNC, now).apply();
+
+                    if (res != null && res.success && res.addedCount > 0) {
+                        Log.i(TAG, "Auto-sync selesai: " + res.addedCount + " rekod baru dikesan. Memaparkan notifikasi...");
+                        showDatabaseUpdatedNotification(context, res.addedCount, "crowdcaller");
+                    } else {
+                        Log.i(TAG, "Auto-sync selesai: Tiada rekod baharu.");
+                    }
+                } catch (Throwable t) {
+                    Log.e(TAG, "checkAndAutoSyncTelegramAsync error: " + t.getMessage(), t);
+                }
+            }
+        }).start();
     }
 }
 

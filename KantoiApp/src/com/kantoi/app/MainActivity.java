@@ -223,16 +223,26 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (intent != null && intent.hasExtra("select_tab")) {
-            int tab = intent.getIntExtra("select_tab", 0);
-            selectTab(tab);
+        if (intent != null) {
+            if (intent.hasExtra("select_tab")) {
+                int tab = intent.getIntExtra("select_tab", 0);
+                selectTab(tab);
+            } else if (intent.getBooleanExtra("extra_open_defense_tab", false)) {
+                selectTab(1);
+                intent.removeExtra("extra_open_defense_tab");
+            }
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        if (getIntent() != null && getIntent().getBooleanExtra("extra_open_defense_tab", false)) {
+            selectTab(1);
+            getIntent().removeExtra("extra_open_defense_tab");
+        }
         mEngine.preloadDeviceContactsAsync();
+        mEngine.checkAndAutoSyncTelegramAsync(this, false);
         updateCallSystemStatusUI();
         updateContactAndSmsStatusUI();
         updateWhatsAppCardStatus();
@@ -1265,6 +1275,40 @@ public class MainActivity extends Activity {
         });
         syncCard.addView(btnSync);
         root.addView(syncCard);
+
+        // 2b. Kad Anjuran Lapor Scammer Komuniti (@crowdcallerbot)
+        LinearLayout reportBotCard = createCard(0xFF1E293B, 0xFF059669, 12);
+        reportBotCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+        setMarginTop(reportBotCard, 10);
+
+        TextView tvBotTitle = new TextView(this);
+        tvBotTitle.setText("📢 LAPOR SCAMMER KE KOMUNITI (@crowdcallerbot)");
+        tvBotTitle.setTextColor(0xFF34D399);
+        tvBotTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvBotTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        reportBotCard.addView(tvBotTitle);
+
+        TextView tvBotDesc = new TextView(this);
+        tvBotDesc.setText("Dihubungi nombor mencurigakan atau menemui akaun bank keldai? Laporkan nombor scammer atau hantar tangkap layar (screenshot) resit/chat kepada @crowdcallerbot di Telegram secara teks atau bergambar untuk disahkan oleh pentadbir demi melindungi jutaan pengguna KANTOI.");
+        tvBotDesc.setTextColor(0xFFE2E8F0);
+        tvBotDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvBotDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
+        reportBotCard.addView(tvBotDesc);
+
+        final Button btnLaunchBot = createButton("💬 HANTAR LAPORAN KE @CROWDCALLERBOT", 0xFF059669, Color.WHITE);
+        btnLaunchBot.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/crowdcallerbot"));
+                    startActivity(i);
+                } catch (Throwable t) {
+                    Toast.makeText(MainActivity.this, "Sila buka Telegram dan cari @crowdcallerbot", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        reportBotCard.addView(btnLaunchBot);
+        root.addView(reportBotCard);
 
         // 3. Android Default Phone App (InCallService) & Screening Manager Card
         LinearLayout callMgrCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
