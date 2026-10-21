@@ -100,7 +100,7 @@ import android.view.animation.TranslateAnimation;
 public class KantoiThreatEngine {
     private static final String TAG = "KantoiThreatEngine";
     private static final String DB_NAME = "kantoi_threats.db";
-    private static final int CURRENT_DB_VERSION = 8; // Version 8: 3,654 Threats (Lowyat + CariGold + Telegram OCR)
+    private static final int CURRENT_DB_VERSION = 9; // Version 9: 3,729 Threats (+67 Kes Pelaburan Palsu & Akaun Keldai Telegram)
     private static final int SCAMMER_CALL_NOTIFICATION_ID = 999111;
     private static final String SCAMMER_CALL_CHANNEL_ID = "scammer_incoming_call_channel";
     private static final String SCAMMER_SMS_CHANNEL_ID = "kantoi_sms_alerts";
@@ -451,7 +451,7 @@ public class KantoiThreatEngine {
                     }
                     return "\uD83D\uDEA8 Rekod SemakMule CCID PDRM \u2022 Buka Info";
                 } else {
-                    int cnt = (sInstance != null) ? sInstance.getThreatCount() : 3654;
+                    int cnt = (sInstance != null) ? sInstance.getThreatCount() : 3729;
                     return "\uD83D\uDEE1\uFE0F " + String.format("%,d", cnt) + " Rekod Scammer • Semak & Lapor";
                 }
             }
@@ -1915,7 +1915,7 @@ public class KantoiThreatEngine {
         if (mThreatMap != null && !mThreatMap.isEmpty()) {
             return mThreatMap.size();
         }
-        return 3654;
+        return 3729;
     }
 
     public static void showDatabaseInfoDialog(final Context context) {
@@ -1925,12 +1925,12 @@ public class KantoiThreatEngine {
             b.setTitle("\uD83D\uDEE1\uFE0F STATUS PANGKALAN DATA RISIKAN");
 
             KantoiThreatEngine engine = getInstance(context);
-            int total = (engine != null) ? engine.getThreatCount() : 3654;
+            int total = (engine != null) ? engine.getThreatCount() : 3729;
             String msg = "Jumlah Perlindungan Aktif: " + String.format("%,d", total) + " Rekod\n\n"
                     + "Pecahan Sumber Risikan Komuniti:\n"
                     + "• \uD83D\uDD34 Forum Lowyat: 1,500 kes scammer\n"
                     + "• \uD83D\uDFE0 Forum CariGold: 554 kes penipuan\n"
-                    + "• \uD83D\uDD35 Risikan Telegram (OCR): 1,600 kes & 428 akaun bank\n"
+                    + "• \uD83D\uDD35 Risikan Telegram (OCR): 1,675 kes & 495 akaun bank keldai\n"
                     + "• \uD83D\uDFE2 JSJK CCID SemakMule: Carian Langsung & Portal Rasmi PDRM\n"
                     + "• \uD83C\uDF10 Google CSE: Enjin Carian Pertikaian Media Sosial\n\n"
                     + "\u2139\uFE0F Pangkalan data disimpan 100% pada peranti anda (offline) bagi memastikan perlindungan serta-merta semasa panggilan masuk tanpa memerlukan internet.";

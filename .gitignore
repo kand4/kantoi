@@ -59,3 +59,10 @@ temp_*.keystore
 # Sensitive config files (if any)
 .env
 local_secrets.py
+
+# User raw imports and OCR cache
+photos/
+result.json
+ocr_cache.json
+parsed_scammers.json
+/kantoi_threats.db
