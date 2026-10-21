@@ -353,12 +353,15 @@ def format_welcome_message(is_admin=False):
     return (
         "👋 *Selamat datang ke Bot Semakan & Laporan Scammer KANTOI!*\n\n"
         "🔍 *1. Semak Nombor:* Taip nombor telefon (contoh: `0179597645`) atau akaun bank untuk menyemak rekod.\n\n"
-        "📢 *2. Lapor Scammer ('Main Tulis Saja'):*\n"
-        "Anda bebas menaip aduan secara santai. Contoh:\n"
-        "_\"Nombor 01139444255 call kata ada saman mahkamah, minta transfer RM500 ke akaun CIMB 7012345678 nama Ali.\"_\n\n"
-        "🤖 Enjin pintar KANTOI akan menyusun laporan anda secara automatik untuk disemak oleh Admin.\n"
+        "📢 *2. Lapor Scammer (Teks, Senarai Panjang & Bergambar):*\n"
+        "Anda dialu-alukan melaporkan sebarang cubaan penipuan:\n"
+        "• *Teks Bebas ('Main Tulis Saja'):* Ceritakan pengalaman anda secara santai.\n"
+        "• *Senarai Pukal:* Tampal senarai nombor penipu serentak.\n"
+        "• *Tangkap Layar (Bergambar):* Hantar gambar tangkap layar (screenshot) resit bank atau perbualan chat scammer terus ke sini!\n\n"
+        "🤖 Enjin pintar KANTOI akan menyusun laporan anda secara automatik untuk disahkan oleh Pentadbir sebelum disiarkan ke saluran @crowdcaller demi melindungi jutaan rakyat Malaysia.\n"
         f"{admin_tag}\n\n"
-        "🛡️ Saluran Rasmi: @crowdcaller"
+        "🛡️ Saluran Rasmi: @crowdcaller\n"
+        "🌐 Repositori Kod: https://github.com/kand4/kantoi"
     )
 
 # ==============================================================================
@@ -507,7 +510,8 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
             f"📚 <b>SUMBER SITASI</b>  : Sumbangan Disahkan Admin (Ref: <code>{safe_rep_id}</code>)\n"
             "--------------------------------------------------\n"
             "ℹ️ <i>Laporan disahkan oleh admin komuniti @crowdcaller.</i>\n"
-            "📲 <i>Buka Tab Pertahanan KANTOI & tekan kemaskini untuk perlindungan automatik.</i>\n"
+            "📲 <i>Buka Tab Pertahanan KANTOI untuk perlindungan masa nyata.</i>\n"
+            "💬 <i>Bantu komuniti: Lapor sebarang nombor/akaun bank scammer (teks/gambar) ke @crowdcallerbot.</i>\n"
             "🔗 <i>Semak kod sumber projek di: https://github.com/kand4/kantoi</i>\n\n"
             "#KANTOI_UPDATE\n"
             f"{phone_norm} | {safe_suspect} | LAPORAN_KOMUNITI_DISAHKAN | {safe_bank or 'Tiada'}"
@@ -675,6 +679,7 @@ def handle_admin_batch_decision(action, batch_id, admin_chat_id, admin_username,
         post_text += (
             f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"📲 <i>Semua {inserted_count} nombor kini aktif dilindungi dalam KANTOI.</i>\n"
+            f"💬 <i>Bantu komuniti: Lapor sebarang nombor/akaun bank scammer (teks/gambar) ke @crowdcallerbot.</i>\n"
             f"🔗 <i>Semak kod sumber projek di: https://github.com/kand4/kantoi</i>\n\n"
             f"#KANTOI_UPDATE\n"
             + "\n".join(channel_threat_tags)
