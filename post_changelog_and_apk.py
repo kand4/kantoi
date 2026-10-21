@@ -73,8 +73,10 @@ def send_changelog_message():
         "5️⃣ 🪟 <b>Papar Di Atas Aplikasi Lain (Display Over Other Apps):</b> Wajib dibenarkan agar paparan amaran radar panggilan masuk dapat muncul di skrin.\n"
         "6️⃣ 🛡️ <b>Tetapkan Sebagai Aplikasi Pemanggil & Spam Lalai (Default Caller ID & Spam App):</b> Memberikan kuasa kepada KANTOI untuk menyekat panggilan scammer serta-merta.\n"
         "7️⃣ 🔋 <b>Pengoptimuman Bateri (Battery Optimization):</b> Pilih <i>'Tidak Dihadkan' (Unrestricted)</i> supaya sistem Android tidak mematikan perkhidmatan amaran di latar belakang.\n\n"
-        "🌐 <b>Repositori Kod Sumber Terbuka (GitHub):</b>\n"
-        "👉 https://github.com/kand4/kantoi\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "🔍 <b>KETELUSAN PENUH & AUDIT BEBAS (100% OPEN SOURCE):</b>\n"
+        "Bagi mereka yang skeptikal atau ragu-ragu dengan fungsi keselamatan KANTOI, projek ini adalah 100% sumber terbuka di bawah lesen <b>GNU GPL-3.0</b>. Tiada iklan, tiada penjejak tersembunyi, dan tiada pencerobohan data peribadi. Anda dialu-alukan untuk menyemak, mengaudit sendiri keseluruhan kod sumber kami, atau menyumbang idea di GitHub:\n"
+        "👉 <b>https://github.com/kand4/kantoi</b>\n\n"
         "📲 <i>Fail APK rasmi dimuat naik di bawah untuk kemaskini segera.</i>"
     )
     

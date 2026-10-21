@@ -19,6 +19,8 @@ out/
 *.zip
 *.idsig
 *.xlsx
+__pycache__/
+*.pyc
 
 # Old decompilation, dumps & scratch folders
 smali_*/
