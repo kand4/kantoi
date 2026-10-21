@@ -47,44 +47,37 @@ def send_changelog_message():
     
     msg_html = (
         f"📋 <b>KEMASKINI APLIKASI KANTOI: VERSI {VERSION_NAME} DILEPASKAN!</b>\n\n"
-        f"Pelepasan <b>Kantoi v{VERSION_NAME}</b> membawakan: <b>Kunci Komuniti VirusTotal Terbina (Multi-Layer Obfuscated)</b> dan <b>Model Hibrid BYOK (Bring-Your-Own-Key Priority)</b> untuk manfaat automatik kepada semua pengguna:\n\n"
+        f"Pelepasan rasmi <b>Kantoi v{VERSION_NAME}</b> membawakan: <b>Pangkalan Data Risikan Baharu (DB v9: 3,729 Rekod)</b>, <b>Penyegerakan Automatik Senyap (OTA Background Sync)</b>, dan <b>Sistem Laporan Komuniti Terus ke @crowdcallerbot</b>:\n\n"
         f"📜 <b>RINGKASAN LOG PERUBAHAN (CHANGELOG v{VERSION_NAME}):</b>\n\n"
-        "🔑 <b>1. Kunci Komuniti VirusTotal Bawaan (Zero-Config Community Key):</b>\n"
-        "• Pengguna baharu kini tidak perlu lagi mendaftar atau menyalin kunci API VirusTotal secara manual.\n"
-        "• KANTOI kini dilengkapi Kunci Komuniti pra-pasang yang sedia digunakan serta-merta sebaik sahaja aplikasi dipasang untuk imbasan fail APK dan pautan web scammer.\n\n"
-        "🛡️ <b>2. Perlindungan Penyamaran Multi-Lapisan (Bitwise XOR Masking & Seed Splitting):</b>\n"
-        "• Kunci API dilindungi menggunakan penyamaran bitwise (Bitwise XOR) dan pemecahan vektor bait dalam memori.\n"
-        "• Menghalang carian rentetan teks biasa (<code>strings</code> / hex search) oleh alat dekompilasi asas (Jadx / Apktool).\n\n"
-        "🔄 <b>3. Model Hibrid BYOK (Bring-Your-Own-Key Priority):</b>\n"
-        "• Pengguna yang mempunyai akaun VirusTotal sendiri tetap boleh memasukkan Kunci API peribadi di tab Tetapan Pertahanan untuk menikmati kuota eksklusif 500 semakan/hari.\n"
-        "• Sistem mengutamakan kunci peribadi jika ada, dan beralih semula ke Kunci Komuniti secara pintar jika dikosongkan.\n\n"
-        "⚡ <b>4. Semua Ciri Pertahanan Siber Kekal Aktif 100%:</b>\n"
-        "• Enjin Heuristik Trojan Perbankan Tempatan (0ms, 100% Offline, Zero-Data).\n"
-        "• Penjaga Muat Turun Latar Belakang (Real-Time Download Sentry) mengesan APK baharu di <code>/Download</code> sebelum dipasang.\n"
-        "• Integrasi 'Kongsi ke KANTOI' (Universal Android System Share Target).\n"
-        "• Kapsul Terapung Sisi (Hab Keselamatan Pantas SemakMule PDRM, Imbas APK, dan Imbas Pautan).\n\n"
+        "🛡️ <b>1. Pangkalan Data Risikan Dipertingkatkan (DB v9: 3,729 Rekod):</b>\n"
+        "• Pertambahan 67 profil ancaman baharu membabitkan sindiket <b>Pelaburan Palsu & Akaun Keldai</b> (diekstrak melalui OCR daripada bukti transaksi & profil WhatsApp scammer).\n"
+        "• Liputan meluas akaun keldai: CIMB, Maybank, Bank Islam, Public Bank, BSN, GXBank, BigPay & DuitNow.\n\n"
+        "🔄 <b>2. Penyegerakan Automatik Senyap OTA (OTA Background Sync):</b>\n"
+        "• Enjin KANTOI kini menyegerakkan rekod scammer baharu secara berkala (setiap 3 jam & setiap kali aplikasi dibuka) daripada saluran @crowdcaller secara automatik.\n"
+        "• Notifikasi sistem pop-up akan memaklumkan pengguna sejurus rekod baharu disegerakkan tanpa perlu memasang semula APK!\n\n"
+        "🤖 <b>3. Hab Pelaporan Komuniti Pintar (@crowdcallerbot):</b>\n"
+        "• Laporkan nombor scammer atau akaun bank mencurigakan terus ke bot @crowdcallerbot.\n"
+        "• Boleh taip santai ('main tulis saja'), hantar senarai panjang nombor, atau lampirkan gambar tangkap layar resit perbankan untuk semakan admin.\n\n"
+        "🔑 <b>4. Semua Ciri Pertahanan Siber KANTOI Kekal Aktif 100%:</b>\n"
+        "• Kunci Komuniti VirusTotal Terbina & Model Hibrid BYOK.\n"
+        "• Enjin Heuristik Trojan Perbankan Tempatan (0ms Offline, Zero-Data).\n"
+        "• Penjaga Muat Turun (Download Sentry) & 'Kongsi ke KANTOI'.\n"
+        "• Kapsul Terapung Sisi SemakMule CCID PDRM.\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "⚠️ <b>PANDUAN PENTING: KEBENARAN SISTEM (PERMISSIONS SETUP)</b>\n"
-        "Untuk memastikan sistem pertahanan KANTOI dapat bertindak secara automatik dan lancar 24/7 melindungi telefon anda, sila pastikan anda <b>BENARKAN (ALLOW) SEMUA KEBENARAN</b> berikut selepas memasang:\n\n"
-        "1️⃣ 📞 <b>Telefon & Log Panggilan (Phone & Call Log):</b> Mengenal pasti ID pemanggil dan menyaring panggilan scammer secara langsung.\n"
-        "2️⃣ 💬 <b>SMS & Mesej:</b> Mengimbas pautan phishing, APK berniat jahat, dan mesej palsu TAC/OTP perbankan.\n"
-        "3️⃣ 📖 <b>Kenalan (Contacts):</b> Membolehkan sistem mengecam kenalan sah anda dan melindunginya melalui Senarai Putih.\n"
-        "4️⃣ 📁 <b>Storan & Pengurusan Fail (Storage Access):</b> Membolehkan Penjaga Muat Turun (Download Sentry) mengimbas fail APK baharu serta-merta.\n"
-        "5️⃣ 🪟 <b>Papar Di Atas Aplikasi Lain (Display Over Other Apps):</b> Wajib dibenarkan agar paparan amaran radar panggilan masuk dapat muncul di skrin.\n"
-        "6️⃣ 🛡️ <b>Tetapkan Sebagai Aplikasi Pemanggil & Spam Lalai (Default Caller ID & Spam App):</b> Memberikan kuasa kepada KANTOI untuk menyekat panggilan scammer serta-merta.\n"
-        "7️⃣ 🔋 <b>Pengoptimuman Bateri (Battery Optimization):</b> Pilih <i>'Tidak Dihadkan' (Unrestricted)</i> supaya sistem Android tidak mematikan perkhidmatan amaran di latar belakang.\n\n"
+        "⚠️ <b>PANDUAN KEBENARAN SISTEM (WAJIB BENARKAN / ALLOW):</b>\n"
+        "Agar perisai KANTOI aktif 24/7, sila benarkan semua kebenaran ini di telefon anda:\n"
+        "1️⃣ 📞 <b>Telefon & Log Panggilan:</b> Mengesan ID pemanggil & sekat scammer.\n"
+        "2️⃣ 💬 <b>SMS & Mesej:</b> Imbas pautan phishing & mesej palsu TAC/OTP.\n"
+        "3️⃣ 📖 <b>Kenalan:</b> Perlindungan Senarai Putih kenalan sah.\n"
+        "4️⃣ 📁 <b>Storan & Pengurusan Fail:</b> Download Sentry mengimbas APK baharu.\n"
+        "5️⃣ 🪟 <b>Papar Di Atas Aplikasi Lain:</b> Paparan radar amaran panggilan masuk.\n"
+        "6️⃣ 🛡️ <b>Aplikasi Pemanggil & Spam Lalai:</b> Kuasa menyekat panggilan scammer serta-merta.\n"
+        "7️⃣ 🔋 <b>Pengoptimuman Bateri:</b> Pilih <i>'Tidak Dihadkan' (Unrestricted)</i> supaya sistem tidak dimatikan Android.\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "📢 <b>SERTAI PERTAHANAN KOMUNITI: LAPOR SCAMMER KEPADA KAMI!</b>\n"
-        "Dihubungi nombor mencurigakan atau menemui akaun bank keldai? Anda dialu-alukan melaporkan sebarang nombor telefon atau akaun bank scammer kepada bot rasmi kami di Telegram:\n"
-        "👉 <b>@crowdcallerbot</b>\n"
-        "• <i>Anda bebas menaip laporan secara santai atau menampal senarai panjang nombor sekali gus.</i>\n"
-        "• <i>Boleh juga lampirkan tangkap layar (screenshot) resit transaksi atau perbualan chat scammer secara bergambar!</i>\n"
-        "Pentadbir komuniti akan menyemak dan mengesahkan laporan anda untuk disegerakkan secara automatik ke semua peranti KANTOI demi melindungi jutaan rakyat Malaysia.\n\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "🔍 <b>KETELUSAN PENUH & AUDIT BEBAS (100% OPEN SOURCE):</b>\n"
-        "Bagi mereka yang skeptikal atau ragu-ragu dengan fungsi keselamatan KANTOI, projek ini adalah 100% sumber terbuka di bawah lesen <b>GNU GPL-3.0</b>. Tiada iklan, tiada penjejak tersembunyi, dan tiada pencerobohan data peribadi. Anda dialu-alukan untuk menyemak, mengaudit sendiri keseluruhan kod sumber kami, atau menyumbang idea di GitHub:\n"
+        "🔍 <b>100% SUMBER TERBUKA & AUDIT BEBAS:</b>\n"
+        "KANTOI bebas iklan, bebas penjejak, dan 100% telus di bawah lesen <b>GNU GPL-3.0</b>. Semak kod sumber di GitHub:\n"
         "👉 <b>https://github.com/kand4/kantoi</b>\n\n"
-        "📲 <i>Fail APK rasmi dimuat naik di bawah untuk kemaskini segera.</i>"
+        "📲 <i>Fail APK rasmi dimuat naik di bawah untuk muat turun & kemaskini segera.</i>"
     )
     
     payload = {
@@ -118,10 +111,11 @@ def upload_apk():
         f"📦 <b>KANTOI Anti-Scam Caller ID & Threat Defense (v{VERSION_NAME} Release)</b>\n\n"
         f"📌 <b>Binaan:</b> <code>{os.path.basename(APK_PATH)}</code>\n"
         f"🔢 <b>Version Code:</b> <code>{VERSION_CODE}</code> (SemVer v{VERSION_NAME})\n"
-        f"🛡️ <b>Ciri Baharu:</b> Kunci Komuniti VirusTotal Terbina (Multi-Layer Obfuscated), Model Hibrid BYOK, Enjin Heuristik Trojan Tempatan (0ms Offline), Penjaga Muat Turun (Download Sentry), dan 'Kongsi ke KANTOI'.\n"
-        f"🌐 <b>Kod Sumber (GitHub):</b> https://github.com/kand4/kantoi\n"
-        f"🔑 <b>Status Tandatangan:</b> Android APK Signature Scheme v2 & v3 (Disahkan & Zipalign)\n\n"
-        f"⚠️ <b>PERINGATAN SELEPAS PASANG:</b> Sila <b>BENARKAN (ALLOW) SEMUA KEBENARAN</b> (Telefon, SMS, Kenalan, Storan, Papar di Atas Aplikasi Lain & Tiada Sekatan Bateri) di tetapan telefon anda agar perisai KANTOI berfungsi 100%!"
+        f"🛡️ <b>Pangkalan Data:</b> DB v9 (3,729 Rekod Scammer & Akaun Keldai)\n"
+        f"🔄 <b>Ciri:</b> OTA Background Sync, @crowdcallerbot Reporting, VirusTotal Community Key, Heuristik Trojan Tempatan (0ms Offline).\n"
+        f"🌐 <b>GitHub:</b> https://github.com/kand4/kantoi\n"
+        f"🔑 <b>Tandatangan:</b> APK Signature Scheme v2 & v3 (Verified & Zipalign)\n\n"
+        f"⚠️ <b>Peringatan:</b> Sila <b>BENARKAN SEMUA KEBENARAN</b> (Telefon, SMS, Kenalan, Storan, Papar Atas Aplikasi & Tiada Sekatan Bateri) di telefon anda!"
     )
     
     with open(APK_PATH, "rb") as f:
@@ -133,6 +127,16 @@ def upload_apk():
             "caption": caption,
             "parse_mode": "HTML"
         }
+        resp = requests.post(url, data=data, files=files, timeout=120)
+        
+    res = resp.json()
+    if res.get("ok"):
+        print("[SUCCESS] Fail APK berjaya dimuat naik ke Telegram @crowdcaller!")
+        print("Document Message ID:", res["result"]["message_id"])
+        return True
+    else:
+        print("[ERROR] Gagal memuat naik APK:", res)
+        return False
         resp = requests.post(url, data=data, files=files, timeout=120)
         
     res = resp.json()
