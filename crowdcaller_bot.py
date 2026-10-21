@@ -29,6 +29,10 @@ if sys.stdout and hasattr(sys.stdout, 'buffer'):
     except Exception:
         pass
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 try:
     from local_secrets import BOT_TOKEN
 except ImportError:
@@ -36,7 +40,6 @@ except ImportError:
 CHANNEL_ID = "@crowdcaller"
 ADMIN_PASSCODE = "kantoi2026"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "kantoi_threats.db")
 if not os.path.exists(DB_PATH):
     DB_PATH = os.path.join(BASE_DIR, "KantoiApp", "assets", "kantoi_threats.db")
@@ -729,6 +732,10 @@ def run_bot():
     processed_msg_ids = set()
     get_updates_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
 
+    if not BOT_TOKEN or BOT_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN_HERE":
+        print("[RALAT KRITIKAL] TELEGRAM_BOT_TOKEN tidak sah atau tiada dalam local_secrets.py!")
+        return
+
     print("[BOT] Bot sedia menerima pertanyaan & laporan bebas (Main Tulis Saja)!")
 
     while True:
@@ -738,6 +745,7 @@ def run_bot():
             data = resp.json()
 
             if not data.get("ok"):
+                print(f"[RALAT TELEGRAM] getUpdates gagal: {data.get('description')} (Kod: {data.get('error_code')})")
                 time.sleep(3)
                 continue
 
