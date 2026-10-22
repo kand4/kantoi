@@ -1048,32 +1048,216 @@ def format_safe_response(query_input, norm_phone):
 def format_welcome_message(is_admin=False):
     admin_tag = "\n⭐ *Status Anda:* Pentadbir (Admin KANTOI)" if is_admin else ""
     return (
-        "👋 *Selamat datang ke Bot Semakan & Laporan Scammer KANTOI!*\n\n"
-        "🔍 *1. Semakan Pantas KANTOI & PDRM SemakMule:*\n"
-        "Taip nombor telefon (contoh: `0179597645`) atau akaun bank untuk semakan serentak pangkalan data KANTOI & rekod rasmi CCID PDRM.\n"
-        "• Perintah terus PDRM: `/pdrm <nombor_atau_akaun>`\n\n"
-        "🕸️ *2. Pengecam Sindiket (Cluster Intelligence):*\n"
-        "Bot mengesan rangkaian scammer yang berkongsi akaun bank keldai atau profil suspek yang sama merentasi pangkalan data.\n\n"
-        "🔗 *3. Semakan Pautan Phishing & APK Sandbox:*\n"
-        "• *Pautan:* Hantar sebarang pautan mencurigakan atau taip `/url <pautan>` untuk mengesan portal bank palsu & pancingan bantuan.\n"
-        "• *Malware APK:* Hantar fail `.apk` ke sini untuk dianalisis oleh KANTOI Sandbox bagi mengesan trojan perbankan & pencuri SMS TAC/OTP.\n\n"
-        "📸 *4. Imbas Gambar & Kod QR DuitNow (Enjin Hibrid Vision):*\n"
-        "Hantar tangkap layar (screenshot) WhatsApp, resit bank, atau gambar kod QR DuitNow untuk pengekstrakan data automatik.\n\n"
-        "📰 *5. Buletin Radar Ancaman Harian:*\n"
-        "Taip `/buletin` untuk membaca berita kes penipuan & taktik scammer terkini di Malaysia daripada sumber berita utama.\n\n"
-        "📢 *6. Lapor Scammer (Teks Bebas & Senarai Pukal):*\n"
-        "• *'Main Tulis Saja':* Ceritakan kejadian scammer dalam bahasa harian anda.\n"
-        "• *Senarai Pukal:* Tampal banyak nombor sekali gus untuk laporan pukal.\n\n"
-        "🛡️ *7. Penjaga Kumpulan (Group Sentinel):*\n"
-        "Masukkan bot ini ke Group Telegram anda (sebagai Admin) untuk mengesan & memadam mesej scammer, pautan phishing, serta malware APK secara automatik!\n\n"
-        f"{admin_tag}\n\n"
-        "🛡️ Saluran Rasmi: @crowdcaller\n"
-        "🌐 Repositori Kod: https://github.com/kand4/kantoi"
+        "🤖 *SELAMAT DATANG KE BOT KANTOI ANTI-SCAM!* 🇲🇾\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Pertahanan siber komuniti anda terhadap sindiket scammer, keldai akaun, dan pancingan data.\n\n"
+        "💡 *PILIHAN PANTAS:* Tekan mana-mana butang di bawah untuk membuka panduan terperinci bagi setiap fungsi bot:\n\n"
+        "• 🔍 *Semakan No/Bank:* Semak nombor & kesan sindiket\n"
+        "• 🏛️ *PDRM CCID:* Semakan aduan polis rasmi secara live\n"
+        "• 📸 *QR DuitNow & Resit:* Ekstrak data terus dari gambar\n"
+        "• 🔗 *Phishing URL:* Kesan laman bank & STR palsu\n"
+        "• 📦 *Malware APK:* Sandbox trojan pencuri SMS TAC\n"
+        "• 📢 *Lapor Scammer:* Hantar aduan teks atau gambar\n"
+        "• 📰 *Buletin Berita:* Laporan kes jenayah siber terkini\n"
+        "• 🛡️ *Penjaga Group:* Lindungi group Telegram anda\n"
+        f"{admin_tag}\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "ℹ️ _Ketik butang menu di bawah untuk panduan cara guna:_"
     )
 
 # ==============================================================================
-# TELEGRAM API CALLS
+# MENU BANTUAN & PANDUAN INTERAKTIF
 # ==============================================================================
+MAIN_REPLY_KEYBOARD = {
+    "keyboard": [
+        [{"text": "🔍 Semak No / Akaun"}, {"text": "🏛️ Semakan PDRM"}],
+        [{"text": "📰 Buletin Berita Scam"}, {"text": "📢 Lapor Scammer"}],
+        [{"text": "ℹ️ Menu Bantuan & Panduan"}]
+    ],
+    "resize_keyboard": True,
+    "is_persistent": True
+}
+
+def get_help_menu_keyboard():
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "🔍 Semakan No / Bank", "callback_data": "help_check"},
+                {"text": "🏛️ Semakan PDRM CCID", "callback_data": "help_pdrm"}
+            ],
+            [
+                {"text": "📸 Imbas QR & Resit", "callback_data": "help_vision"},
+                {"text": "🔗 Semak Pautan (URL)", "callback_data": "help_url"}
+            ],
+            [
+                {"text": "📦 Sandbox APK Malware", "callback_data": "help_apk"},
+                {"text": "📢 Cara Lapor Scammer", "callback_data": "help_report"}
+            ],
+            [
+                {"text": "📰 Buletin Berita Scam", "callback_data": "help_bulletin"},
+                {"text": "🛡️ Penjaga Group", "callback_data": "help_group"}
+            ]
+        ]
+    }
+
+def get_help_detail(topic):
+    back_button = {
+        "inline_keyboard": [
+            [{"text": "« Kembali ke Menu Utama", "callback_data": "help_menu"}]
+        ]
+    }
+    
+    if topic == "help_check":
+        text = (
+            "🔍 *PANDUAN SEMAKAN NO TELEFON & AKAUN BANK*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Anda boleh menyemak sebarang nombor telefon atau akaun bank yang meragukan.\n\n"
+            "💡 *Cara Penggunaan:*\n"
+            "Cukup sekadar taip nombor telefon atau nombor akaun bank terus ke dalam chat bot ini!\n\n"
+            "📝 *Contoh Carian:*\n"
+            "• `0179597645`\n"
+            "• `+601139444255`\n"
+            "• `112028138548` (Akaun Maybank)\n"
+            "• `7056210969` (Akaun CIMB)\n\n"
+            "🛡️ *Enjin KANTOI akan automatik:*\n"
+            "1. Menyemak pangkalan data komuniti KANTOI (3,729+ rekod).\n"
+            "2. Mengesan rangkaian sindiket (Cluster Matching).\n"
+            "3. Menyemak portal rasmi PDRM SemakMule CCID secara langsung!"
+        )
+        return text, back_button
+
+    elif topic == "help_pdrm":
+        text = (
+            "🏛️ *PANDUAN SEMAKAN SIAP-SEDIA PDRM CCID*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Bot KANTOI dihubungkan terus dengan pangkalan data Jabatan Siasatan Jenayah Komersil (JSJK) Polis Diraja Malaysia.\n\n"
+            "💡 *Cara Penggunaan:*\n"
+            "Gunakan arahan `/pdrm` atau `/semakmule` diikuti nombor sasaran.\n\n"
+            "📝 *Contoh Arahan:*\n"
+            "• `/pdrm 01121938112`\n"
+            "• `/pdrm 512802774281`\n"
+            "• `/semakmule 162900219348`\n\n"
+            "📊 *Maklumat yang Diberikan:*\n"
+            "• Jumlah Laporan Polis Rasmi yang telah difailkan mangsa.\n"
+            "• Jumlah carian awam yang pernah dibuat di portal PDRM."
+        )
+        return text, back_button
+
+    elif topic == "help_vision":
+        text = (
+            "📸 *PANDUAN IMBASAN FOTO & KOD QR DUITNOW*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Malas menaip? Anda boleh hantar gambar terus kepada bot ini!\n\n"
+            "💡 *Apa Yang Boleh Dihantar:*\n"
+            "1. *Kod QR DuitNow:*\n"
+            "   Bot membaca matrik QR binary secara matematik (0.001 saat) untuk membongkar Nama Pemegang Akaun, Bank, dan No Akaun sebenar di sebalik QR tersebut!\n\n"
+            "2. *Tangkap Layar (Screenshot) WhatsApp / Telegram:*\n"
+            "   Enjin OCR mengekstrak nombor telefon suspek, akaun bank, dan cerita scammer secara automatik.\n\n"
+            "3. *Slip / Resit Transaksi Bank:*\n"
+            "   Mengekstrak maklumat akaun keldai untuk semakan segera."
+        )
+        return text, back_button
+
+    elif topic == "help_url":
+        text = (
+            "🔗 *PANDUAN SEMAKAN PAUTAN PHISHING (URL)*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Menerima SMS atau mesej yang menyuruh anda menekan pautan bank atau bantuan kerajaan? Hantar ke sini sebelum klik!\n\n"
+            "💡 *Cara Penggunaan:*\n"
+            "Taip `/url <pautan>` ATAU hantar saja pautan penuh ke dalam chat.\n\n"
+            "📝 *Contoh Arahan:*\n"
+            "• `/url https://maybank2u-login.top/my`\n"
+            "• `/url http://bantuan-str-fasa1.vip`\n\n"
+            "🛡️ *Apa Yang Dikesan:*\n"
+            "• Portal perbankan palsu (Maybank, CIMB, RHB, TNG, dll).\n"
+            "• Pancingan data bantuan kerajaan (STR, MyKasih, PADU).\n"
+            "• Domain risiko tinggi (`.top`, `.xyz`, `.vip`, `.icu`).\n"
+            "• Pautan pendek (`bit.ly`, `tinyurl`) yang cuba menyembunyikan alamat sebenar."
+        )
+        return text, back_button
+
+    elif topic == "help_apk":
+        text = (
+            "📦 *PANDUAN SANDBOX MALWARE APK*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Scammer sering menghantar fail `.apk` (cth: 'Bantuan_STR.apk', 'Wedding_Card.apk', 'Cleaning_Service.apk') untuk mencuri wang perbankan anda.\n\n"
+            "💡 *Cara Penggunaan:*\n"
+            "Hantarkan fail dokumen `.apk` tersebut terus ke dalam chat bot ini!\n\n"
+            "🛡️ *Enjin KANTOI Sandbox akan:*\n"
+            "• Menganalisis kebenaran berisiko (Pencuri SMS TAC/OTP, Accessibility Keylogger, Overlay Login Palsu).\n"
+            "• Mengesan pautan pelayan Bot C2 scammer.\n"
+            "• Memberikan gred keselamatan (SELAMAT / RISIKO / BAHAYA KRITIKAL) tanpa perlu memasang fail tersebut pada telefon anda!"
+        )
+        return text, back_button
+
+    elif topic == "help_report":
+        text = (
+            "📢 *PANDUAN CARA MELAPORKAN SCAMMER*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Setiap laporan anda membantu melindungi jutaan rakyat Malaysia daripada ditipu.\n\n"
+            "💡 *Pilihan 1: 'Main Tulis Saja' (Paling Mudah!)*\n"
+            "Taip cerita anda dalam bahasa harian biasa mengandungi nombor scammer & akaun bank. Bot akan menyusun draf secara automatik!\n"
+            "Contoh: _'01139444255 scammer menyamar pegawai polis bukit aman suruh transfer rm500 ke cimb 7056210969'_\n\n"
+            "💡 *Pilihan 2: Borang Berstruktur*\n"
+            "Taip `/lapor` untuk mengisi borang 4-langkah secara teratur.\n\n"
+            "💡 *Pilihan 3: Laporan Pukal (Banyak Nombor)*\n"
+            "Tampal senarai nombor sekali gus untuk pengesahan pukal!"
+        )
+        return text, back_button
+
+    elif topic == "help_bulletin":
+        text = (
+            "📰 *PANDUAN BULETIN BERITA SCAM HARIAN*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Ketahui modus operandi dan kes tangkapan penipuan terkini di Malaysia.\n\n"
+            "💡 *Cara Penggunaan:*\n"
+            "• Taip `/buletin` atau `/berita` untuk membaca 5 berita terkini daripada sumber berita utama (Astro Awani, Berita Harian, Harian Metro, TV3, Bernama).\n"
+            "• Bot juga menyiarkan buletin automatik setiap pagi di saluran rasmi @crowdcaller."
+        )
+        bulletin_kb = {
+            "inline_keyboard": [
+                [{"text": "📰 Baca Buletin Sekarang", "callback_data": "read_bulletin_now"}],
+                [{"text": "« Kembali ke Menu Utama", "callback_data": "help_menu"}]
+            ]
+        }
+        return text, bulletin_kb
+
+    elif topic == "help_group":
+        text = (
+            "🛡️ *PANDUAN PENJAGA KUMPULAN (GROUP SENTINEL)*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Lindungi group Telegram komuniti, keluarga, atau persatuan anda daripada spambot & scammer!\n\n"
+            "💡 *Cara Memasang:*\n"
+            "1. Masukkan `@crowdcallerbot` ke dalam Telegram Group anda.\n"
+            "2. Lantik bot sebagai *Admin* dengan kebenaran 'Delete Messages'.\n\n"
+            "🛡️ *Tindakan Automatik Bot:*\n"
+            "• Memadam secara senyap sebarang mesej yang mengandungi nombor scammer atau akaun keldai.\n"
+            "• Memadam pautan phishing dan fail APK trojan yang dihantar ahli.\n"
+            "• Mengeluarkan kad amaran merah untuk mengingatkan semua ahli kumpulan!"
+        )
+        return text, back_button
+
+    return format_welcome_message(), get_help_menu_keyboard()
+
+def register_bot_commands():
+    """Mendaftar senarai perintah rasmi pada butang Menu Telegram"""
+    commands = [
+        {"command": "start", "description": "Mula & buka Menu Utama"},
+        {"command": "help", "description": "Pusat Bantuan & Panduan Interaktif"},
+        {"command": "semak", "description": "Semak no telefon atau akaun bank"},
+        {"command": "pdrm", "description": "Semakan terus portal rasmi PDRM CCID"},
+        {"command": "url", "description": "Semak pautan phishing & bank palsu"},
+        {"command": "buletin", "description": "Berita kes penipuan terkini di Malaysia"},
+        {"command": "lapor", "description": "Borang aduan scammer langkah demi langkah"},
+        {"command": "batal", "description": "Batal proses semasa"}
+    ]
+    try:
+        res = api_call("setMyCommands", {"commands": commands})
+        if res.get("ok"):
+            print("[BOT] Perintah bot rasmi (setMyCommands) berjaya didaftarkan ke Telegram.")
+    except Exception as e:
+        print(f"[BOT] Gagal daftar setMyCommands: {e}")
+
 def api_call(method, payload=None, files=None):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/{method}"
     try:
@@ -1426,6 +1610,7 @@ def handle_admin_batch_decision(action, batch_id, admin_chat_id, admin_username,
 # ==============================================================================
 def run_bot():
     print("[BOT] Memulakan CrowdCaller & KANTOI Bot (Smart NLP Free-Form + Mod A)...")
+    register_bot_commands()
     print(f"[BOT] Pangkalan data: {DB_PATH}")
     print(f"[BOT] Saluran siaran: {CHANNEL_ID}")
     
@@ -1570,6 +1755,26 @@ def run_bot():
                             answer_callback(cb_id, "Laporan pukal berjaya dihantar ke Admin!", alert=False)
                         else:
                             answer_callback(cb_id, "Sesi laporan telah tamat tempoh.", alert=True)
+                        continue
+
+                    # 1d. Pusat Bantuan & Panduan Interaktif Pengguna
+                    if cb_data == "help_menu":
+                        is_admin = cb_chat_id in get_admin_ids()
+                        edit_message(cb_chat_id, cb_msg_id, format_welcome_message(is_admin), get_help_menu_keyboard())
+                        answer_callback(cb_id, "Menu Utama", alert=False)
+                        continue
+
+                    if cb_data.startswith("help_"):
+                        text_guide, markup = get_help_detail(cb_data)
+                        edit_message(cb_chat_id, cb_msg_id, text_guide, markup)
+                        answer_callback(cb_id, "Panduan dimuatkan", alert=False)
+                        continue
+
+                    if cb_data == "read_bulletin_now":
+                        b_text = format_scam_radar_bulletin(5)
+                        back_markup = {"inline_keyboard": [[{"text": "« Kembali ke Menu Utama", "callback_data": "help_menu"}]]}
+                        edit_message(cb_chat_id, cb_msg_id, b_text, back_markup)
+                        answer_callback(cb_id, "Buletin terkini", alert=False)
                         continue
 
                     # 2. Tindakan oleh Admin
@@ -2140,11 +2345,63 @@ def run_bot():
                     send_message(chat_id, "❌ Proses dibatalkan.")
                     continue
 
-                # Start / Bantuan
-                if text in ["/start", "/help", "start", "help", "bantuan"]:
+                # Start / Bantuan / Menu Interaktif
+                if text in ["/start", "/help", "start", "help", "bantuan", "/menu", "menu", "panduan"]:
                     user_sessions.pop(chat_id, None)
                     is_admin = chat_id in get_admin_ids()
-                    send_message(chat_id, format_welcome_message(is_admin))
+                    # Hantar menu pantas papan kekunci (Reply Keyboard) dan menu inline interaktif
+                    send_message(chat_id, format_welcome_message(is_admin), reply_markup=get_help_menu_keyboard())
+                    continue
+
+                # Butang Pantas Papan Kekunci Bawah (Quick Keyboard Buttons)
+                if text == "🔍 Semak No / Akaun":
+                    send_message(
+                        chat_id, 
+                        "🔍 *SEMAKAN NOMBOR TELEFON ATAU AKAUN BANK*\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                        "Sila taip *nombor telefon* (contoh: `0179597645`) atau *nombor akaun bank* (contoh: `112028138548`) yang ingin disemak terus ke sini:",
+                        reply_markup=MAIN_REPLY_KEYBOARD
+                    )
+                    continue
+
+                if text == "🏛️ Semakan PDRM":
+                    send_message(
+                        chat_id, 
+                        "🏛️ *SEMAKAN TERUS PORTAL PDRM CCID*\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                        "Sila taip nombor sasaran dengan arahan `/pdrm <nombor>`\n"
+                        "Contoh: `/pdrm 01121938112` atau `/pdrm 512802774281`",
+                        reply_markup=MAIN_REPLY_KEYBOARD
+                    )
+                    continue
+
+                if text == "📰 Buletin Berita Scam":
+                    bulletin = format_scam_radar_bulletin(5)
+                    send_message(chat_id, bulletin, reply_markup=MAIN_REPLY_KEYBOARD)
+                    continue
+
+                if text == "📢 Lapor Scammer":
+                    user_sessions[chat_id] = {
+                        "step": "STEP_PHONE",
+                        "user_id": chat_id,
+                        "username": username,
+                        "data": {}
+                    }
+                    send_message(
+                        chat_id,
+                        "📢 *BORANG LAPORAN SCAMMER (Langkah 1/4)*\n\n"
+                        "Sila masukkan *Nombor Telefon Scammer* yang ingin dilaporkan:\n"
+                        "_(Contoh: `01139444255` atau `+60123456789`)_\n\n"
+                        "💡 _Tip: Anda juga boleh 'main tulis saja' satu cerita penuh terus ke sini tanpa isi borang!_\n"
+                        "_(Taip /batal untuk membatalkan)_",
+                        reply_markup=MAIN_REPLY_KEYBOARD
+                    )
+                    continue
+
+                if text == "ℹ️ Menu Bantuan & Panduan":
+                    user_sessions.pop(chat_id, None)
+                    is_admin = chat_id in get_admin_ids()
+                    send_message(chat_id, format_welcome_message(is_admin), reply_markup=get_help_menu_keyboard())
                     continue
 
                 # Mula Wizard /lapor berstruktur (jika pengguna mahu langkah demi langkah)
