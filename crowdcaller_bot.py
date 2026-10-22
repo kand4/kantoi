@@ -428,8 +428,9 @@ def robust_decode_qr(image_path):
 
 def parse_qr_payload(raw_data):
     """
-    Menganalisis kandungan teks / data binari daripada kod QR.
-    Menyokong DuitNow EMVCo Kebangsaan, URL pautan perbankan/phishing, dan teks nombor.
+    Menganalisis kandungan teks / data binari daripada kod QR secara pintar.
+    Mengekstrak DuitNow EMVCo Kebangsaan, pautan web phishing/quishing,
+    muat turun fail APK malware, dan teks nombor akaun.
     """
     raw_data = raw_data.strip()
     
@@ -479,9 +480,21 @@ def parse_qr_payload(raw_data):
             'raw_payload': raw_data
         }
         
-    # 2. Kod QR Berbentuk Pautan (URL / Pembayaran Digital)
-    elif raw_data.startswith(('http://', 'https://')):
-        u = urllib.parse.urlparse(raw_data)
+    # 2. Pengesanan Pautan Web / Phishing / Quishing / APK Dropper daripada Kod QR
+    url_m = re.search(r'(https?://[^\s<>"]+|www\.[^\s<>"]+)', raw_data, re.IGNORECASE)
+    if not url_m:
+        dom_m = re.search(r'\b([a-zA-Z0-9-]+\.(?:top|xyz|vip|icu|cc|site|club|app|info|online|live|shop|cfd|buzz|gov\.my|com\.my|com|net|org)(?:/[^\s<>"]*)?)\b', raw_data, re.IGNORECASE)
+        if dom_m:
+            url_str = 'https://' + dom_m.group(1).rstrip('.,;:)')
+        else:
+            url_str = None
+    else:
+        url_str = url_m.group(0).rstrip('.,;:)')
+        if url_str.lower().startswith('www.'):
+            url_str = 'https://' + url_str
+
+    if url_str:
+        u = urllib.parse.urlparse(url_str)
         domain = u.netloc.lower()
         bank_name = 'PAUTAN_WEB'
         if 'tngdigital' in domain: bank_name = 'TNG DIGITAL'
@@ -489,7 +502,7 @@ def parse_qr_payload(raw_data):
         elif 'cimb' in domain: bank_name = 'CIMB'
         elif 'duitnow' in domain: bank_name = 'DUITNOW'
         
-        phone_match = re.search(r'(?:60|0)1[0-9]{8,9}', raw_data)
+        phone_match = re.search(r'(?:60|0)1[0-9]{8,9}', url_str)
         phone = phone_match.group(0) if phone_match else ''
         
         return {
@@ -499,23 +512,22 @@ def parse_qr_payload(raw_data):
             'bank': bank_name,
             'account_number': '',
             'proxy_phone': phone,
-            'url': raw_data,
+            'url': url_str,
             'raw_payload': raw_data
         }
         
     # 3. Kod QR Berbentuk Teks / Nombor Hubungi
-    else:
-        phone_match = re.search(r'(?:\+?60|0)[\s\-]?1[0-9][\s\-]?[0-9]{3,4}[\s\-]?[0-9]{3,5}', raw_data)
-        acc_match = re.search(r'[0-9]{8,18}', raw_data)
-        return {
-            'qr_detected': True,
-            'qr_type': 'TEKS',
-            'name': 'Kod QR Teks',
-            'bank': 'N/A',
-            'account_number': acc_match.group(0) if acc_match else '',
-            'proxy_phone': phone_match.group(0) if phone_match else '',
-            'raw_payload': raw_data
-        }
+    phone_match = re.search(r'(?:\+?60|0)[\s\-]?[1-9][0-9][\s\-]?[0-9]{3,4}[\s\-]?[0-9]{3,5}', raw_data)
+    acc_match = re.search(r'\b[0-9]{8,18}\b', raw_data)
+    return {
+        'qr_detected': True,
+        'qr_type': 'TEKS',
+        'name': 'Kod QR Teks',
+        'bank': 'N/A',
+        'account_number': acc_match.group(0) if acc_match else '',
+        'proxy_phone': phone_match.group(0) if phone_match else '',
+        'raw_payload': raw_data
+    }
 
 def decode_duitnow_qr(image_path):
     """Membaca petak kod QR secara multi-pass dan mengekstrak maklumat perbankan"""
@@ -970,6 +982,36 @@ def inspect_url_phishing(url):
         "target_brand": target_brand,
         "reasons": reasons
     }
+
+def download_url_to_temp_apk(url, max_size_mb=25):
+    """
+    Memuat turun fail APK daripada pautan web secara selamat ke dalam
+    sandbox sementara untuk analisis kebenaran trojan perbankan & C2 bot.
+    """
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-S908B)"}
+        r = requests.get(url, stream=True, timeout=12, headers=headers, verify=False)
+        if r.status_code == 200:
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".apk")
+            downloaded = 0
+            for chunk in r.iter_content(chunk_size=65536):
+                if chunk:
+                    tmp.write(chunk)
+                    downloaded += len(chunk)
+                    if downloaded > max_size_mb * 1024 * 1024:
+                        break
+            tmp.close()
+            if zipfile.is_zipfile(tmp.name):
+                return tmp.name
+            else:
+                if os.path.exists(tmp.name):
+                    try:
+                        os.unlink(tmp.name)
+                    except Exception:
+                        pass
+    except Exception as e:
+        print(f"[QUISHING APK DL ERR] {e}")
+    return None
 
 def inspect_apk_malware(apk_path, original_filename="aplikasi.apk"):
     """
@@ -2180,18 +2222,28 @@ def run_bot():
                         if rec:
                             threat_found = rec
 
-                    # d. Imbas kod QR atau imej dalam kumpulan
-                    if not threat_found and photos:
-                        tmp_img = download_telegram_photo(photos[-1]["file_id"])
+                    # d. Imbas kod QR atau imej dalam kumpulan (Quishing & Scammer Shield)
+                    if not threat_found and (photos or (doc and (doc.get("mime_type", "").startswith("image/") or (doc.get("file_name", "")).lower().endswith((".png", ".jpg", ".jpeg", ".webp"))))):
+                        target_file_id = photos[-1]["file_id"] if photos else doc["file_id"]
+                        tmp_img = download_telegram_photo(target_file_id)
                         if tmp_img:
                             try:
                                 intel = extract_hybrid_image_intel(tmp_img, GEMINI_API_KEY)
                                 if intel.get("has_intel"):
-                                    for p in intel.get("all_phones", []):
-                                        rec, _ = query_threat(p)
-                                        if rec:
-                                            threat_found = rec
-                                            break
+                                    # 1. Semak jika kod QR mengandungi pautan Phishing atau APK Dropper
+                                    qr_info = intel.get("qr_data")
+                                    if qr_info and qr_info.get("url"):
+                                        u_res = inspect_url_phishing(qr_info["url"])
+                                        if u_res["severity"] in ["CRITICAL", "HIGH"]:
+                                            threat_found = ("QUISHING_URL", qr_info["url"], u_res["verdict"], u_res["domain"])
+
+                                    # 2. Semak rekod scammer dalam pangkalan data komuniti KANTOI
+                                    if not threat_found:
+                                        for p in intel.get("all_phones", []):
+                                            rec, _ = query_threat(p)
+                                            if rec:
+                                                threat_found = rec
+                                                break
                                     if not threat_found and intel.get("account_number") and intel.get("account_number") != "N/A":
                                         rec, _ = query_threat(intel["account_number"])
                                         if rec:
@@ -2206,22 +2258,35 @@ def run_bot():
                     # Jika ancaman scammer dikesan dalam kumpulan:
                     if threat_found:
                         api_call("deleteMessage", {"chat_id": chat_id, "message_id": msg_id})
-                        warning_msg = (
-                            f"🚨 <b>PERISAI KANTOI: ANCAMAN SCAMMER DIKESAN DALAM KUMPULAN!</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"⚠️ Mesej / Imej daripada <b>@{html.escape(username)}</b> telah dipadamkan secara automatik kerana mengandungi rekod SCAMMER yang disahkan:\n\n"
-                            f"📱 <b>Nombor / Akaun:</b> <code>{threat_found[0]}</code>\n"
-                            f"👤 <b>Suspek:</b> {html.escape(threat_found[1] or 'N/A')}\n"
-                            f"🏷️ <b>Klasifikasi:</b> {html.escape(threat_found[2] or 'AMARAN')}\n"
-                            f"🏦 <b>Maklumat Bank:</b> {html.escape(threat_found[3] or 'N/A')}\n\n"
-                            f"⚠️ <i>Semua ahli kumpulan diingatkan agar TIDAK memindahkan sebarang wang atau berurusan dengan pihak ini!</i>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"🛡️ <i>KANTOI Group Sentinel Shield</i>"
-                        )
+                        if isinstance(threat_found, tuple) and threat_found[0] == "QUISHING_URL":
+                            warning_msg = (
+                                f"🚨 <b>PERISAI KANTOI: KOD QR HASAD (QUISHING / MALWARE) DIPADAMKAN!</b>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"⚠️ Mesej / Imej daripada <b>@{html.escape(username)}</b> telah dipadamkan secara automatik kerana mengandungi Kod QR berpautkan laman pancingan data (Phishing) / fail Trojan APK:\n\n"
+                                f"🔗 <b>Pautan Dikesan:</b> <code>{html.escape(threat_found[1])}</code>\n"
+                                f"🌐 <b>Domain:</b> <code>{html.escape(threat_found[3])}</code>\n"
+                                f"🏷️ <b>Klasifikasi:</b> {html.escape(threat_found[2])}\n\n"
+                                f"⚠️ <i>Semua ahli kumpulan diingatkan agar TIDAK mengimbas sebarang kod QR mencurigakan yang dihantar ke dalam kumpulan!</i>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🛡️ <i>KANTOI Group Sentinel Shield</i>"
+                            )
+                            print(f"[GROUP SENTINEL] Quishing QR dipadamkan dalam kumpulan {chat_id} daripada @{username}: {threat_found[1]}")
+                        else:
+                            warning_msg = (
+                                f"🚨 <b>PERISAI KANTOI: ANCAMAN SCAMMER DIKESAN DALAM KUMPULAN!</b>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"⚠️ Mesej / Imej daripada <b>@{html.escape(username)}</b> telah dipadamkan secara automatik kerana mengandungi rekod SCAMMER yang disahkan:\n\n"
+                                f"📱 <b>Nombor / Akaun:</b> <code>{threat_found[0]}</code>\n"
+                                f"👤 <b>Suspek:</b> {html.escape(threat_found[1] or 'N/A')}\n"
+                                f"🏷️ <b>Klasifikasi:</b> {html.escape(threat_found[2] or 'AMARAN')}\n"
+                                f"🏦 <b>Maklumat Bank:</b> {html.escape(threat_found[3] or 'N/A')}\n\n"
+                                f"⚠️ <i>Semua ahli kumpulan diingatkan agar TIDAK memindahkan sebarang wang atau berurusan dengan pihak ini!</i>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🛡️ <i>KANTOI Group Sentinel Shield</i>"
+                            )
+                            print(f"[GROUP SENTINEL] Ancaman dipadamkan dalam kumpulan {chat_id} daripada @{username}: {threat_found[0]}")
                         api_call("sendMessage", {"chat_id": chat_id, "text": warning_msg, "parse_mode": "HTML"})
-                        print(f"[GROUP SENTINEL] Ancaman dipadamkan dalam kumpulan {chat_id} daripada @{username}: {threat_found[0]}")
-                    
-                    continue
+                        continue
 
                 # ------------------------------------------------------------------
                 # MOD CHAT PERIBADI: ENJIN IMBASAN IMEJ & KOD QR HIBRID
@@ -2299,29 +2364,101 @@ def run_bot():
                             target_bank = intel.get("bank_name") or "N/A"
                             target_url = qr_data.get("url") if qr_data else ""
 
-                            # A. Jika kod QR mengandungi pautan URL / Pembayaran Digital
+                            # A. Jika kod QR mengandungi pautan URL / Pembayaran Digital / Malware Dropper
                             if target_url:
                                 res_url = inspect_url_phishing(target_url)
-                                badge = "🚨" if res_url["severity"] == "CRITICAL" else ("⚠️" if res_url["severity"] in ["HIGH", "MEDIUM"] else "✅")
+                                final_target = res_url.get("final_url", target_url)
+                                
+                                # Semak jika pautan mengarah kepada muat turun fail APK (Malware Dropper)
+                                is_apk_target = (
+                                    final_target.lower().endswith('.apk') or 
+                                    '.apk?' in final_target.lower() or 
+                                    '/apk/' in final_target.lower() or
+                                    'download' in final_target.lower()
+                                )
+
+                                tmp_apk = None
+                                apk_rep = None
+                                if is_apk_target:
+                                    api_call("sendChatAction", {"chat_id": t_chat_id, "action": "upload_document"})
+                                    tmp_apk = download_url_to_temp_apk(final_target)
+                                    if tmp_apk:
+                                        try:
+                                            fn = os.path.basename(urllib.parse.urlparse(final_target).path) or "aplikasi_kod_qr.apk"
+                                            apk_rep = inspect_apk_malware(tmp_apk, fn)
+                                        finally:
+                                            if os.path.exists(tmp_apk):
+                                                try:
+                                                    os.unlink(tmp_apk)
+                                                except Exception:
+                                                    pass
+
+                                if apk_rep and "error" not in apk_rep:
+                                    # Laporan Sandbox Quishing-to-Malware Lengkap
+                                    badge = "🚨" if apk_rep["severity"] == "CRITICAL" else ("⚠️" if apk_rep["severity"] in ["HIGH", "MEDIUM"] else "✅")
+                                    lines = [
+                                        f"{badge} <b>PERISAI KANTOI: ANCAMAN QUISHING & MALWARE APK DIKESAN DARI KOD QR!</b>",
+                                        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                                        f"🔗 <b>Pautan QR Dikesan:</b> <code>{html.escape(target_url)}</code>",
+                                        f"🌐 <b>Pelayan Muat Turun:</b> <code>{html.escape(res_url['domain'])}</code>",
+                                        f"📁 <b>Fail APK:</b> <code>{html.escape(apk_rep['filename'])}</code> ({apk_rep['size_mb']} MB)",
+                                        f"🔑 <b>Hash SHA256:</b> <code>{apk_rep['sha256'][:24]}...</code>",
+                                        "",
+                                        f"🚨 <b>KEPUTUSAN SANDBOX KANTOI:</b>",
+                                        f"<b>{html.escape(apk_rep['verdict'])}</b>",
+                                        ""
+                                    ]
+                                    if apk_rep["danger_perms"]:
+                                        lines.append("⚠️ <b>Kebenaran Berbahaya Dikesan:</b>")
+                                        for dp, desc in apk_rep["danger_perms"]:
+                                            lines.append(f"   • <code>{html.escape(dp)}</code>: {html.escape(desc)}")
+                                        lines.append("")
+                                    if apk_rep["dex_tokens"]:
+                                        lines.append(f"🤖 <b>Bot C2 Exfiltration:</b> Dikesan <code>{len(apk_rep['dex_tokens'])}</code> token Bot Telegram scammer dalam kod!")
+                                    if apk_rep["has_banking_strings"]:
+                                        lines.append("🏦 <b>Sasaran Perbankan:</b> Rentetan nama bank tempatan (Maybank/CIMB/TNG) ditemui dalam kod!")
+                                    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                                    if apk_rep["severity"] == "CRITICAL":
+                                        lines.append("🚫 <b>AMARAN KRITIKAL:</b> JANGAN PASANG fail ini! Ia mengandungi kod trojan pencuri SMS TAC/OTP untuk menceroboh akaun bank anda.")
+                                    else:
+                                        lines.append("ℹ️ <i>Dianalisis secara automatik oleh KANTOI Static Android Sandbox tanpa menjalankan kod.</i>")
+
+                                    api_call("sendMessage", {
+                                        "chat_id": t_chat_id,
+                                        "text": "\n".join(lines),
+                                        "parse_mode": "HTML"
+                                    })
+                                    return
+
+                                # Laporan Phishing / Pautan Biasa (Quishing)
+                                is_danger = res_url["severity"] in ["CRITICAL", "HIGH"]
+                                badge = "🚨" if is_danger else ("⚠️" if res_url["severity"] == "MEDIUM" else "✅")
+                                
+                                title_text = "PERISAI KANTOI: KOD QR PHISHING (QUISHING) DIKESAN!" if is_danger else "HASIL IMBASAN KOD QR: PAUTAN (URL)"
                                 lines = [
-                                    f"{badge} *HASIL IMBASAN KOD QR: PAUTAN (URL)*",
+                                    f"{badge} <b>{title_text}</b>",
                                     "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                    f"🔗 *Pautan Terkandung:* `{res_url['url']}`",
-                                    f"🌐 *Domain:* `{res_url['domain']}`",
-                                    f"🛡️ *Keputusan:* *{res_url['verdict']}*",
+                                    f"🔗 <b>Pautan Terkandung:</b> <code>{html.escape(res_url['url'])}</code>",
+                                    f"🌐 <b>Domain Pendaratan:</b> <code>{html.escape(res_url['domain'])}</code>",
+                                    f"🛡️ <b>Keputusan:</b> <b>{html.escape(res_url['verdict'])}</b>",
                                     ""
                                 ]
                                 if res_url["reasons"]:
-                                    lines.append("⚠️ *Faktor Penilaian Risiko:*")
+                                    lines.append("⚠️ <b>Faktor Penilaian Risiko:</b>")
                                     for rsn in res_url["reasons"]:
-                                        lines.append(f"   • {rsn}")
+                                        lines.append(f"   • {html.escape(rsn)}")
                                     lines.append("")
                                 lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                                if res_url["severity"] in ["CRITICAL", "HIGH"]:
-                                    lines.append("🚫 *AMARAN:* Jangan layari pautan ini atau memasukkan sebarang kata laluan/maklumat bank anda!")
+                                if is_danger:
+                                    lines.append("🚫 <b>AMARAN:</b> Ini adalah perangkap pancingan data (Quishing) untuk mencuri kata laluan atau TAC bank anda. Jangan buka pautan ini!")
                                 else:
-                                    lines.append("ℹ️ _Sentiasa pastikan domain rasmi bank atau perkhidmatan sebelum memindahkan wang._")
-                                send_message(t_chat_id, "\n".join(lines))
+                                    lines.append("ℹ️ <i>Pautan ini tidak menunjukkan sebarang ciri phishing atau penyamaran bank rasmi yang diketahui.</i>")
+
+                                api_call("sendMessage", {
+                                    "chat_id": t_chat_id,
+                                    "text": "\n".join(lines),
+                                    "parse_mode": "HTML"
+                                })
                                 return
 
                             # B. Semakan Sasaran Nombor / Akaun
