@@ -69,6 +69,7 @@ BACKUP_DB_PATH = os.path.join(BASE_DIR, "lowyat_threats.db")
 PDRM_SEMAKMULE_API = "https://semakmule.rmp.gov.my/api/mule/get_search_data.php"
 PDRM_API_KEY = "j3j389#nklala2"
 MALAYSIA_SCAM_NEWS_RSS = "https://news.google.com/rss/search?q=scam+OR+penipuan+Malaysia&hl=ms&gl=MY&ceid=MY:ms"
+GOOGLE_CSE_CX = "53a0041f2f24f4e3b"
 
 OFFICIAL_DOMAINS = {
     'maybank': ['maybank2u.com.my', 'maybank.com', 'maybank.com.my'],
@@ -1159,6 +1160,37 @@ def format_scam_radar_bulletin(limit=5):
     return "\n".join(lines)
 
 
+def generate_google_cse_url(query):
+    """
+    Menjana URL Carian Khas Google CSE mengikut konfigurasi KANTOI Android.
+    Engine ID (cx): 53a0041f2f24f4e3b
+    Format: https://cse.google.com/cse?cx=53a0041f2f24f4e3b&q={clean_query}#gsc.tab=0&gsc.q={clean_query}
+    """
+    clean_q = (str(query) if query else "").strip()
+    digits = re.sub(r'[^\d]', '', clean_q)
+    if digits.startswith("60") and len(digits) >= 10:
+        target = "0" + digits[2:]
+    elif digits and len(digits) >= 8:
+        target = digits
+    else:
+        target = clean_q
+    encoded = urllib.parse.quote(target)
+    return f"https://cse.google.com/cse?cx={GOOGLE_CSE_CX}&q={encoded}#gsc.tab=0&gsc.q={encoded}"
+
+def get_threat_check_keyboard(query_input, norm_phone=None, has_threat=False):
+    target = norm_phone if norm_phone else query_input
+    cse_url = generate_google_cse_url(target)
+    kb = [
+        [
+            {"text": "🌐 Semak Media Sosial (Google CSE)", "url": cse_url}
+        ],
+        [
+            {"text": "🏛️ Portal PDRM SemakMule", "url": "https://semakmule.rmp.gov.my"},
+            {"text": "📰 Buletin Scam", "callback_data": "read_bulletin_now"}
+        ]
+    ]
+    return {"inline_keyboard": kb}
+
 # ==============================================================================
 # FORMATTER MESEJ
 # ==============================================================================
@@ -1202,7 +1234,10 @@ def format_threat_response(record, query_input):
         lines.append(format_syndicate_badge(cluster))
 
     lines.append("--------------------------------------------------")
-    lines.append("ℹ️ _Disemak daripada KANTOI Threat Engine (3,729+ Rekod)._")
+    lines.append("🌐 *Semakan Media Sosial & Forum (Google CSE):*")
+    lines.append("• _Ketik butang di bawah untuk membuka carian perbincangan forum Lowyat, CariGold, Facebook, X & TikTok._")
+    lines.append("--------------------------------------------------")
+    lines.append("ℹ️ _Disemak daripada KANTOI Threat Engine (4,700+ Rekod)._")
     lines.append("📲 _Gunakan aplikasi KANTOI untuk perlindungan panggilan & SMS masa nyata._")
     return "\n".join(lines)
 
@@ -1249,6 +1284,9 @@ def format_safe_response(query_input, norm_phone):
         "• Jangan sesekali berkongsi kata laluan, TAC/OTP, atau memindahkan wang ke akaun peribadi yang tidak dikenali.",
         "• Anda boleh melaporkan nombor ini dengan menaip cerita/bukti kejadian jika mengesyaki penipuan.",
         "--------------------------------------------------",
+        "🌐 *Semakan Media Sosial & Forum (Google CSE):*",
+        "• _Ingin menyemak jika nombor/akaun ini pernah diadu di Lowyat, CariGold, Facebook atau X? Ketik butang Google CSE di bawah._",
+        "--------------------------------------------------",
         "ℹ️ _Pangkalan Data KANTOI merangkumi rekod PDRM SemakMule CCID & Komuniti._"
     ])
     return "\n".join(lines)
@@ -1262,6 +1300,7 @@ def format_welcome_message(is_admin=False):
         "💡 *PILIHAN PANTAS:* Tekan mana-mana butang di bawah untuk membuka panduan terperinci bagi setiap fungsi bot:\n\n"
         "• 🔍 *Semakan No/Bank:* Semak nombor & kesan sindiket\n"
         "• 🏛️ *PDRM CCID:* Semakan aduan polis rasmi secara live\n"
+        "• 🌐 *Media Sosial (CSE):* Carian aduan di Lowyat, CariGold & FB\n"
         "• 📸 *QR DuitNow & Resit:* Ekstrak data terus dari gambar\n"
         "• 🔗 *Phishing URL:* Kesan laman bank & STR palsu\n"
         "• 📦 *Malware APK:* Sandbox trojan pencuri SMS TAC\n"
@@ -1279,8 +1318,8 @@ def format_welcome_message(is_admin=False):
 MAIN_REPLY_KEYBOARD = {
     "keyboard": [
         [{"text": "🔍 Semak No / Akaun"}, {"text": "🏛️ Semakan PDRM"}],
-        [{"text": "📰 Buletin Berita Scam"}, {"text": "📢 Lapor Scammer"}],
-        [{"text": "ℹ️ Menu Bantuan & Panduan"}]
+        [{"text": "🌐 Carian Media Sosial"}, {"text": "📰 Buletin Berita Scam"}],
+        [{"text": "📢 Lapor Scammer"}, {"text": "ℹ️ Menu Bantuan & Panduan"}]
     ],
     "resize_keyboard": True,
     "is_persistent": True
@@ -1294,15 +1333,18 @@ def get_help_menu_keyboard():
                 {"text": "🏛️ Semakan PDRM CCID", "callback_data": "help_pdrm"}
             ],
             [
-                {"text": "📸 Imbas QR & Resit", "callback_data": "help_vision"},
-                {"text": "🔗 Semak Pautan (URL)", "callback_data": "help_url"}
+                {"text": "🌐 Carian Medsos (Google CSE)", "callback_data": "help_cse"},
+                {"text": "📸 Imbas QR & Resit", "callback_data": "help_vision"}
             ],
             [
-                {"text": "📦 Sandbox APK Malware", "callback_data": "help_apk"},
-                {"text": "📢 Cara Lapor Scammer", "callback_data": "help_report"}
+                {"text": "🔗 Semak Pautan (URL)", "callback_data": "help_url"},
+                {"text": "📦 Sandbox APK Malware", "callback_data": "help_apk"}
             ],
             [
-                {"text": "📰 Buletin Berita Scam", "callback_data": "help_bulletin"},
+                {"text": "📢 Cara Lapor Scammer", "callback_data": "help_report"},
+                {"text": "📰 Buletin Berita Scam", "callback_data": "help_bulletin"}
+            ],
+            [
                 {"text": "🛡️ Penjaga Group", "callback_data": "help_group"}
             ]
         ]
@@ -1328,7 +1370,7 @@ def get_help_detail(topic):
             "• `112028138548` (Akaun Maybank)\n"
             "• `7056210969` (Akaun CIMB)\n\n"
             "🛡️ *Enjin KANTOI akan automatik:*\n"
-            "1. Menyemak pangkalan data komuniti KANTOI (3,729+ rekod).\n"
+            "1. Menyemak pangkalan data komuniti KANTOI (4,700+ rekod).\n"
             "2. Mengesan rangkaian sindiket (Cluster Matching).\n"
             "3. Menyemak portal rasmi PDRM SemakMule CCID secara langsung!"
         )
@@ -1350,6 +1392,33 @@ def get_help_detail(topic):
             "• Jumlah carian awam yang pernah dibuat di portal PDRM."
         )
         return text, back_button
+
+    elif topic == "help_cse":
+        text = (
+            "🌐 *PANDUAN CARIAN PERTIKAIAN MEDIA SOSIAL (GOOGLE CSE)*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "Ciri berkuasa yang diadaptasi terus daripada enjin carian khas aplikasi KANTOI!\n\n"
+            "Enjin Google CSE (Custom Search Engine ID: `53a0041f2f24f4e3b`) telah diprogramkan khusus untuk menyaring rekod penipuan dan pertikaian transaksi di platform utama Malaysia:\n\n"
+            "• 🔴 *Forum Lowyat* (Aduan Kopitiam & Trade Zone Dispute)\n"
+            "• 🟡 *Forum CariGold* (Pendedahan Scammer & Skim Cepat Kaya)\n"
+            "• 🔵 *Facebook & Kumpulan Komuniti Anti-Scam*\n"
+            "• ⚫ *Twitter / X & Thread Pendedahan Scammer*\n"
+            "• 📱 *TikTok & Laporan Transaksi Bank Meragukan*\n"
+            "• 📝 *Blog-blog & Portal Jenayah Siber Tempatan*\n\n"
+            "💡 *Cara Penggunaan:*\n"
+            "Gunakan arahan `/cse` atau `/social` diikuti nombor atau nama sasaran:\n"
+            "• `/cse 0179597645`\n"
+            "• `/cse 112028138548`\n"
+            "• `/social scammer pakej umrah`\n\n"
+            "Setiap hasil carian biasa atau imbasan QR juga akan automatik disertakan butang terus ke Google CSE!"
+        )
+        cse_kb = {
+            "inline_keyboard": [
+                [{"text": "🌐 Uji Carian Google CSE", "url": generate_google_cse_url("0179597645")}],
+                [{"text": "« Kembali ke Menu Utama", "callback_data": "help_menu"}]
+            ]
+        }
+        return text, cse_kb
 
     elif topic == "help_vision":
         text = (
@@ -1454,6 +1523,7 @@ def register_bot_commands():
         {"command": "help", "description": "Pusat Bantuan & Panduan Interaktif"},
         {"command": "semak", "description": "Semak no telefon atau akaun bank"},
         {"command": "pdrm", "description": "Semakan terus portal rasmi PDRM CCID"},
+        {"command": "cse", "description": "Carian media sosial & forum (Google CSE)"},
         {"command": "url", "description": "Semak pautan phishing & bank palsu"},
         {"command": "buletin", "description": "Berita kes penipuan terkini di Malaysia"},
         {"command": "lapor", "description": "Borang aduan scammer langkah demi langkah"},
@@ -2058,7 +2128,8 @@ def run_bot():
                                 "message_text": text_body,
                                 "parse_mode": "Markdown",
                                 "disable_web_page_preview": True
-                            }
+                            },
+                            "reply_markup": get_threat_check_keyboard(q, norm, has_threat=bool(rec))
                         }]
                         try:
                             requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerInlineQuery",
@@ -2108,13 +2179,44 @@ def run_bot():
                             rec, norm = query_threat(query)
                             if rec:
                                 reply = format_threat_response(rec, query)
+                                markup = get_threat_check_keyboard(query, norm, has_threat=True)
                             else:
                                 reply = format_safe_response(query, norm)
+                                markup = get_threat_check_keyboard(query, norm, has_threat=False)
                             api_call("sendMessage", {
                                 "chat_id": chat_id,
                                 "text": reply,
                                 "parse_mode": "Markdown",
-                                "reply_to_message_id": msg_id
+                                "reply_to_message_id": msg_id,
+                                "reply_markup": markup
+                            })
+                        continue
+
+                    if text.startswith(("/cse", "/social")):
+                        parts = text.split(maxsplit=1)
+                        target = parts[1].strip() if len(parts) > 1 else ""
+                        if target:
+                            cse_url = generate_google_cse_url(target)
+                            reply = (
+                                "🌐 <b>CARIAN PERTIKAIAN MEDIA SOSIAL (GOOGLE CSE)</b>\n"
+                                "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🔍 <b>Sasaran Carian:</b> <code>{html.escape(target)}</code>\n"
+                                "📚 <b>Sumber Liputan:</b> Forum Lowyat, CariGold, Facebook, Twitter/X, Telegram, TikTok & Blogspot.\n"
+                                "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                "Ketik butang di bawah untuk membuka carian pertikaian komuniti terus di Telegram:"
+                            )
+                            markup = {
+                                "inline_keyboard": [
+                                    [{"text": "🌐 Buka Google CSE KANTOI", "url": cse_url}],
+                                    [{"text": "🏛️ Portal PDRM CCID", "url": "https://semakmule.rmp.gov.my"}]
+                                ]
+                            }
+                            api_call("sendMessage", {
+                                "chat_id": chat_id,
+                                "text": reply,
+                                "parse_mode": "HTML",
+                                "reply_to_message_id": msg_id,
+                                "reply_markup": markup
                             })
                         continue
 
@@ -2521,9 +2623,11 @@ def run_bot():
                                 warn_lines.append("🚫 <b>AMARAN:</b> Akaun ini mempunyai rekod jenayah penipuan. JANGAN PINDAHKAN SEBARANG WANG!")
 
                                 is_admin_sender = t_chat_id in get_admin_ids()
+                                cse_btn = {"text": "🌐 Semak Media Sosial (Google CSE)", "url": generate_google_cse_url(check_target or target_name)}
                                 if is_admin_sender:
                                     markup = {
                                         "inline_keyboard": [
+                                            [cse_btn],
                                             [
                                                 {"text": "⚡ Luluskan & Siar Terus", "callback_data": f"cfrm_direct_{tmp_id}"},
                                                 {"text": "❌ Batal", "callback_data": f"cncl_{tmp_id}"}
@@ -2533,6 +2637,7 @@ def run_bot():
                                 else:
                                     markup = {
                                         "inline_keyboard": [
+                                            [cse_btn],
                                             [
                                                 {"text": "📢 Tambah Aduan Saya", "callback_data": f"repqr_{tmp_id}"},
                                                 {"text": "❌ Batal", "callback_data": f"cncl_{tmp_id}"}
@@ -2557,13 +2662,15 @@ def run_bot():
                                     "",
                                     f"🏛️ <b>PDRM SemakMule CCID:</b> <b>Tiada Laporan Polis (0 Rekod)</b>",
                                     f"👥 <b>Jumlah Carian Awam PDRM:</b> {pdrm_searches} Kali",
-                                    f"🛡️ <b>Pangkalan Data KANTOI:</b> <b>Rekod Bersih (3,729+ Senarai)</b>",
+                                    f"🛡️ <b>Pangkalan Data KANTOI:</b> <b>Rekod Bersih (4,700+ Senarai)</b>",
                                     "━━━━━━━━━━━━━━━━━━━━━━━━━━",
                                     "ℹ️ <i>Buat masa ini tiada rekod aduan rasmi difailkan terhadap akaun ini.</i>\n",
                                     "💡 <i>Sekiranya anda merupakan mangsa penipuan individu ini, sila tekan butang di bawah untuk menghantar aduan:</i>"
                                 ]
+                                cse_btn_clean = {"text": "🌐 Semak Media Sosial (Google CSE)", "url": generate_google_cse_url(check_target or target_name)}
                                 markup = {
                                     "inline_keyboard": [
+                                        [cse_btn_clean],
                                         [
                                             {"text": "📢 Lapor Sebagai Scammer", "callback_data": f"repqr_{tmp_id}"},
                                             {"text": "ℹ️ Menu Utama", "callback_data": "help_menu"}
@@ -2679,6 +2786,61 @@ def run_bot():
                     continue
 
                 # ------------------------------------------------------------------
+                # MOD CHAT PERIBADI: SEMAKAN MANUAL /SEMAK & /CHECK
+                # ------------------------------------------------------------------
+                if text.startswith(("/semak", "/check", "/kantoi")):
+                    parts = text.split(maxsplit=1)
+                    if len(parts) > 1 and parts[1].strip():
+                        target = parts[1].strip()
+                        rec, norm = query_threat(target)
+                        if rec:
+                            reply = format_threat_response(rec, target)
+                            markup = get_threat_check_keyboard(target, norm, has_threat=True)
+                        else:
+                            reply = format_safe_response(target, norm)
+                            markup = get_threat_check_keyboard(target, norm, has_threat=False)
+                        send_message(chat_id, reply, reply_markup=markup)
+                        continue
+                    else:
+                        send_message(chat_id, "ℹ️ Format semakan: `/semak <nombor_telefon_atau_akaun_bank>`\nContoh: `/semak 0179597645`")
+                        continue
+
+                # ------------------------------------------------------------------
+                # MOD CHAT PERIBADI: CARIAN MEDIA SOSIAL GOOGLE CSE (KANTOI ENGINE)
+                # ------------------------------------------------------------------
+                if text.startswith(("/cse", "/social")):
+                    parts = text.split(maxsplit=1)
+                    if len(parts) > 1 and parts[1].strip():
+                        target = parts[1].strip()
+                        cse_url = generate_google_cse_url(target)
+                        reply = (
+                            "🌐 *CARIAN PERTIKAIAN MEDIA SOSIAL (GOOGLE CSE)*\n"
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"🔍 *Sasaran Carian:* `{target}`\n"
+                            "📚 *Sumber Liputan:* Forum Lowyat, CariGold, Facebook, Twitter/X, Telegram, TikTok & Blogspot.\n"
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            "Enjin Carian Google CSE KANTOI membolehkan anda mencari sebarang aduan mangsa, resit transaksi meragukan, atau perbincangan forum yang membabitkan nombor atau akaun ini.\n\n"
+                            "👇 *Ketik butang di bawah untuk membuka carian terus di Telegram:*"
+                        )
+                        markup = {
+                            "inline_keyboard": [
+                                [{"text": "🌐 BUKA GOOGLE CSE KANTOI 🌐", "url": cse_url}],
+                                [
+                                    {"text": "🏛️ Portal PDRM CCID", "url": "https://semakmule.rmp.gov.my"},
+                                    {"text": "📰 Buletin Berita Scam", "callback_data": "read_bulletin_now"}
+                                ]
+                            ]
+                        }
+                        send_message(chat_id, reply, reply_markup=markup)
+                        continue
+                    else:
+                        send_message(
+                            chat_id,
+                            "ℹ️ *Format Carian Media Sosial:*\n`/cse <nombor_telefon_atau_akaun_bank>`\n\nContoh:\n• `/cse 0179597645`\n• `/cse 112028138548`\n• `/social scammer pakej umrah`"
+                        )
+                        continue
+
+                # ------------------------------------------------------------------
                 # MOD CHAT PERIBADI: SEMAKAN LANGSUNG PDRM CCID (IDEA 4)
                 # ------------------------------------------------------------------
                 if text.startswith(("/pdrm", "/semakmule")):
@@ -2788,6 +2950,18 @@ def run_bot():
                         "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                         "Sila taip nombor sasaran dengan arahan `/pdrm <nombor>`\n"
                         "Contoh: `/pdrm 01121938112` atau `/pdrm 512802774281`",
+                        reply_markup=MAIN_REPLY_KEYBOARD
+                    )
+                    continue
+
+                if text == "🌐 Carian Media Sosial":
+                    send_message(
+                        chat_id,
+                        "🌐 *CARIAN PERTIKAIAN MEDIA SOSIAL (GOOGLE CSE)*\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                        "Sila taip nombor telefon atau akaun bank dengan arahan `/cse <nombor>`\n"
+                        "Contoh: `/cse 0179597645` atau `/cse 112028138548`\n\n"
+                        "💡 _Enjin Google CSE KANTOI menyaring perbincangan di Lowyat, CariGold, Facebook, Twitter/X dan TikTok secara automatik._",
                         reply_markup=MAIN_REPLY_KEYBOARD
                     )
                     continue
@@ -3047,11 +3221,11 @@ def run_bot():
                 if record:
                     reply = format_threat_response(record, text)
                     print(f"[HIT] Rekod scammer dijumpai untuk: {text} -> {record[1]}")
+                    send_message(chat_id, reply, reply_markup=get_threat_check_keyboard(text, norm_phone, has_threat=True))
                 else:
                     reply = format_safe_response(text, norm_phone)
                     print(f"[CLEAN] Tiada rekod untuk: {text}")
-
-                send_message(chat_id, reply)
+                    send_message(chat_id, reply, reply_markup=get_threat_check_keyboard(text, norm_phone, has_threat=False))
 
         except requests.exceptions.RequestException:
             time.sleep(3)
