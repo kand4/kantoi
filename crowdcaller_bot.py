@@ -23,6 +23,14 @@ import html
 import base64
 import subprocess
 import tempfile
+import hashlib
+import zipfile
+import datetime
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 try:
     from PIL import Image
@@ -57,6 +65,36 @@ DB_PATH = os.path.join(BASE_DIR, "kantoi_threats.db")
 if not os.path.exists(DB_PATH):
     DB_PATH = os.path.join(BASE_DIR, "KantoiApp", "assets", "kantoi_threats.db")
 BACKUP_DB_PATH = os.path.join(BASE_DIR, "lowyat_threats.db")
+
+PDRM_SEMAKMULE_API = "https://semakmule.rmp.gov.my/api/mule/get_search_data.php"
+PDRM_API_KEY = "j3j389#nklala2"
+MALAYSIA_SCAM_NEWS_RSS = "https://news.google.com/rss/search?q=scam+OR+penipuan+Malaysia&hl=ms&gl=MY&ceid=MY:ms"
+
+OFFICIAL_DOMAINS = {
+    'maybank': ['maybank2u.com.my', 'maybank.com', 'maybank.com.my'],
+    'cimb': ['cimbclicks.com.my', 'cimb.com', 'cimb.com.my'],
+    'publicbank': ['pbebank.com', 'publicbank.com.my'],
+    'rhb': ['rhbgroup.com', 'rhbtradesmart.com'],
+    'bankislam': ['bankislam.com', 'bankislam.biz'],
+    'hongleong': ['hlb.com.my', 'hongleongconnect.my'],
+    'ambank': ['ambank.com.my', 'ambankspot.com'],
+    'affin': ['affinonline.com', 'affinbank.com.my'],
+    'bsn': ['mybsn.com.my', 'bsn.com.my'],
+    'tng': ['touchngo.com.my', 'tngdigital.com.my'],
+    'gxbank': ['gxbank.my'],
+    'bigpay': ['bigpayme.com']
+}
+
+SUSPICIOUS_TLDS = {
+    '.top', '.xyz', '.vip', '.icu', '.tk', '.ml', '.ga', '.cf', '.gq', 
+    '.buzz', '.work', '.click', '.rest', '.fit', '.online', '.site', 
+    '.cc', '.space', '.pw', '.club', '.link', '.live', '.monster', '.cfd'
+}
+
+GOV_KEYWORDS = [
+    'str', 'bantuan', 'sumbangan', 'tunai', 'ebpn', 'mykasih', 'ekasih', 
+    'madani', 'kwsp', 'saman', 'jpj', 'mysejahtera', 'padu', 'pakej-5g'
+]
 
 ADMIN_CONFIG_PATH = os.path.join(BASE_DIR, "admin_config.json")
 REPORTS_DATA_PATH = os.path.join(BASE_DIR, "pending_reports.json")
@@ -570,6 +608,350 @@ def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, so
             print(f"[SQLITE ERR] Gagal simpan ke {db}: {e}")
 
 # ==============================================================================
+# MOD PENGENALPASTIAN SINDIKET & CLUSTER (IDEA 1)
+# ==============================================================================
+def find_syndicate_cluster(db_path, query_input, norm_phone=None, suspect_name=None, bank_accounts=None):
+    """
+    Mengesan rangkaian sindiket (cluster) melalui pertindihan akaun bank keldai,
+    nama suspek yang sama, atau nombor telefon bersiri.
+    """
+    if not os.path.exists(db_path):
+        return {"is_syndicate": False, "cluster_count": 0, "matched_items": []}
+        
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    
+    target_accounts = []
+    if bank_accounts and bank_accounts != "N/A":
+        target_accounts = [m for m in re.findall(r'\b\d{8,18}\b', bank_accounts)]
+        
+    clean_name = ""
+    if suspect_name and suspect_name not in ["N/A", "Tidak Dinyatakan", "Scammer", "Penyewa Akaun", "Komuniti"] and len(suspect_name.strip()) >= 4:
+        clean_name = suspect_name.strip().split("|")[0].strip()
+        if len(clean_name) < 4:
+            clean_name = ""
+
+    matched_rows = []
+    seen_phones = set()
+    if norm_phone:
+        seen_phones.add(norm_phone)
+    if query_input:
+        seen_phones.add(query_input)
+
+    # 1. Carian melalui Akaun Bank yang sama (Mule Account Sharing)
+    for acc in target_accounts:
+        cur.execute("SELECT phone_norm, suspect_name, risk_tag, bank_accounts, all_phones FROM threat_numbers WHERE bank_accounts LIKE ? LIMIT 10", (f"%{acc}%",))
+        for r in cur.fetchall():
+            if r[0] not in seen_phones:
+                seen_phones.add(r[0])
+                matched_rows.append(("Akaun Bank Sama", acc, r))
+
+    # 2. Carian melalui Nama Suspek yang sama
+    if clean_name:
+        cur.execute("SELECT phone_norm, suspect_name, risk_tag, bank_accounts, all_phones FROM threat_numbers WHERE suspect_name LIKE ? LIMIT 10", (f"%{clean_name}%",))
+        for r in cur.fetchall():
+            if r[0] not in seen_phones:
+                seen_phones.add(r[0])
+                matched_rows.append(("Nama Suspek Sama", clean_name, r))
+
+    conn.close()
+    return {
+        "is_syndicate": len(matched_rows) > 0,
+        "cluster_count": len(matched_rows),
+        "matched_items": matched_rows
+    }
+
+def format_syndicate_badge(cluster_info):
+    """Menjana lencana risikan sindiket dalam balasan amaran"""
+    if not cluster_info or not cluster_info.get("is_syndicate"):
+        return ""
+        
+    count = cluster_info["cluster_count"]
+    lines = [
+        "",
+        "🕸️ *RANGKAIAN SINDIKET DIKESAN (Cluster Intelligence)*",
+        f"⚠️ _Nombor ini berkait rapat dengan *{count}* rekod scammer lain dalam pangkalan data!_",
+        "👥 *Rangkaian Terhubung:*"
+    ]
+    for reason, key, r in cluster_info["matched_items"][:4]:
+        p_num = r[0]
+        s_name = r[1] or "Suspek"
+        lines.append(f"   • `{p_num}` ({s_name[:20]}) — _{reason}: {key}_")
+    if count > 4:
+        lines.append(f"   • _...dan {count - 4} nombor proxy lain._")
+    lines.append("🚨 *Petunjuk:* Operasi sindiket terancang yang berkongsi akaun keldai / profil.")
+    return "\n".join(lines)
+
+
+# ==============================================================================
+# SEMAKAN SIAP-SEDIA SEMAKMULE PDRM CCID SECARA LANGSUNG (IDEA 4)
+# ==============================================================================
+def query_pdrm_semakmule_live(category, value):
+    """
+    Menyemak rekod aduan rasmi secara langsung di portal PDRM CCID SemakMule
+    """
+    clean_val = re.sub(r'[^\d]', '', str(value))
+    if not clean_val or len(clean_val) < 6:
+        return {"success": False, "police_reports": 0, "search_count": 0, "has_record": False}
+        
+    cat_param = "bank" if category == "bank" else "telefon"
+    payload = {
+        "data": {
+            "category": cat_param,
+            "telNo": clean_val if cat_param == "telefon" else "",
+            "bankAccount": clean_val if cat_param == "bank" else "",
+            "companyName": ""
+        }
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+        "apikey": PDRM_API_KEY,
+        "Content-Type": "application/json"
+    }
+    try:
+        r = requests.post(PDRM_SEMAKMULE_API, json=payload, headers=headers, verify=False, timeout=6)
+        if r.status_code == 200:
+            data = r.json()
+            table_data = data.get("table_data", [])
+            police_reports = 0
+            if table_data and len(table_data) > 0 and len(table_data[0]) > 1:
+                try:
+                    police_reports = int(table_data[0][1])
+                except (ValueError, TypeError):
+                    police_reports = 1
+            search_count = data.get("count", 0)
+            return {
+                "success": True,
+                "category": cat_param,
+                "value": clean_val,
+                "police_reports": police_reports,
+                "search_count": search_count,
+                "has_record": police_reports > 0
+            }
+    except Exception as e:
+        print(f"[PDRM LIVE ERR] {e}")
+    return {"success": False, "police_reports": 0, "search_count": 0, "has_record": False}
+
+
+# ==============================================================================
+# SEMAKAN PAUTAN PHISHING & SANDBOX MALWARE APK (IDEA 3)
+# ==============================================================================
+def inspect_url_phishing(url):
+    """
+    Menganalisis pautan web untuk mengesan pancingan data (Phishing) perbankan & bantuan palsu
+    """
+    final_url = url
+    try:
+        parsed_init = urllib.parse.urlparse(url)
+        host_init = (parsed_init.hostname or "").lower()
+        shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'is.gd', 'cutt.ly', 'rb.gy', 'wa.me', 't.me']
+        if any(host_init == s or host_init.endswith('.' + s) for s in shorteners):
+            r = requests.head(url, allow_redirects=True, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+            final_url = r.url
+    except Exception:
+        pass
+
+    parsed = urllib.parse.urlparse(final_url)
+    hostname = (parsed.hostname or '').lower()
+    path = parsed.path.lower()
+    
+    reasons = []
+    verdict = "BERSIH / TIADA INDIKATOR PHISHING"
+    severity = "INFO"
+    target_brand = ""
+
+    # Semak penyamaran jenama bank rasmi
+    for brand, legits in OFFICIAL_DOMAINS.items():
+        if brand in hostname:
+            if not any(hostname == leg or hostname.endswith('.' + leg) for leg in legits):
+                verdict = f"BAHAYA - LAMAN PERBANKAN PALSU (PHISHING {brand.upper()})!"
+                severity = "CRITICAL"
+                target_brand = brand.upper()
+                reasons.append(f"Menyamar sebagai perbankan rasmi {brand.upper()} menggunakan domain luar: `{hostname}`")
+                break
+
+    # Semak umpan bantuan kerajaan / subsidi
+    if severity != "CRITICAL":
+        for kw in GOV_KEYWORDS:
+            if kw in hostname or kw in path:
+                if not (hostname.endswith('.gov.my') or hostname.endswith('.my')):
+                    verdict = "RISIKO TINGGI - PANCINGAN BANTUAN KERAJAAN / APLIKASI PALSU"
+                    severity = "HIGH"
+                    target_brand = f"Bantuan Kerajaan ({kw.upper()})"
+                    reasons.append(f"Menggunakan kata kunci bantuan (`{kw}`) tanpa pengesahan domain rasmi `.gov.my`")
+                    break
+
+    # Semak akhiran domain berisiko tinggi
+    for tld in SUSPICIOUS_TLDS:
+        if hostname.endswith(tld):
+            reasons.append(f"Menggunakan akhiran domain risiko tinggi sindiket (`{tld}`)")
+            if severity == "INFO":
+                severity = "MEDIUM"
+                verdict = "MENCURIGAKAN - DOMAIN RISIKO TINGGI"
+
+    # Semak muat turun APK terus
+    if path.endswith('.apk'):
+        reasons.append("Pautan memuat turun fail aplikasi Android (`.apk`) secara terus dari web tidak sah!")
+        verdict = "AMARAN - PAUTAN DROPPER MALWARE APK"
+        severity = "CRITICAL"
+
+    return {
+        "url": url,
+        "final_url": final_url,
+        "domain": hostname,
+        "verdict": verdict,
+        "severity": severity,
+        "target_brand": target_brand,
+        "reasons": reasons
+    }
+
+def inspect_apk_malware(apk_path, original_filename="aplikasi.apk"):
+    """
+    Sandbox Statik KANTOI: Menganalisis fail APK untuk kebenaran trojan perbankan,
+    pencurian SMS OTP, dan rentetan bot C2 tanpa perlu memasang aplikasi.
+    """
+    if not os.path.exists(apk_path):
+        return {"error": "Fail tidak ditemui."}
+
+    file_size_mb = os.path.getsize(apk_path) / (1024 * 1024)
+    with open(apk_path, "rb") as f:
+        sha256 = hashlib.sha256(f.read()).hexdigest()
+
+    perms = set()
+    dex_tokens = []
+    has_banking_strings = False
+    
+    try:
+        with zipfile.ZipFile(apk_path, "r") as zf:
+            namelist = zf.namelist()
+            manifest_raw = b""
+            if "AndroidManifest.xml" in namelist:
+                manifest_raw = zf.read("AndroidManifest.xml")
+                
+                # Ekstrak permissions daripada string pool binary AXML (UTF-8 dan UTF-16LE)
+                for m in re.finditer(rb'permission\.([A-Za-z0-9_]+)', manifest_raw):
+                    perms.add(m.group(1).decode("utf-8", errors="ignore"))
+                for m in re.finditer(rb'p\x00e\x00r\x00m\x00i\x00s\x00s\x00i\x00o\x00n\x00\.\x00([A-Za-z0-9_\x00]+)', manifest_raw):
+                    raw_str = m.group(1).replace(b"\x00", b"").decode("utf-8", errors="ignore")
+                    p_name = re.match(r'^[A-Za-z0-9_]+', raw_str)
+                    if p_name:
+                        perms.add(p_name.group(0))
+
+            # Imbas rentetan DEX untuk token Bot Telegram atau sasaran bank
+            for name in namelist:
+                if name.endswith(".dex"):
+                    dex_data = zf.read(name)
+                    found_tokens = re.findall(rb'bot[0-9]{8,10}:[A-Za-z0-9_-]{35}', dex_data)
+                    if found_tokens:
+                        dex_tokens.extend([t.decode("utf-8", errors="ignore") for t in found_tokens])
+                    if any(b in dex_data for b in [b'com.maybank2u', b'com.cimb', b'touchngo', b'my.com.tngdigital']):
+                        has_banking_strings = True
+    except Exception as e:
+        return {"error": f"Gagal membaca arkib APK: {e}"}
+
+    danger_perms = []
+    high_risk_list = {
+        "RECEIVE_SMS": "Membaca mesej SMS masuk secara langsung (Pintasan TAC/OTP)",
+        "READ_SMS": "Membaca peti masuk SMS peribadi (Kecurian TAC/OTP)",
+        "SEND_SMS": "Menghantar mesej SMS tanpa pengetahuan mangsa",
+        "BIND_ACCESSIBILITY_SERVICE": "Kawalan Skrin Penuh (Accessibility Service / Keylogger)",
+        "SYSTEM_ALERT_WINDOW": "Paparan Bertindih Skrin (Overlay palsu login bank)",
+        "REQUEST_INSTALL_PACKAGES": "Memasang aplikasi luar secara senyap (Dropper)",
+        "RECORD_AUDIO": "Intipan Mikrofon / Rakaman Suara",
+        "READ_CONTACTS": "Mengekstrak senarai kenalan buku telefon"
+    }
+    
+    for p, desc in high_risk_list.items():
+        if p in perms:
+            danger_perms.append((p, desc))
+
+    # Tentukan Tahap Ancaman
+    verdict = "APLIKASI BIASA / BERSIH"
+    severity = "INFO"
+
+    if (any(p in perms for p in ["RECEIVE_SMS", "READ_SMS"]) and 
+        any(p in perms for p in ["BIND_ACCESSIBILITY_SERVICE", "SYSTEM_ALERT_WINDOW"])):
+        verdict = "🚨 BAHAYA KRITIKAL: DISAHKAN TROJAN PERBANKAN (BANKING MALWARE)!"
+        severity = "CRITICAL"
+    elif any(p in perms for p in ["RECEIVE_SMS", "READ_SMS", "BIND_ACCESSIBILITY_SERVICE"]):
+        verdict = "⚠️ RISIKO TINGGI: DISYAKI PENCURI SMS TAC / SPYWARE"
+        severity = "HIGH"
+    elif danger_perms:
+        verdict = "⚠️ AMARAN: APLIKASI MEMINTA KEBENARAN BERISIKO TINGGI"
+        severity = "MEDIUM"
+
+    return {
+        "filename": original_filename,
+        "size_mb": round(file_size_mb, 2),
+        "sha256": sha256,
+        "danger_perms": danger_perms,
+        "all_permissions": sorted(list(perms)),
+        "dex_tokens": list(set(dex_tokens)),
+        "has_banking_strings": has_banking_strings,
+        "verdict": verdict,
+        "severity": severity
+    }
+
+
+# ==============================================================================
+# BULETIN RADAR ANCAMAN HARIAN DARI SUMBER BERITA UTAMA (IDEA 6)
+# ==============================================================================
+def fetch_malaysia_scam_news(limit=5):
+    """
+    Mengambil suapan berita kes penipuan & jenayah siber Malaysia terkini
+    daripada sumber berita utama (Berita Harian, Astro Awani, Harian Metro, dsb)
+    """
+    req = urllib.request.Request(MALAYSIA_SCAM_NEWS_RSS, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            root = ET.fromstring(resp.read())
+        items = root.findall("./channel/item")
+        articles = []
+        for it in items[:limit]:
+            title = it.find("title").text if it.find("title") is not None else "Kes Penipuan Terkini"
+            link = it.find("link").text if it.find("link") is not None else ""
+            pub_date = it.find("pubDate").text if it.find("pubDate") is not None else ""
+            source_el = it.find("source")
+            source = source_el.text if source_el is not None else "Media Utama"
+            
+            clean_title = re.sub(r'\s*-\s*[^-]+$', '', title).strip()
+            articles.append({
+                "title": clean_title,
+                "source": source,
+                "link": link,
+                "date": pub_date[:16]
+            })
+        return articles
+    except Exception as e:
+        print(f"[NEWS ERR] {e}")
+        return []
+
+def format_scam_radar_bulletin(limit=5):
+    """Menjana teks buletin berita jenayah siber harian untuk tatapan pengguna"""
+    news = fetch_malaysia_scam_news(limit)
+    today_str = datetime.datetime.now().strftime("%d %B %Y")
+    
+    lines = [
+        "📰 *BULETIN RADAR ANCAMAN SIBER & SCAM MALAYSIA*",
+        f"📅 *Tarikh:* {today_str}",
+        "📡 *Sumber Liputan:* _Berita Harian, Astro Awani, Harian Metro, Bernama, TV3_",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    ]
+    
+    if not news:
+        lines.append("⚠️ _Tiada berita baharu dapat dimuat turun buat masa ini._")
+    else:
+        for idx, a in enumerate(news, 1):
+            lines.append(f"*{idx}. [{a['source']}]* {a['title']}")
+            if a.get('link'):
+                lines.append(f"   🔗 [Baca Penuh di Sini]({a['link']})\n")
+                
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("💡 *Peringatan KANTOI:* _Jangan sesekali klik pautan tidak sah atau melayan panggilan individu mencurigakan. Laporkan nombor scammer terus kepada @crowdcallerbot!_")
+    return "\n".join(lines)
+
+
+# ==============================================================================
 # FORMATTER MESEJ
 # ==============================================================================
 def format_threat_response(record, query_input):
@@ -592,43 +974,98 @@ def format_threat_response(record, query_input):
         clean_links = " | ".join(evidence_links.split(" | ")[:3])
         lines.append(f"🔗 *PAUTAN BUKTI*   : {clean_links}")
 
+    # Semakan Live PDRM CCID SemakMule (Idea 4)
+    pdrm_info = query_pdrm_semakmule_live("telefon", phone_norm)
+    if not pdrm_info.get("has_record") and bank_accounts and bank_accounts != "N/A":
+        accs = re.findall(r'\b\d{8,18}\b', bank_accounts)
+        if accs:
+            pdrm_info = query_pdrm_semakmule_live("bank", accs[0])
+            
     lines.append("--------------------------------------------------")
-    lines.append("ℹ️ _Disemak daripada KANTOI Threat Engine (3,652+ Rekod)._")
+    if pdrm_info.get("success"):
+        if pdrm_info.get("police_reports", 0) > 0:
+            lines.append(f"🏛️ *PDRM SEMAKMULE CCID:* 🚨 *{pdrm_info['police_reports']} Laporan Polis Rasmi!* (Dicari {pdrm_info['search_count']} kali)")
+        else:
+            lines.append(f"🏛️ *PDRM SEMAKMULE CCID:* _Tiada laporan polis rasmi (Dicari {pdrm_info['search_count']} kali di portal CCID)_")
+
+    # Mod Pengecam Sindiket (Idea 1)
+    cluster = find_syndicate_cluster(DB_PATH, query_input, phone_norm, suspect_name, bank_accounts)
+    if cluster.get("is_syndicate"):
+        lines.append(format_syndicate_badge(cluster))
+
+    lines.append("--------------------------------------------------")
+    lines.append("ℹ️ _Disemak daripada KANTOI Threat Engine (3,729+ Rekod)._")
     lines.append("📲 _Gunakan aplikasi KANTOI untuk perlindungan panggilan & SMS masa nyata._")
     return "\n".join(lines)
 
 def format_safe_response(query_input, norm_phone):
     display_num = norm_phone if norm_phone else query_input
+    
+    # Semakan Live PDRM CCID SemakMule walaupun tiada dalam DB KANTOI (Idea 4)
+    is_bank = not norm_phone and len(re.sub(r'[^\d]', '', query_input)) >= 8
+    cat = "bank" if is_bank else "telefon"
+    pdrm_info = query_pdrm_semakmule_live(cat, display_num)
+    
+    if pdrm_info.get("has_record") and pdrm_info.get("police_reports", 0) > 0:
+        lines = [
+            "==================================================",
+            "🚨 *AMARAN KRITIKAL: REKOD PDRM CCID DITEMUI!*",
+            "==================================================",
+            f"Nombor Disemak: `{display_num}`",
+            f"🏛️ *Laporan Polis Rasmi (CCID):* 🚨 *{pdrm_info['police_reports']} Laporan Didaftarkan!*",
+            f"🔍 *Rekod Carian Portal PDRM:* Dicari sebanyak *{pdrm_info['search_count']}* kali.",
+            "",
+            "⚠️ *PERHATIAN:*",
+            "Walaupun nombor ini belum dimasukkan ke pangkalan data komuniti KANTOI, *PDRM SemakMule mengesahkan terdapat aduan jenayah komersil terhadap akaun/nombor ini!*",
+            "🚫 *JANGAN PINDAHKAN WANG ATAU BERURUSAN DENGAN PIHAK INI!*",
+            "--------------------------------------------------",
+            "💡 _Anda boleh menaip laporan mengenai nombor ini untuk dikemaskini ke aplikasi KANTOI._"
+        ]
+        return "\n".join(lines)
+
     lines = [
         "==================================================",
         "✅ *TIADA REKOD SCAMMER DITEMUI*",
         "==================================================",
         f"Nombor Disemak: `{display_num}`",
         "Status: *BERSIH* (Tiada rekod penipuan dalam pangkalan data KANTOI)",
-        "",
+        ""
+    ]
+    if pdrm_info.get("success"):
+        lines.append(f"🏛️ *PDRM SemakMule CCID:* 0 Laporan Polis (Dicari {pdrm_info['search_count']} kali)")
+        lines.append("")
+
+    lines.extend([
         "⚠️ *PERINGATAN PENTING:*",
         "• Walaupun tiada rekod, sentiasa berwaspada!",
         "• Jangan sesekali berkongsi kata laluan, TAC/OTP, atau memindahkan wang ke akaun peribadi yang tidak dikenali.",
         "• Anda boleh melaporkan nombor ini dengan menaip cerita/bukti kejadian jika mengesyaki penipuan.",
         "--------------------------------------------------",
         "ℹ️ _Pangkalan Data KANTOI merangkumi rekod PDRM SemakMule CCID & Komuniti._"
-    ]
+    ])
     return "\n".join(lines)
 
 def format_welcome_message(is_admin=False):
     admin_tag = "\n⭐ *Status Anda:* Pentadbir (Admin KANTOI)" if is_admin else ""
     return (
         "👋 *Selamat datang ke Bot Semakan & Laporan Scammer KANTOI!*\n\n"
-        "🔍 *1. Semak Pantas:* Taip nombor telefon (contoh: `0179597645`) atau akaun bank untuk menyemak rekod.\n\n"
-        "📸 *2. Imbas Gambar & Kod QR DuitNow (Enjin Hibrid Vision):*\n"
-        "Anda kini boleh menghantar gambar terus ke sini:\n"
-        "• *Kod QR DuitNow:* Bot akan automatik membongkar nama pemegang & nombor akaun bank serta-merta!\n"
-        "• *Tangkap Layar (Screenshot) WhatsApp & Resit Bank:* Enjin Vision pintar mengekstrak nombor telefon, akaun keldai, dan cerita scammer secara automatik.\n\n"
-        "📢 *3. Lapor Scammer (Teks Bebas & Senarai Pukal):*\n"
+        "🔍 *1. Semakan Pantas KANTOI & PDRM SemakMule:*\n"
+        "Taip nombor telefon (contoh: `0179597645`) atau akaun bank untuk semakan serentak pangkalan data KANTOI & rekod rasmi CCID PDRM.\n"
+        "• Perintah terus PDRM: `/pdrm <nombor_atau_akaun>`\n\n"
+        "🕸️ *2. Pengecam Sindiket (Cluster Intelligence):*\n"
+        "Bot mengesan rangkaian scammer yang berkongsi akaun bank keldai atau profil suspek yang sama merentasi pangkalan data.\n\n"
+        "🔗 *3. Semakan Pautan Phishing & APK Sandbox:*\n"
+        "• *Pautan:* Hantar sebarang pautan mencurigakan atau taip `/url <pautan>` untuk mengesan portal bank palsu & pancingan bantuan.\n"
+        "• *Malware APK:* Hantar fail `.apk` ke sini untuk dianalisis oleh KANTOI Sandbox bagi mengesan trojan perbankan & pencuri SMS TAC/OTP.\n\n"
+        "📸 *4. Imbas Gambar & Kod QR DuitNow (Enjin Hibrid Vision):*\n"
+        "Hantar tangkap layar (screenshot) WhatsApp, resit bank, atau gambar kod QR DuitNow untuk pengekstrakan data automatik.\n\n"
+        "📰 *5. Buletin Radar Ancaman Harian:*\n"
+        "Taip `/buletin` untuk membaca berita kes penipuan & taktik scammer terkini di Malaysia daripada sumber berita utama.\n\n"
+        "📢 *6. Lapor Scammer (Teks Bebas & Senarai Pukal):*\n"
         "• *'Main Tulis Saja':* Ceritakan kejadian scammer dalam bahasa harian anda.\n"
         "• *Senarai Pukal:* Tampal banyak nombor sekali gus untuk laporan pukal.\n\n"
-        "🛡️ *4. Penjaga Kumpulan (Group Sentinel):*\n"
-        "Masukkan bot ini ke dalam Group Telegram anda (sebagai Admin) untuk mengesan & memadam mesej scammer secara automatik demi melindungi ahli kumpulan!\n\n"
+        "🛡️ *7. Penjaga Kumpulan (Group Sentinel):*\n"
+        "Masukkan bot ini ke Group Telegram anda (sebagai Admin) untuk mengesan & memadam mesej scammer, pautan phishing, serta malware APK secara automatik!\n\n"
         f"{admin_tag}\n\n"
         "🛡️ Saluran Rasmi: @crowdcaller\n"
         "🌐 Repositori Kod: https://github.com/kand4/kantoi"
@@ -996,6 +1433,7 @@ def run_bot():
     print(f"[BOT] Admin berdaftar semasa ({len(admins)}): {list(admins)}")
     
     last_update_id = 0
+    last_radar_date = ""
     processed_msg_ids = set()
     get_updates_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
 
@@ -1015,6 +1453,22 @@ def run_bot():
                 print(f"[RALAT TELEGRAM] getUpdates gagal: {data.get('description')} (Kod: {data.get('error_code')})")
                 time.sleep(3)
                 continue
+
+            # Auto-Scheduler: Buletin Radar Ancaman Harian (Idea 6)
+            today_iso = datetime.date.today().isoformat()
+            if datetime.datetime.now().hour >= 9 and last_radar_date != today_iso:
+                last_radar_date = today_iso
+                try:
+                    bulletin_text = format_scam_radar_bulletin(5)
+                    api_call("sendMessage", {
+                        "chat_id": CHANNEL_ID,
+                        "text": bulletin_text,
+                        "parse_mode": "Markdown",
+                        "disable_web_page_preview": True
+                    })
+                    print(f"[RADAR] Buletin harian disiarkan secara automatik ke {CHANNEL_ID} pada {today_iso}")
+                except Exception as e:
+                    print(f"[RADAR AUTO ERR] {e}")
 
             for update in data.get("result", []):
                 last_update_id = update["update_id"]
@@ -1202,15 +1656,16 @@ def run_bot():
                 username = user.get("username") or user.get("first_name", "Komuniti")
                 text = (message.get("text") or message.get("caption") or "").strip()
                 photos = message.get("photo")
+                doc = message.get("document")
 
-                if not text and not photos:
+                if not text and not photos and not doc:
                     continue
 
                 # ------------------------------------------------------------------
                 # MOD PENJAGA KUMPULAN (GROUP SENTINEL SHIELD)
                 # ------------------------------------------------------------------
                 if is_group:
-                    # 1. Semakan Manual di dalam Group (/semak, /check, /kantoi)
+                    # 1. Semakan Manual di dalam Group (/semak, /check, /kantoi, /pdrm, /semakmule, /buletin)
                     if text.startswith(("/semak", "/check", "/kantoi")):
                         parts = text.split(maxsplit=1)
                         query = parts[1].strip() if len(parts) > 1 else ""
@@ -1228,13 +1683,111 @@ def run_bot():
                             })
                         continue
 
+                    if text.startswith(("/pdrm", "/semakmule")):
+                        parts = text.split(maxsplit=1)
+                        if len(parts) > 1 and parts[1].strip():
+                            qt = parts[1].strip()
+                            clean_digits = re.sub(r'[^\d]', '', qt)
+                            cat = "bank" if len(clean_digits) > 11 or not qt.startswith(("01", "+601", "601")) else "telefon"
+                            pdrm = query_pdrm_semakmule_live(cat, qt)
+                            if pdrm.get("success"):
+                                reps = pdrm["police_reports"]
+                                searches = pdrm["search_count"]
+                                badge = "🚨 <b>REKOD JENAYAH DIKESAN!</b>" if reps > 0 else "✅ <b>TIADA REKOD ADUAN PDRM</b>"
+                                rep_msg = (
+                                    f"🏛️ <b>STATUS SIAP-SEDIA PDRM CCID SEMAKMULE</b>\n"
+                                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                    f"🔍 <b>Sasaran:</b> <code>{html.escape(qt)}</code> ({cat.upper()})\n"
+                                    f"📊 <b>Keputusan:</b> {badge}\n"
+                                    f"📑 <b>Laporan Polis Rasmi:</b> <b>{reps} Laporan</b>\n"
+                                    f"👥 <b>Jumlah Carian Awam:</b> <b>{searches} Kali</b>\n"
+                                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                    f"ℹ️ <i>Data diambil secara langsung dari portal rasmi CCID SemakMule PDRM.</i>"
+                                )
+                            else:
+                                rep_msg = "⚠️ Gagal berhubung dengan pelayan PDRM SemakMule buat masa ini."
+                            api_call("sendMessage", {
+                                "chat_id": chat_id,
+                                "text": rep_msg,
+                                "parse_mode": "HTML",
+                                "reply_to_message_id": msg_id
+                            })
+                        continue
+
+                    if text in ["/buletin", "/berita", "buletin", "berita", "/radar"]:
+                        bulletin = format_scam_radar_bulletin(3)
+                        api_call("sendMessage", {
+                            "chat_id": chat_id,
+                            "text": bulletin,
+                            "parse_mode": "Markdown",
+                            "disable_web_page_preview": True,
+                            "reply_to_message_id": msg_id
+                        })
+                        continue
+
                     # 2. Imbasan Senyap Keselamatan Kumpulan (Zero-Scam Group Guard)
+                    # a. Imbas pautan phishing
+                    if text:
+                        urls = re.findall(r'https?://[^\s<>"]+', text)
+                        phishing_hit = None
+                        for u in urls:
+                            u_res = inspect_url_phishing(u)
+                            if u_res["severity"] in ["CRITICAL", "HIGH"]:
+                                phishing_hit = u_res
+                                break
+                        if phishing_hit:
+                            api_call("deleteMessage", {"chat_id": chat_id, "message_id": msg_id})
+                            warning_msg = (
+                                f"🚨 <b>PERISAI KANTOI: PAUTAN PHISHING DIPADAM!</b>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"⚠️ Mesej daripada <b>@{html.escape(username)}</b> telah dipadamkan secara automatik kerana mengandungi pautan pancingan data berbahaya:\n\n"
+                                f"🌐 <b>Domain:</b> <code>{html.escape(phishing_hit['domain'])}</code>\n"
+                                f"🏷️ <b>Keputusan:</b> {html.escape(phishing_hit['verdict'])}\n\n"
+                                f"⚠️ <i>Semua ahli kumpulan diingatkan agar TIDAK menekan pautan atau memasukkan maklumat perbankan!</i>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🛡️ <i>KANTOI Group Sentinel Shield</i>"
+                            )
+                            api_call("sendMessage", {"chat_id": chat_id, "text": warning_msg, "parse_mode": "HTML"})
+                            print(f"[GROUP SENTINEL] Pautan phishing dipadamkan dalam kumpulan {chat_id} daripada @{username}: {phishing_hit['domain']}")
+                            continue
+
+                    # b. Imbas fail APK berniat jahat
+                    if doc:
+                        doc_name = (doc.get("file_name") or "").lower()
+                        doc_mime = (doc.get("mime_type") or "").lower()
+                        if doc_name.endswith(".apk") or "package-archive" in doc_mime:
+                            tmp_apk = download_telegram_photo(doc["file_id"])
+                            if tmp_apk:
+                                try:
+                                    apk_res = inspect_apk_malware(tmp_apk, doc.get("file_name", "aplikasi.apk"))
+                                    if apk_res.get("severity") in ["CRITICAL", "HIGH"]:
+                                        api_call("deleteMessage", {"chat_id": chat_id, "message_id": msg_id})
+                                        warning_msg = (
+                                            f"🚨 <b>PERISAI KANTOI: FAIL APK MALWARE DIPADAM!</b>\n"
+                                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                            f"⚠️ Fail <code>{html.escape(apk_res['filename'])}</code> daripada <b>@{html.escape(username)}</b> telah dipadamkan secara automatik!\n\n"
+                                            f"📦 <b>Klasifikasi:</b> {html.escape(apk_res['verdict'])}\n"
+                                            f"🔑 <b>Hash:</b> <code>{apk_res['sha256'][:20]}...</code>\n\n"
+                                            f"⚠️ <i>Fail ini mengandungi kod trojan perbankan / pencuri SMS TAC/OTP. JANGAN PASANG!</i>\n"
+                                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                            f"🛡️ <i>KANTOI Group Sentinel Shield</i>"
+                                        )
+                                        api_call("sendMessage", {"chat_id": chat_id, "text": warning_msg, "parse_mode": "HTML"})
+                                        print(f"[GROUP SENTINEL] APK malware dipadamkan dalam kumpulan {chat_id} daripada @{username}: {apk_res['filename']}")
+                                        continue
+                                finally:
+                                    if os.path.exists(tmp_apk):
+                                        try: os.unlink(tmp_apk)
+                                        except: pass
+
+                    # c. Imbas nombor/akaun scammer dalam teks
                     threat_found = None
                     if text:
                         rec, _ = query_threat(text)
                         if rec:
                             threat_found = rec
 
+                    # d. Imbas kod QR atau imej dalam kumpulan
                     if not threat_found and photos:
                         tmp_img = download_telegram_photo(photos[-1]["file_id"])
                         if tmp_img:
@@ -1431,6 +1984,140 @@ def run_bot():
                                     os.unlink(tmp_img)
                                 except Exception:
                                     pass
+
+                # ------------------------------------------------------------------
+                # MOD CHAT PERIBADI: KENDALIKAN DOKUMEN / FAIL APK (SANDBOX MALWARE)
+                # ------------------------------------------------------------------
+                if doc:
+                    doc_name = (doc.get("file_name") or "").lower()
+                    doc_mime = (doc.get("mime_type") or "").lower()
+                    if doc_name.endswith(".apk") or "package-archive" in doc_mime:
+                        api_call("sendChatAction", {"chat_id": chat_id, "action": "upload_document"})
+                        tmp_apk = download_telegram_photo(doc["file_id"])
+                        if tmp_apk:
+                            try:
+                                rep = inspect_apk_malware(tmp_apk, doc.get("file_name", "aplikasi.apk"))
+                                if "error" in rep:
+                                    send_message(chat_id, f"❌ Ralat menganalisis APK: {rep['error']}")
+                                else:
+                                    badge = "🚨" if rep["severity"] == "CRITICAL" else ("⚠️" if rep["severity"] in ["HIGH", "MEDIUM"] else "✅")
+                                    lines = [
+                                        f"{badge} *HASIL ANALISIS SANDBOX MALWARE APK (KANTOI)*",
+                                        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                                        f"📁 *Nama Fail:* `{rep['filename']}` ({rep['size_mb']} MB)",
+                                        f"🔑 *SHA256:* `{rep['sha256'][:24]}...`",
+                                        f"🚨 *KEPUTUSAN:* *{rep['verdict']}*",
+                                        ""
+                                    ]
+                                    if rep["danger_perms"]:
+                                        lines.append("⚠️ *Kebenaran Berbahaya Dikesan:*")
+                                        for dp, desc in rep["danger_perms"]:
+                                            lines.append(f"   • `{dp}`: {desc}")
+                                        lines.append("")
+                                    if rep["dex_tokens"]:
+                                        lines.append(f"🤖 *Bot Exfiltration (C2) Dikesan:* `{len(rep['dex_tokens'])}` Token Bot Telegram")
+                                    if rep["has_banking_strings"]:
+                                        lines.append("🏦 *Sasaran:* Rentetan aplikasi bank tempatan (Maybank/CIMB/TNG) ditemui dalam kod!")
+                                    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                                    if rep["severity"] == "CRITICAL":
+                                        lines.append("🚫 *NASIHAT KESELAMATAN:* JANGAN PASANG fail ini! Ia mengandungi kod trojan pencuri SMS TAC/OTP perbankan anda.")
+                                    else:
+                                        lines.append("ℹ️ _Dianalisis melalui KANTOI Static Android Sandbox tanpa menjalankan kod._")
+
+                                    send_message(chat_id, "\n".join(lines))
+                            finally:
+                                if os.path.exists(tmp_apk):
+                                    try: os.unlink(tmp_apk)
+                                    except: pass
+                        continue
+                    else:
+                        send_message(chat_id, "📄 *Dokumen Diterima.* Bot kini menyokong analisis keselamatan fail Android (`.apk`). Sila muat naik fail APK untuk semakan.")
+                        continue
+
+                # ------------------------------------------------------------------
+                # MOD CHAT PERIBADI: PERINTAH BULETIN & RADAR ANCAMAN (IDEA 6)
+                # ------------------------------------------------------------------
+                if text in ["/buletin", "/berita", "buletin", "berita", "/radar"]:
+                    bulletin = format_scam_radar_bulletin(5)
+                    send_message(chat_id, bulletin)
+                    continue
+
+                if text.startswith("/siar_radar"):
+                    if chat_id not in get_admin_ids():
+                        send_message(chat_id, "❌ Akses Ditolak: Perintah ini hanya untuk Admin KANTOI.")
+                        continue
+                    bulletin = format_scam_radar_bulletin(5)
+                    api_call("sendMessage", {
+                        "chat_id": CHANNEL_ID,
+                        "text": bulletin,
+                        "parse_mode": "Markdown",
+                        "disable_web_page_preview": True
+                    })
+                    send_message(chat_id, f"✅ *Buletin Radar Ancaman berjaya disiarkan ke saluran {CHANNEL_ID}!*")
+                    continue
+
+                # ------------------------------------------------------------------
+                # MOD CHAT PERIBADI: SEMAKAN LANGSUNG PDRM CCID (IDEA 4)
+                # ------------------------------------------------------------------
+                if text.startswith(("/pdrm", "/semakmule")):
+                    parts = text.split(maxsplit=1)
+                    if len(parts) > 1 and parts[1].strip():
+                        qt = parts[1].strip()
+                        clean_digits = re.sub(r'[^\d]', '', qt)
+                        cat = "bank" if len(clean_digits) > 11 or not qt.startswith(("01", "+601", "601")) else "telefon"
+                        pdrm = query_pdrm_semakmule_live(cat, qt)
+                        if pdrm.get("success"):
+                            reps = pdrm["police_reports"]
+                            searches = pdrm["search_count"]
+                            badge = "🚨 *REKOD JENAYAH DIKESAN!*" if reps > 0 else "✅ *TIADA REKOD ADUAN PDRM*"
+                            rep_msg = (
+                                f"🏛️ *STATUS SIAP-SEDIA PDRM CCID SEMAKMULE*\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🔍 *Sasaran:* `{qt}` ({cat.upper()})\n"
+                                f"📊 *Keputusan:* {badge}\n"
+                                f"📑 *Laporan Polis Rasmi:* *{reps} Laporan*\n"
+                                f"👥 *Jumlah Carian Awam:* *{searches} Kali*\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"ℹ️ _Data diambil secara langsung dari portal rasmi CCID SemakMule PDRM._"
+                            )
+                        else:
+                            rep_msg = "⚠️ Gagal berhubung dengan pelayan PDRM SemakMule buat masa ini. Sila cuba sebentar lagi."
+                        send_message(chat_id, rep_msg)
+                        continue
+                    else:
+                        send_message(chat_id, "ℹ️ Format carian PDRM: `/pdrm <nombor_telefon_atau_akaun_bank>`")
+                        continue
+
+                # ------------------------------------------------------------------
+                # MOD CHAT PERIBADI: SEMAKAN PAUTAN PHISHING (IDEA 3)
+                # ------------------------------------------------------------------
+                if text.startswith("/url") or (re.search(r'https?://[^\s<>"]+', text) and not is_likely_report(text)):
+                    urls = re.findall(r'https?://[^\s<>"]+', text)
+                    if urls:
+                        for u in urls[:3]:
+                            res_url = inspect_url_phishing(u)
+                            badge = "🚨" if res_url["severity"] in ["CRITICAL", "HIGH"] else ("⚠️" if res_url["severity"] == "MEDIUM" else "✅")
+                            lines = [
+                                f"{badge} *HASIL SEMAKAN KESELAMATAN PAUTAN (URL)*",
+                                "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                                f"🔗 *Pautan:* `{res_url['url']}`",
+                                f"🌐 *Domain Pendaratan:* `{res_url['domain']}`",
+                                f"🛡️ *Keputusan:* *{res_url['verdict']}*",
+                                ""
+                            ]
+                            if res_url["reasons"]:
+                                lines.append("⚠️ *Faktor Penilaian Risiko:*")
+                                for rsn in res_url["reasons"]:
+                                    lines.append(f"   • {rsn}")
+                                lines.append("")
+                            lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                            if res_url["severity"] in ["CRITICAL", "HIGH"]:
+                                lines.append("🚫 *AMARAN:* Jangan masukkan kata laluan atau TAC bank anda di pautan ini!")
+                            else:
+                                lines.append("ℹ️ _Sentiasa pastikan domain rasmi bank berakhir dengan domain yang disahkan._")
+
+                            send_message(chat_id, "\n".join(lines))
+                        continue
 
                 # Arahan Pendaftaran Admin: /admin <passcode>
                 if text.startswith("/admin"):
