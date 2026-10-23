@@ -122,6 +122,30 @@ def save_json_file(path, data):
     except Exception as e:
         print(f"[ERR] Gagal menyimpan {path}: {e}")
 
+def get_gemini_api_key():
+    """Mendapatkan Gemini API Key daripada admin_config.json, local_secrets, atau persekitaran"""
+    cfg = load_json_file(ADMIN_CONFIG_PATH, {})
+    k = cfg.get("gemini_api_key") or cfg.get("GEMINI_API_KEY")
+    if k and str(k).strip() and str(k).strip() != "YOUR_GEMINI_API_KEY_HERE":
+        return str(k).strip()
+    try:
+        import local_secrets
+        ls_key = getattr(local_secrets, "GEMINI_API_KEY", "")
+        if ls_key and str(ls_key).strip() and str(ls_key).strip() != "YOUR_GEMINI_API_KEY_HERE":
+            return str(ls_key).strip()
+    except Exception:
+        pass
+    env_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if env_key and env_key != "YOUR_GEMINI_API_KEY_HERE":
+        return env_key
+    return ""
+
+def set_gemini_api_key(new_key):
+    """Menyimpan Gemini API Key ke dalam admin_config.json"""
+    cfg = load_json_file(ADMIN_CONFIG_PATH, {})
+    cfg["gemini_api_key"] = new_key.strip()
+    save_json_file(ADMIN_CONFIG_PATH, cfg)
+
 def get_admin_ids():
     data = load_json_file(ADMIN_CONFIG_PATH, {"admins": []})
     return set(data.get("admins", []))
@@ -544,35 +568,81 @@ def decode_duitnow_qr(image_path):
             continue
     return None
 
-def analyze_image_with_gemini(image_path, api_key):
+def get_image_mime_type(image_path):
+    """Mengesahkan format imej secara dinamik daripada header fail (PNG, JPEG, WEBP, dsb)"""
+    try:
+        with open(image_path, "rb") as f:
+            header = f.read(16)
+        if header.startswith(b'\x89PNG\r\n\x1a\n'):
+            return "image/png"
+        elif header.startswith(b'\xff\xd8\xff'):
+            return "image/jpeg"
+        elif header.startswith(b'RIFF') and b'WEBP' in header:
+            return "image/webp"
+        elif header.startswith(b'GIF8'):
+            return "image/gif"
+    except Exception:
+        pass
+    return "image/jpeg"
+
+def analyze_image_with_gemini(image_path, api_key=None):
     """Menghantar imej ke Google Gemini Vision API untuk analisis pintar berkonteks"""
+    if not api_key:
+        api_key = get_gemini_api_key()
+    api_key = (api_key or "").strip()
     if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
         return None
+        
+    mime_type = get_image_mime_type(image_path)
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     try:
         with open(image_path, "rb") as f:
             b64_data = base64.b64encode(f.read()).decode("utf-8")
         
         prompt = (
-            "Anda adalah penganalisis keselamatan siber risikan penipuan KANTOI (Malaysia). "
-            "Analisis gambar ini (screenshot perbualan WhatsApp / resit perbankan / poster scammer / profil WhatsApp / Kod QR). "
-            "Ekstrak maklumat scammer dalam format JSON sah dengan kunci berikut:\n"
+            "Anda adalah penganalisis keselamatan siber risikan penipuan KANTOI (Malaysia).\n"
+            "TUGAS UTAMA: Analisis gambar ini secara pintar dan teliti (screenshot WhatsApp/Telegram, resit bank, profil suspek, foto telefon lain).\n\n"
+            "PANDUAN MENGIKUT ARKETIP IMEJ:\n"
+            "1. SKRIN PANGGILAN WHATSAPP (Call Screen / Ringing / Calling / Incoming Call):\n"
+            "   - Nombor terpapar besar di bahagian atas (cth: +60 14-627 2791) bersama status 'Ringing...', butang tamat panggilan, dan avatar suspek.\n"
+            "   - Ekstrak nombor telefon ke 'phone_numbers'.\n"
+            "   - scam_tactic: 'Panggilan Suara Scammer (WhatsApp Call)'.\n\n"
+            "2. PROFIL / KAD PERNIAGAAN WHATSAPP (WhatsApp Business Profile / Bio):\n"
+            "   - Mengandungi nombor utama, nama profil/perkhidmatan (cth: 'OFFICIAL MIDMAN MAZE'), emel (cth: 'midmanmaze@gmail.com'), dan nombor tambahan dalam teks bio (cth: 0145057539 -Paidpromote).\n"
+            "   - Ekstrak SEMUA nombor unik ke 'phone_numbers'.\n"
+            "   - Ekstrak nama organisasi/servis ke 'suspect_name'.\n"
+            "   - Ekstrak emel jika ada ke 'email'.\n"
+            "   - scam_tactic: 'Khidmat Orang Tengah Palsu (Fake Midman / Escrow)'.\n\n"
+            "3. SKRIN MAKLUMAT KENALAN WHATSAPP (Contact Info Screen dengan simbol ~):\n"
+            "   - Nombor telefon terpapar besar di atas (cth: +60 14-627 2791) dan di bawahnya nama push yang didaftarkan suspek (cth: ~ Prem Kumar).\n"
+            "   - Ekstrak nama tersebut (buang simbol ~) ke 'suspect_name' (cth: 'Prem Kumar').\n"
+            "   - Ekstrak nombor telefon ke 'phone_numbers'.\n\n"
+            "4. FOTO FIZIKAL SKRIN TELEFON LAIN / QUISHING TNG MONEY PACKET:\n"
+            "   - Foto fizikal telefon lain yang ditangkap kamera (ada pantulan lampu/sudut condong).\n"
+            "   - Jika ada mesej Telegram/WhatsApp (cth pengirim 'Wafa KJ Dietetik' dan teks 'Saya nak bagi sikit rezeki...'):\n"
+            "   - Ekstrak nama pengirim ke 'suspect_name'.\n"
+            "   - scam_tactic: 'Penipuan Sedekah Palsu / Quishing TNG Money Packet'.\n\n"
+            "5. RESIT PEMINDAHAN BANK / DUITNOW QR:\n"
+            "   - Ekstrak nombor akaun, nama bank, nama penerima, dan jumlah.\n\n"
+            "Formatkan maklumat dalam JSON sah dengan kunci berikut:\n"
             "{\n"
-            '  "phone_numbers": ["nombor telefon scammer format Malaysia cth 011xxxxxxxx jika ada"],\n'
-            '  "suspect_name": "nama scammer atau nama pemegang akaun bank keldai jika ada",\n'
-            '  "bank_name": "nama bank cth Maybank, CIMB, Bank Islam jika ada",\n'
-            '  "account_number": "nombor akaun bank keldai jika ada",\n'
-            '  "scam_tactic": "ringkasan taktik scam cth Pelaburan Palsu, Tipu Jualan, Macau Scam",\n'
-            '  "evidence_text": "ringkasan 1-2 ayat bukti yang dipaparkan dalam gambar"\n'
+            '  "phone_numbers": ["senarai nombor telefon unik cth 011xxxxxxxx, 014xxxxxxxx"],\n'
+            '  "suspect_name": "nama scammer, nama profil WhatsApp tanpa ~, nama servis (cth OFFICIAL MIDMAN MAZE), atau pengirim Telegram",\n'
+            '  "email": "alamat emel jika ada atau null",\n'
+            '  "bank_name": "nama bank jika ada atau null",\n'
+            '  "account_number": "nombor akaun bank keldai jika ada atau null",\n'
+            '  "scam_tactic": "kategori penipuan terperinci",\n'
+            '  "evidence_text": "ringkasan ringkas bukti dalam bahasa Melayu",\n'
+            '  "full_text": "semua teks dan nombor penting dalam imej"\n'
             "}\n"
-            "Jika sesuatu medan tiada dalam gambar, letakkan null atau senarai kosong []. Berikan JSON SAHAJA tanpa markdown."
+            "Berikan JSON SAHAJA tanpa sebarang teks tambahan."
         )
         
         payload = {
             "contents": [{
                 "parts": [
                     {"text": prompt},
-                    {"inline_data": {"mime_type": "image/jpeg", "data": b64_data}}
+                    {"inline_data": {"mime_type": mime_type, "data": b64_data}}
                 ]
             }],
             "generationConfig": {
@@ -580,11 +650,34 @@ def analyze_image_with_gemini(image_path, api_key):
                 "response_mime_type": "application/json"
             }
         }
-        resp = requests.post(url, json=payload, timeout=20)
+        resp = requests.post(url, json=payload, timeout=25)
+        if resp.status_code != 200:
+            print(f"[GEMINI VISION HTTP {resp.status_code}] {resp.text[:300]}")
+            # Cuba fallback ke gemini-2.0-flash jika 404
+            if resp.status_code in [404, 400]:
+                alt_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+                resp2 = requests.post(alt_url, json=payload, timeout=25)
+                if resp2.status_code == 200:
+                    resp = resp2
+                else:
+                    return None
+            else:
+                return None
+
         data = resp.json()
         if "candidates" in data and data["candidates"]:
-            raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-            return json.loads(raw_text)
+            part = data["candidates"][0].get("content", {}).get("parts", [{}])[0]
+            raw_text = part.get("text", "").strip()
+            
+            # Buang markdown code fence jika ada (```json ... ```)
+            clean_json = re.sub(r'^```(?:json)?\s*', '', raw_text, flags=re.IGNORECASE)
+            clean_json = re.sub(r'\s*```$', '', clean_json.strip())
+            
+            # Cari corak {...} dengan regex
+            m = re.search(r'\{.*\}', clean_json, re.DOTALL)
+            if m:
+                return json.loads(m.group(0))
+            return json.loads(clean_json)
     except Exception as e:
         print(f"[GEMINI VISION ERR] {e}")
     return None
@@ -626,9 +719,10 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None):
     qr_data = decode_duitnow_qr(image_path)
     
     # 2. Imbas teks melalui AI Vision (jika ada kunci) atau Windows Native OCR
+    active_key = (gemini_api_key or "").strip() or get_gemini_api_key()
     gemini_data = None
-    if gemini_api_key:
-        gemini_data = analyze_image_with_gemini(image_path, gemini_api_key)
+    if active_key:
+        gemini_data = analyze_image_with_gemini(image_path, active_key)
         
     ocr_text = ""
     if not gemini_data:
@@ -637,6 +731,7 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None):
     # Ekstrak data OCR / Vision
     vision_phones = []
     vision_name = ""
+    vision_email = ""
     vision_bank = ""
     vision_acc = ""
     vision_tactic = "Penipuan Siber / Akaun Keldai"
@@ -646,20 +741,42 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None):
     if gemini_data:
         source_type = "AI_VISION"
         raw_phones = gemini_data.get("phone_numbers", [])
+        if isinstance(raw_phones, str):
+            raw_phones = [raw_phones]
+        elif not isinstance(raw_phones, list):
+            raw_phones = []
+            
         for p in raw_phones:
-            np = normalize_phone(p)
+            np = normalize_phone(str(p))
             if np and np not in vision_phones:
                 vision_phones.append(np)
+
         vision_name = (gemini_data.get("suspect_name") or "").strip()
+        vision_email = (gemini_data.get("email") or "").strip()
         vision_bank = (gemini_data.get("bank_name") or "").strip()
         vision_acc = (gemini_data.get("account_number") or "").strip()
         vision_tactic = gemini_data.get("scam_tactic") or vision_tactic
         vision_evidence = gemini_data.get("evidence_text") or vision_evidence
+        
+        # Imbas nombor telefon tambahan daripada teks penuh / bukti / nama suspek jika terlepas
+        all_text_search = f"{vision_name} {vision_evidence} {gemini_data.get('full_text', '')}"
+        extra_phones = re.findall(r'(?:(?:\+?60|0)[\s\-]?[1-9][0-9][\s\-]?[0-9]{3,4}[\s\-]?[0-9]{3,5})', all_text_search)
+        for ep in extra_phones:
+            np = normalize_phone(ep)
+            if np and np not in vision_phones:
+                vision_phones.append(np)
+                
+        # Jika nama suspek sebenarnya adalah nombor telefon, bersihkan
+        if vision_name and normalize_phone(vision_name) in vision_phones:
+            vision_name = "Suspek (Nombor Telefon)"
     elif ocr_text:
+        # Ekstrak nombor telefon
         for p in re.findall(r'(?:\+?60|0)[\s\-]?[1-9][0-9][\s\-]?[0-9]{3,4}[\s\-]?[0-9]{3,5}', ocr_text):
             np = normalize_phone(p)
             if np and np not in vision_phones:
                 vision_phones.append(np)
+                
+        # Ekstrak akaun bank
         for am in re.findall(r'(?:ACC|AKAUN|ACCOUNT|AKAI-JN|NO ACC|NOMBOR AKAUN)\s*[:.\-]?[\s]*([0-9\s]{8,18})', ocr_text, re.IGNORECASE):
             cam = re.sub(r'\s+', '', am)
             if len(cam) >= 8 and cam.isdigit() and not vision_acc:
@@ -668,13 +785,59 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None):
             if re.search(r'\b' + re.escape(bk) + r'\b', ocr_text, re.IGNORECASE):
                 vision_bank = bk
                 break
-        nm = re.search(r'(?:NAMA|NAME)\s*[:.\-]?[\s]*([A-Za-z\s@/]+?)(?:\s+(?:BANK|ACC|ACCOUNT|NOMBOR|AKAUN|Online)|\n|$)', ocr_text, re.IGNORECASE)
-        if nm:
-            vision_name = nm.group(1).strip()
+
+        # 1. Kesan WhatsApp Push Name (cth: ~ Prem Kumar)
+        push_m = re.search(r'~\s*([A-Za-z\s\'.]{3,35})', ocr_text)
+        if push_m:
+            vision_name = push_m.group(1).strip()
+
+        # 2. Kesan Nama Rasmi / Profil
+        if not vision_name:
+            nm = re.search(r'(?:NAMA|NAME)\s*[:.\-]?[\s]*([A-Za-z\s@/]+?)(?:\s+(?:BANK|ACC|ACCOUNT|NOMBOR|AKAUN|Online)|\n|$)', ocr_text, re.IGNORECASE)
+            if nm:
+                vision_name = nm.group(1).strip()
+            
+        # 3. Kesan Nama Perniagaan / Organisasi (cth: OFFICIAL MIDMAN MAZE)
+        if not vision_name:
+            biz_m = re.search(r'\b(OFFICIAL\s+[A-Za-z\s]{3,25}|[A-Za-z0-9\s]{3,25}\s+ENTERPRISE|[A-Za-z0-9\s]{3,25}\s+SDN BHD)\b', ocr_text, re.IGNORECASE)
+            if biz_m:
+                vision_name = biz_m.group(1).strip()
+
+        # 4. Kesan Nama Suspek Tepat Selepas Nombor Telefon (cth: +60 14-627 2791 Prem Kumar Voice Video...)
+        if not vision_name and vision_phones:
+            ui_boundary = r'(?:Voice|Video|Search|Call|Audio|Media|Links|Docs|Ringing|Calling|Manage|Storage|Notifications|Visibility|Messages|Open|Edit)'
+            phone_after_m = re.search(r'(?:\+?60|0)[\s\-]?[1-9][0-9][\s\-]?[0-9]{3,4}[\s\-]?[0-9]{3,5}\s*(?:~)?\s*([A-Za-z\s\'.]{2,35}?)(?=\s+' + ui_boundary + r'|\n|$)', ocr_text)
+            if phone_after_m:
+                cand = phone_after_m.group(1).strip()
+                if cand and len(cand) > 2 and cand.lower() not in ['voice', 'video', 'search', 'ringing', 'calling', 'ringing .']:
+                    vision_name = cand
+
+        # 5. Kesan Nama Pengirim Chat Bar Atas
+        if not vision_name:
+            sender_m = re.search(r'(?:^|\n)\s*([A-Za-z0-9\s]{3,30}?)(?=\s+(?:last seen|online|typing|Open now|Saya nak bag)|\n|$)', ocr_text, re.IGNORECASE)
+            if sender_m:
+                cand = sender_m.group(1).strip()
+                if cand and len(cand) > 2 and not any(w in cand.lower() for w in ['scammer', 'edit', 'open']):
+                    vision_name = cand
+
+        # 6. Ekstrak Emel
+        email_matches = re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', ocr_text)
+        if email_matches:
+            vision_email = email_matches[0]
+
+        # 7. Pengelasan Taktik Penipuan Tempatan
+        if re.search(r'\b(?:MIDMAN|MIDDLEMAN|REKBER)\b', ocr_text, re.IGNORECASE):
+            vision_tactic = "Khidmat Orang Tengah Palsu (Fake Midman / Escrow)"
+        elif re.search(r'\b(?:MONEY PACKET|DUIT RAYA|REZEKI|ANGPOW)\b', ocr_text, re.IGNORECASE):
+            vision_tactic = "Penipuan Touch 'n Go Money Packet / Sedekah Palsu"
+        elif re.search(r'\b(?:Ringing|Calling|Panggilan)\b', ocr_text, re.IGNORECASE) and vision_phones:
+            vision_tactic = "Panggilan Suara Scammer (WhatsApp Call)"
+
         vision_evidence = ocr_text[:250].replace('\n', ' ')
 
-    # 3. Gabungkan Penemuan QR + Vision/OCR
-    final_name = (qr_data.get('name') if qr_data and qr_data.get('name') != 'Tidak Dinyatakan' else None) or vision_name or "Tidak Dinyatakan"
+    # 3. Gabungkan Penemuan QR + Vision/OCR (Utamakan nama manusia sebenar jika ada)
+    qr_human_name = qr_data.get('name') if qr_data and qr_data.get('name') != 'Tidak Dinyatakan' and not qr_data.get('name', '').startswith('Pautan (') else None
+    final_name = vision_name or qr_human_name or (qr_data.get('name') if qr_data else None) or "Tidak Dinyatakan"
     final_bank = (qr_data.get('bank') if qr_data and qr_data.get('bank') != 'N/A' else None) or vision_bank or "N/A"
     final_acc = (qr_data.get('account_number') if qr_data and qr_data.get('account_number') else None) or vision_acc or "N/A"
     
@@ -701,6 +864,7 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None):
         "source_type": source_type,
         "phone_norm": primary_phone,
         "all_phones": vision_phones,
+        "email": vision_email,
         "suspect_name": final_name,
         "bank_name": final_bank,
         "account_number": final_acc,
@@ -2581,6 +2745,7 @@ def run_bot():
 
                             is_threat = (rec_kantoi is not None) or (pdrm_reports > 0)
                             source_badge = "📱 Kod QR DuitNow" if intel["qr_detected"] else ("🤖 AI Vision" if intel["source_type"] == "AI_VISION" else "🔍 OCR KANTOI")
+                            is_phone_only = bool(target_phone and (not target_acc or target_acc == "N/A"))
 
                             # Jana Draf Laporan Sementara
                             tmp_id = f"tmp_{int(time.time()*1000) % 1000000}"
@@ -2588,6 +2753,8 @@ def run_bot():
                             if t_caption:
                                 combined_evidence = f"{t_caption}\n\n[Bukti Imej]: {combined_evidence}"
 
+                            if intel.get("email"):
+                                combined_evidence = f"{combined_evidence}\n[Emel]: {intel['email']}"
                             rep_data = {
                                 "user_id": t_chat_id,
                                 "username": t_username,
@@ -2602,17 +2769,35 @@ def run_bot():
                             save_pending_report(tmp_id, rep_data)
 
                             if is_threat:
+                                is_phone_only = bool(target_phone and (not target_acc or target_acc == "N/A"))
+                                target_label = "Nombor Telefon" if is_phone_only else "No. Akaun / Sasaran"
+                                target_icon = "📱" if is_phone_only else "💳"
+
                                 # KAD MERAH: ANCAMAN SCAMMER DIKESAN
                                 warn_lines = [
                                     f"🚨 <b>PERISAI KANTOI: ANCAMAN SCAMMER DIKESAN DARI {source_badge.upper()}!</b>",
-                                    "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                    f"👤 <b>Nama Pemunya:</b> {html.escape(target_name)}",
-                                    f"🏦 <b>Institusi / Bank:</b> {html.escape(target_bank)}",
-                                    f"💳 <b>No. Akaun / Sasaran:</b> <code>{html.escape(check_target)}</code>",
+                                    "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                                ]
+                                if is_phone_only:
+                                    warn_lines.append(f"📱 <b>Nombor Telefon:</b> <code>{html.escape(target_phone)}</code>")
+                                    if target_name and target_name != "Tidak Dinyatakan":
+                                        warn_lines.append(f"👤 <b>Nama Suspek / Panggilan:</b> {html.escape(target_name)}")
+                                else:
+                                    warn_lines.append(f"👤 <b>Nama Pemunya:</b> {html.escape(target_name)}")
+                                    if target_bank != "N/A":
+                                        warn_lines.append(f"🏦 <b>Institusi / Bank:</b> {html.escape(target_bank)}")
+                                    warn_lines.append(f"💳 <b>No. Akaun Bank:</b> <code>{html.escape(check_target)}</code>")
+
+                                if intel.get("email"):
+                                    warn_lines.append(f"📧 <b>Emel Suspek:</b> <code>{html.escape(intel['email'])}</code>")
+                                if intel.get("tactic"):
+                                    warn_lines.append(f"🏷️ <b>Modus / Taktik:</b> {html.escape(intel['tactic'])}")
+
+                                warn_lines.extend([
                                     "",
                                     f"📑 <b>Laporan Polis Rasmi (PDRM):</b> <b>{pdrm_reports} Laporan</b>",
                                     f"👥 <b>Jumlah Carian Awam PDRM:</b> <b>{pdrm_searches} Kali</b>",
-                                ]
+                                ])
                                 if rec_kantoi:
                                     warn_lines.append(f"🏷️ <b>Klasifikasi KANTOI:</b> {html.escape(rec_kantoi[2] or 'AMARAN')}")
                                     if rec_kantoi[1]:
@@ -2655,18 +2840,32 @@ def run_bot():
                                 # KAD HIJAU: BERSIH / TIADA REKOD ANCAMAN
                                 clean_lines = [
                                     f"✅ <b>HASIL IMBASAN {source_badge.upper()}</b>",
-                                    "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                    f"👤 <b>Nama Pemunya:</b> {html.escape(target_name)}",
-                                    f"🏦 <b>Institusi / Bank:</b> {html.escape(target_bank)}",
-                                    f"💳 <b>No. Akaun / Sasaran:</b> <code>{html.escape(check_target or 'N/A')}</code>",
+                                    "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                                ]
+                                if is_phone_only:
+                                    clean_lines.append(f"📱 <b>Nombor Telefon:</b> <code>{html.escape(target_phone)}</code>")
+                                    if target_name and target_name != "Tidak Dinyatakan":
+                                        clean_lines.append(f"👤 <b>Nama / Profil:</b> {html.escape(target_name)}")
+                                else:
+                                    clean_lines.append(f"👤 <b>Nama Pemunya:</b> {html.escape(target_name)}")
+                                    if target_bank != "N/A":
+                                        clean_lines.append(f"🏦 <b>Institusi / Bank:</b> {html.escape(target_bank)}")
+                                    clean_lines.append(f"💳 <b>No. Akaun Bank:</b> <code>{html.escape(check_target or 'N/A')}</code>")
+
+                                if intel.get("email"):
+                                    clean_lines.append(f"📧 <b>Emel Dikesan:</b> <code>{html.escape(intel['email'])}</code>")
+                                if intel.get("tactic"):
+                                    clean_lines.append(f"📝 <b>Taktik / Ringkasan:</b> <i>{html.escape(intel['tactic'])}</i>")
+
+                                clean_lines.extend([
                                     "",
                                     f"🏛️ <b>PDRM SemakMule CCID:</b> <b>Tiada Laporan Polis (0 Rekod)</b>",
                                     f"👥 <b>Jumlah Carian Awam PDRM:</b> {pdrm_searches} Kali",
                                     f"🛡️ <b>Pangkalan Data KANTOI:</b> <b>Rekod Bersih (4,700+ Senarai)</b>",
                                     "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                    "ℹ️ <i>Buat masa ini tiada rekod aduan rasmi difailkan terhadap akaun ini.</i>\n",
+                                    f"ℹ️ <i>Buat masa ini tiada rekod aduan rasmi difailkan terhadap {'nombor' if is_phone_only else 'akaun'} ini.</i>\n",
                                     "💡 <i>Sekiranya anda merupakan mangsa penipuan individu ini, sila tekan butang di bawah untuk menghantar aduan:</i>"
-                                ]
+                                ])
                                 cse_btn_clean = {"text": "🌐 Semak Media Sosial (Google CSE)", "url": generate_google_cse_url(check_target or target_name)}
                                 markup = {
                                     "inline_keyboard": [
@@ -2902,6 +3101,32 @@ def run_bot():
 
                             send_message(chat_id, "\n".join(lines))
                         continue
+
+                # Arahan Konfigurasi Gemini API: /gemini <api_key> atau /key <api_key>
+                if text.startswith(("/gemini", "/key")):
+                    if chat_id not in get_admin_ids():
+                        send_message(chat_id, "❌ Akses Ditolak: Arahan ini hanya untuk Admin KANTOI.")
+                        continue
+                    parts = text.split(maxsplit=1)
+                    if len(parts) > 1 and parts[1].strip():
+                        new_k = parts[1].strip()
+                        # Uji kunci secara langsung
+                        test_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={new_k}"
+                        test_body = {"contents": [{"parts": [{"text": "PONG"}]}]}
+                        try:
+                            t_resp = requests.post(test_url, json=test_body, timeout=10)
+                            if t_resp.status_code == 200:
+                                set_gemini_api_key(new_k)
+                                send_message(chat_id, "🎉 <b>BERJAYA!</b> Google Gemini Vision API Key anda telah disahkan sah dan disimpan terus ke dalam sistem.\n\nKini bot boleh mengekstrak teks tangkap layar WhatsApp, Telegram dan nombor scammer secara pintar!")
+                            else:
+                                send_message(chat_id, f"⚠️ <b>Kunci API Ditolak oleh Google (HTTP {t_resp.status_code}):</b>\n<code>{html.escape(t_resp.text[:200])}</code>\n\nSila pastikan anda menyalin kunci daripada https://aistudio.google.com/")
+                        except Exception as e:
+                            send_message(chat_id, f"❌ Ralat menghubungi pelayan Google: {e}")
+                    else:
+                        current_k = get_gemini_api_key()
+                        status_k = f"<code>{current_k[:8]}...{current_k[-4:]}</code>" if current_k else "<i>Belum Ditetapkan</i>"
+                        send_message(chat_id, f"🔑 <b>STATUS GEMINI API KEY:</b> {status_k}\n\nUntuk menetapkan kunci baharu, taip:\n<code>/gemini &lt;API_KEY_ANDA&gt;</code>")
+                    continue
 
                 # Arahan Pendaftaran Admin: /admin <passcode>
                 if text.startswith("/admin"):

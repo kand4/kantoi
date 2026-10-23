@@ -249,9 +249,9 @@ def import_to_sqlite(entities_list):
     return new_inserts, updated_records
 
 def main():
-    target_count = 1000
+    target_count = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
     per_page = 50
-    total_pages = target_count // per_page
+    total_pages = (target_count + per_page - 1) // per_page
     
     print("=" * 60)
     print("   PENYEDUT PINTAR KENASCAM.COM -> KANTOI THREAT ENGINE")
@@ -294,7 +294,9 @@ def main():
     
     for page in range(start_page, end_page + 1):
         p_t0 = time.time()
-        print(f"\n[PAGE {page}/{end_page}] Memuat turun 50 pos melalui Tor...", end=" ", flush=True)
+        pct = round((page / end_page) * 100, 1)
+        bar = '█' * int(pct // 5) + '░' * (20 - int(pct // 5))
+        print(f"\n[{bar}] {pct}% | [PAGE {page}/{end_page}] Memuat turun 50 pos melalui Tor...", end=" ", flush=True)
         posts = fetch_page_via_tor(page, per_page=per_page)
         
         if not posts:
