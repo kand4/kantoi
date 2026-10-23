@@ -1324,6 +1324,77 @@ def format_scam_radar_bulletin(limit=5):
     return "\n".join(lines)
 
 
+def fetch_google_cse_snippets(query_target, max_results=2):
+    """
+    Menyemak hasil carian media sosial & forum secara automatik:
+    1. Google Custom Search JSON API (jika ada kunci API Google)
+    2. Pangkalan data komuniti tempatan KANTOI (Lowyat, CariGold, KenaScam)
+    """
+    clean_target = re.sub(r'[^\d]', '', str(query_target))
+    if not clean_target or len(clean_target) < 8:
+        clean_target = str(query_target).strip()
+        
+    snippets = []
+    google_key = get_gemini_api_key()
+    
+    # 1. Cuba Google Custom Search JSON API jika ada kunci Google
+    if google_key:
+        try:
+            api_url = f"https://www.googleapis.com/customsearch/v1?key={google_key}&cx={GOOGLE_CSE_CX}&q={urllib.parse.quote(clean_target)}&num={max_results}"
+            r = requests.get(api_url, timeout=5)
+            if r.status_code == 200:
+                data = r.json()
+                for item in data.get("items", [])[:max_results]:
+                    title = item.get("title", "").strip()
+                    snippet = item.get("snippet", "").strip().replace("\n", " ")
+                    link = item.get("link", "")
+                    domain = urllib.parse.urlparse(link).netloc.replace("www.", "")
+                    snippets.append({
+                        "source": domain.upper(),
+                        "title": title[:55],
+                        "snippet": snippet[:95],
+                        "link": link
+                    })
+        except Exception:
+            pass
+            
+    # 2. Semak rekod forum dalam Pangkalan Data Komuniti KANTOI (Lowyat/CariGold/KenaScam)
+    if not snippets:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT suspect_name, source, evidence_links, risk_tag 
+                FROM threat_numbers 
+                WHERE phone_norm = ? OR bank_accounts LIKE ?
+                LIMIT ?
+            """, (clean_target, f"%{clean_target}%", max_results))
+            rows = cur.fetchall()
+            conn.close()
+            for r in rows:
+                s_name, src, ev_links, r_tag = r
+                if ev_links and ev_links != "N/A":
+                    for lk in ev_links.split(" | ")[:max_results]:
+                        domain = urllib.parse.urlparse(lk).netloc.replace("www.", "") or src
+                        snippets.append({
+                            "source": domain.upper(),
+                            "title": f"Aduan: {s_name}" if s_name else f"Kes {src}",
+                            "snippet": f"Aduan dilaporkan di {src} ({r_tag})",
+                            "link": lk
+                        })
+                elif src:
+                    snippets.append({
+                        "source": src.upper(),
+                        "title": f"Aduan: {s_name or clean_target}",
+                        "snippet": f"Rekod pertikaian dalam pangkalan komuniti KANTOI ({src})",
+                        "link": ""
+                    })
+        except Exception:
+            pass
+
+    return snippets[:max_results]
+
+
 def generate_google_cse_url(query):
     """
     Menjana URL Carian Khas Google CSE mengikut konfigurasi KANTOI Android.
@@ -1398,8 +1469,16 @@ def format_threat_response(record, query_input):
         lines.append(format_syndicate_badge(cluster))
 
     lines.append("--------------------------------------------------")
-    lines.append("🌐 *Semakan Media Sosial & Forum (Google CSE):*")
-    lines.append("• _Ketik butang di bawah untuk membuka carian perbincangan forum Lowyat, CariGold, Facebook, X & TikTok._")
+    cse_snippets = fetch_google_cse_snippets(phone_norm or query_input)
+    if cse_snippets:
+        lines.append("🌐 *HASIL SEMAKAN MEDIA SOSIAL & FORUM (Google CSE):*")
+        for cs in cse_snippets:
+            lines.append(f"• *[{cs['source']}]* {cs['title']}")
+            if cs.get('snippet'):
+                lines.append(f"  _{cs['snippet']}_")
+    else:
+        lines.append("🌐 *Semakan Media Sosial & Forum (Google CSE):*")
+        lines.append("• _Ketik butang di bawah untuk carian lanjut di Lowyat, CariGold, FB & TikTok._")
     lines.append("--------------------------------------------------")
     lines.append("ℹ️ _Disemak daripada KANTOI Threat Engine (4,700+ Rekod)._")
     lines.append("📲 _Gunakan aplikasi KANTOI untuk perlindungan panggilan & SMS masa nyata._")
@@ -1447,12 +1526,21 @@ def format_safe_response(query_input, norm_phone):
         "• Walaupun tiada rekod, sentiasa berwaspada!",
         "• Jangan sesekali berkongsi kata laluan, TAC/OTP, atau memindahkan wang ke akaun peribadi yang tidak dikenali.",
         "• Anda boleh melaporkan nombor ini dengan menaip cerita/bukti kejadian jika mengesyaki penipuan.",
-        "--------------------------------------------------",
-        "🌐 *Semakan Media Sosial & Forum (Google CSE):*",
-        "• _Ingin menyemak jika nombor/akaun ini pernah diadu di Lowyat, CariGold, Facebook atau X? Ketik butang Google CSE di bawah._",
-        "--------------------------------------------------",
-        "ℹ️ _Pangkalan Data KANTOI merangkumi rekod PDRM SemakMule CCID & Komuniti._"
+        "--------------------------------------------------"
     ])
+    cse_snippets = fetch_google_cse_snippets(display_num)
+    if cse_snippets:
+        lines.append("🌐 *HASIL SEMAKAN MEDIA SOSIAL & FORUM (Google CSE):*")
+        for cs in cse_snippets:
+            lines.append(f"• *[{cs['source']}]* {cs['title']}")
+            if cs.get('snippet'):
+                lines.append(f"  _{cs['snippet']}_")
+    else:
+        lines.append("🌐 *SEMAKAN MEDIA SOSIAL & FORUM (Google CSE):*")
+        lines.append("• _Tiada rekod aduan dikesan di Lowyat, CariGold atau Facebook._")
+        lines.append("• _Ketik butang Google CSE di bawah untuk carian lanjut._")
+    lines.append("--------------------------------------------------")
+    lines.append("ℹ️ _Pangkalan Data KANTOI merangkumi rekod PDRM SemakMule CCID & Komuniti (6,100+ Rekod)._")
     return "\n".join(lines)
 
 def format_welcome_message(is_admin=False):
@@ -2804,6 +2892,15 @@ def run_bot():
                                         warn_lines.append(f"👤 <b>Rekod Suspek:</b> {html.escape(rec_kantoi[1])}")
                                     if rec_kantoi[4]:
                                         warn_lines.append(f"📝 <b>Modus Operandi:</b> {html.escape(rec_kantoi[4])}")
+
+                                cse_snippets = fetch_google_cse_snippets(check_target)
+                                if cse_snippets:
+                                    warn_lines.append("")
+                                    warn_lines.append("🌐 <b>Hasil Media Sosial & Forum (Google CSE):</b>")
+                                    for cs in cse_snippets:
+                                        warn_lines.append(f"• <b>[{html.escape(cs['source'])}]</b> {html.escape(cs['title'])}")
+                                        if cs.get('snippet'):
+                                            warn_lines.append(f"  <i>{html.escape(cs['snippet'])}</i>")
                                 warn_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
                                 warn_lines.append("🚫 <b>AMARAN:</b> Akaun ini mempunyai rekod jenayah penipuan. JANGAN PINDAHKAN SEBARANG WANG!")
 
@@ -2861,7 +2958,21 @@ def run_bot():
                                     "",
                                     f"🏛️ <b>PDRM SemakMule CCID:</b> <b>Tiada Laporan Polis (0 Rekod)</b>",
                                     f"👥 <b>Jumlah Carian Awam PDRM:</b> {pdrm_searches} Kali",
-                                    f"🛡️ <b>Pangkalan Data KANTOI:</b> <b>Rekod Bersih (4,700+ Senarai)</b>",
+                                    f"🛡️ <b>Pangkalan Data KANTOI:</b> <b>Rekod Bersih (6,100+ Senarai)</b>",
+                                ])
+
+                                cse_snippets = fetch_google_cse_snippets(check_target)
+                                if cse_snippets:
+                                    clean_lines.append("")
+                                    clean_lines.append("🌐 <b>Hasil Media Sosial & Forum (Google CSE):</b>")
+                                    for cs in cse_snippets:
+                                        clean_lines.append(f"• <b>[{html.escape(cs['source'])}]</b> {html.escape(cs['title'])}")
+                                        if cs.get('snippet'):
+                                            clean_lines.append(f"  <i>{html.escape(cs['snippet'])}</i>")
+                                else:
+                                    clean_lines.append("🌐 <b>Media Sosial (Google CSE):</b> <i>Tiada aduan dikesan di Lowyat/FB.</i>")
+
+                                clean_lines.extend([
                                     "━━━━━━━━━━━━━━━━━━━━━━━━━━",
                                     f"ℹ️ <i>Buat masa ini tiada rekod aduan rasmi difailkan terhadap {'nombor' if is_phone_only else 'akaun'} ini.</i>\n",
                                     "💡 <i>Sekiranya anda merupakan mangsa penipuan individu ini, sila tekan butang di bawah untuk menghantar aduan:</i>"
