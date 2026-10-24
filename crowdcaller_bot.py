@@ -99,6 +99,18 @@ GOV_KEYWORDS = [
 
 ADMIN_CONFIG_PATH = os.path.join(BASE_DIR, "admin_config.json")
 REPORTS_DATA_PATH = os.path.join(BASE_DIR, "pending_reports.json")
+USER_KEYS_PATH = os.path.join(BASE_DIR, "user_api_keys.json")
+
+# Senarai Model Google Gemini yang disokong secara automatik (Fallback Terpantas)
+AVAILABLE_GEMINI_MODELS = [
+    "gemini-2.5-flash",       # Generasi Terkini Pantas (Workhorse Vision/OCR)
+    "gemini-2.0-flash",       # Standard Kestabilan Tinggi & Kependaman Rendah
+    "gemini-1.5-flash",       # Sandaran Kuota Luas & Keserasian Maksimum
+    "gemini-2.5-pro",         # Model Penalaran Siber Mendalam
+    "gemini-3.8-flash",       # Generasi Maju
+    "gemini-4-argon",         # Flagship 1M Context
+    "gemini-3.5-flash"        # Generasi 3.5 Flash
+]
 
 user_sessions = {}
 unconfirmed_reports = {}
@@ -147,9 +159,10 @@ def get_gemini_api_key_details():
     # 1. Semak fail-fail konfigurasi JSON
     json_candidates = [
         ("admin_config.json", os.path.join(BASE_DIR, "admin_config.json")),
+        ("secret.json", os.path.join(BASE_DIR, "secret.json")),
+        ("secrets.json", os.path.join(BASE_DIR, "secrets.json")),
         ("config.json", os.path.join(BASE_DIR, "config.json")),
         ("settings.json", os.path.join(BASE_DIR, "settings.json")),
-        ("secrets.json", os.path.join(BASE_DIR, "secrets.json")),
     ]
     for fn_label, fpath in json_candidates:
         if os.path.exists(fpath):
@@ -233,6 +246,105 @@ def set_gemini_api_key(new_key):
     os.environ["GEMINI_API_KEY"] = clean_key
     global GEMINI_API_KEY
     GEMINI_API_KEY = clean_key
+
+# ==============================================================================
+# SISTEM BYOK (BRING YOUR OWN KEY) UNTUK PENGGUNA AWAM
+# ==============================================================================
+def get_user_gemini_key(user_id):
+    """Mendapatkan kunci Gemini peribadi (BYOK) untuk pengguna Telegram tertentu"""
+    if not user_id:
+        return ""
+    all_keys = load_json_file(USER_KEYS_PATH, {})
+    u_info = all_keys.get(str(user_id))
+    if isinstance(u_info, dict):
+        k = u_info.get("api_key", "").strip(" \t\r\n\'\"")
+        if k and len(k) >= 15:
+            return k
+    elif isinstance(u_info, str):
+        k = u_info.strip(" \t\r\n\'\"")
+        if k and len(k) >= 15:
+            return k
+    return ""
+
+def set_user_gemini_key(user_id, api_key, model="auto"):
+    """Menyimpan kunci Gemini peribadi (BYOK) ke dalam user_api_keys.json"""
+    clean_k = api_key.strip(" \t\r\n\'\"")
+    all_keys = load_json_file(USER_KEYS_PATH, {})
+    all_keys[str(user_id)] = {
+        "api_key": clean_k,
+        "registered_at": int(time.time()),
+        "model": model
+    }
+    save_json_file(USER_KEYS_PATH, all_keys)
+    return True
+
+def remove_user_gemini_key(user_id):
+    """Memadamkan kunci Gemini peribadi (BYOK) pengguna"""
+    all_keys = load_json_file(USER_KEYS_PATH, {})
+    if str(user_id) in all_keys:
+        del all_keys[str(user_id)]
+        save_json_file(USER_KEYS_PATH, all_keys)
+        return True
+    return False
+
+def get_effective_gemini_key(user_id=None):
+    """
+    Mengambil kunci Gemini yang berkesan mengikut keutamaan:
+    1. Kunci peribadi pengguna (BYOK) jika didaftarkan
+    2. Kunci pelayan KANTOI (admin_config.json / secret.json / local_secrets.py)
+    Mengembalikan (kunci_bersih, label_sumber, jenis_kunci)
+    """
+    if user_id:
+        u_key = get_user_gemini_key(user_id)
+        if u_key:
+            return u_key, "BYOK (Kunci Peribadi Pengguna)", "BYOK"
+
+    server_key, src_fn, kname = get_gemini_api_key_details()
+    if server_key:
+        return server_key, f"Pelayan KANTOI ({src_fn})", "SERVER"
+
+    return "", "Tiada Kunci Dikesan", "NONE"
+
+def test_gemini_api_key(api_key):
+    """
+    Menguji kesahihan kunci Google Gemini API secara langsung dengan permintaan ringan (PONG).
+    Mengembalikan (is_valid: bool, working_model_or_error: str)
+    """
+    clean_key = (api_key or "").strip(" \t\r\n\'\"")
+    if not clean_key or len(clean_key) < 15:
+        return False, "Format kunci tidak sah atau terlalu pendek."
+
+    last_err = ""
+    for tm in AVAILABLE_GEMINI_MODELS:
+        test_url = f"https://generativelanguage.googleapis.com/v1beta/models/{tm}:generateContent?key={clean_key}"
+        headers = {
+            "x-goog-api-key": clean_key,
+            "Content-Type": "application/json"
+        }
+        test_body = {"contents": [{"parts": [{"text": "PONG"}]}]}
+        r = None
+        try:
+            r = requests.post(test_url, headers=headers, json=test_body, timeout=10)
+        except Exception as net_err:
+            try:
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                r = requests.post(test_url, headers=headers, json=test_body, timeout=10, verify=False)
+            except Exception as e_retry:
+                last_err = f"Ralat sambungan: {str(e_retry)[:80]}"
+                continue
+
+        if r and r.status_code == 200:
+            return True, tm
+        elif r and r.status_code in [404, 400]:
+            last_err = f"Model {tm} tidak disokong (HTTP {r.status_code})"
+            continue
+        elif r and r.status_code in [401, 403]:
+            return False, f"Google menolak kunci (HTTP {r.status_code} - API Key Invalid)."
+        elif r:
+            last_err = f"HTTP {r.status_code}: {r.text[:80]}"
+
+    return False, last_err or "Pelayan Google tidak dapat dihubungi."
 
 def get_admin_ids():
     data = load_json_file(ADMIN_CONFIG_PATH, {"admins": []})
@@ -673,11 +785,11 @@ def get_image_mime_type(image_path):
         pass
     return "image/jpeg"
 
-def analyze_image_with_gemini(image_path, api_key=None):
+def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
     """Menghantar imej ke Google Gemini Vision API dengan sokongan perlindungan keselamatan dan kebal SSL Windows 7"""
     global LAST_GEMINI_DIAGNOSTIC
     if not api_key:
-        api_key = get_gemini_api_key()
+        api_key, _, _ = get_effective_gemini_key(user_id)
     api_key = (api_key or "").strip(" \t\r\n\'\"")
     if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
         LAST_GEMINI_DIAGNOSTIC = {
@@ -755,13 +867,7 @@ def analyze_image_with_gemini(image_path, api_key=None):
         }
     }
 
-    models_to_try = [
-        "gemini-3.8-flash",       # TERPANTAS & PALING CANGGIH (Generasi Terkini Sept 2026 - Workhorse Vision/OCR)
-        "gemini-4-argon",         # FLAGSHIP TERPINTAR (Google Gemini 4 Argon - 1M Context & Penalaran Siber)
-        "gemini-3.7-flash",       # Sandaran Generasi 3.7 Flash (Ogos 2026)
-        "gemini-3.6-flash",       # Sandaran Generasi 3.6 Flash
-        "gemini-3.5-flash"        # Sandaran Generasi 3.5 Flash
-    ]
+    models_to_try = AVAILABLE_GEMINI_MODELS
 
     for model_name in models_to_try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
@@ -932,9 +1038,9 @@ def windows_native_ocr(image_path):
     """Pengekalan keserasian fungsi lama"""
     return local_image_ocr(image_path)
 
-def extract_hybrid_image_intel(image_path, gemini_api_key=None, progress_callback=None):
+def extract_hybrid_image_intel(image_path, gemini_api_key=None, user_id=None, progress_callback=None):
     """
-    Menyelaraskan gabungan QR DuitNow + AI Vision (Gemini) + OCR Tempatan
+    Menyelaraskan gabungan QR DuitNow + AI Vision (Gemini) + OCR Tempatan (dengan sokongan BYOK)
     """
     if progress_callback:
         progress_callback(35, "🔍 Mengimbas kod QR DuitNow & mentafsir EMVCo...", "OpenCV / PyZbar Binary Matrix")
@@ -943,12 +1049,18 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None, progress_callbac
     qr_data = decode_duitnow_qr(image_path)
     
     # 2. Imbas teks melalui AI Vision (jika ada kunci) atau Windows Native OCR
-    active_key = (gemini_api_key or "").strip() or get_gemini_api_key()
+    active_key = (gemini_api_key or "").strip()
+    key_src_label = ""
+    if not active_key:
+        active_key, key_src_label, _ = get_effective_gemini_key(user_id)
+    else:
+        key_src_label = "Kunci Dinyatakan"
+
     gemini_data = None
     if active_key:
         if progress_callback:
             progress_callback(60, "🧠 Pengecaman Teks & Nombor Telefon...", "Enjin AI Vision KANTOI")
-        gemini_data = analyze_image_with_gemini(image_path, active_key)
+        gemini_data = analyze_image_with_gemini(image_path, active_key, user_id=user_id)
         
     ocr_text = ""
     if not gemini_data:
@@ -1105,7 +1217,9 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None, progress_callbac
         "tactic": vision_tactic,
         "evidence_text": vision_evidence,
         "gemini_status": LAST_GEMINI_DIAGNOSTIC.get("status", "NOT_CONFIGURED"),
-        "gemini_error": LAST_GEMINI_DIAGNOSTIC.get("error", "")
+        "gemini_error": LAST_GEMINI_DIAGNOSTIC.get("error", ""),
+        "key_source": key_src_label,
+        "is_byok": bool(user_id and get_user_gemini_key(user_id))
     }
 
 def download_telegram_photo(file_id):
@@ -1131,8 +1245,14 @@ def download_telegram_photo(file_id):
 # OPERASI PANGKALAN DATA (SQLITE)
 # ==============================================================================
 def query_threat(query_text):
-    norm_phone = normalize_phone(query_text)
-    clean_digits = re.sub(r"[^\d]", "", query_text)
+    if not query_text or not str(query_text).strip():
+        return None, ""
+    clean_raw = str(query_text).strip()
+    if clean_raw.lower() in ["none", "unknown", "n/a", "tidak dinyatakan", "tiada", "0"]:
+        return None, ""
+
+    norm_phone = normalize_phone(clean_raw)
+    clean_digits = re.sub(r"[^\d]", "", clean_raw)
     
     if not os.path.exists(DB_PATH):
         return None, "DATABASE_MISSING"
@@ -1141,7 +1261,7 @@ def query_threat(query_text):
     cur = conn.cursor()
     match = None
 
-    if norm_phone:
+    if norm_phone and len(norm_phone) >= 8:
         cur.execute("SELECT phone_norm, suspect_name, risk_tag, bank_accounts, address, source, evidence_links, all_phones FROM threat_numbers WHERE phone_norm = ? LIMIT 1", (norm_phone,))
         match = cur.fetchone()
         if not match:
@@ -1565,9 +1685,20 @@ def fetch_google_cse_snippets(query_target, max_results=2):
     1. Google Custom Search JSON API (jika ada kunci API Google rasmi AIzaSy...)
     2. Pangkalan data komuniti tempatan KANTOI (Lowyat, CariGold, KenaScam)
     """
-    clean_target = re.sub(r'[^\d]', '', str(query_target))
+    if not query_target or not str(query_target).strip():
+        return []
+
+    raw_str = str(query_target).strip()
+    if raw_str.lower() in ["none", "unknown", "n/a", "tidak dinyatakan", "tiada", "0"]:
+        return []
+
+    clean_target = re.sub(r'[^\d]', '', raw_str)
     if not clean_target or len(clean_target) < 8:
-        clean_target = str(query_target).strip()
+        clean_target = raw_str
+
+    if len(clean_target) < 3:
+        return []
+
     norm = normalize_phone(clean_target)
     search_phone = norm if norm else clean_target
         
@@ -1599,49 +1730,69 @@ def fetch_google_cse_snippets(query_target, max_results=2):
             pass
             
     # 2. Semak rekod forum dalam Pangkalan Data Komuniti KANTOI (Lowyat/CariGold/KenaScam)
+    # ELAKKAN WILDCARD (LIKE %%) DENGAN MEMASTIKAN SYARAT KUKUH
     if not snippets or len(snippets) < max_results:
         try:
-            conn = sqlite3.connect(DB_PATH)
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT suspect_name, source, evidence_links, risk_tag 
-                FROM threat_numbers 
-                WHERE phone_norm = ? OR all_phones LIKE ? OR bank_accounts LIKE ? OR suspect_name LIKE ?
-                LIMIT ?
-            """, (search_phone, f"%{search_phone}%", f"%{clean_target}%", f"%{clean_target}%", max_results * 2))
-            rows = cur.fetchall()
-            conn.close()
-            for r in rows:
-                s_name, src, ev_links, r_tag = r
-                if ev_links and ev_links != "N/A":
-                    for lk in ev_links.split(" | "):
-                        lk = lk.strip()
-                        if not lk or lk in seen_links:
-                            continue
-                        seen_links.add(lk)
-                        domain = urllib.parse.urlparse(lk).netloc.replace("www.", "") or src
-                        snippets.append({
-                            "source": domain.upper(),
-                            "title": f"Aduan: {s_name}" if s_name else f"Kes {src}",
-                            "snippet": f"Aduan dilaporkan di {src} ({r_tag})",
-                            "link": lk
-                        })
-                        if len(snippets) >= max_results:
-                            break
-                elif src:
-                    key_tag = f"{src}:{s_name}"
-                    if key_tag not in seen_links:
-                        seen_links.add(key_tag)
-                        snippets.append({
-                            "source": src.upper(),
-                            "title": f"Aduan: {s_name or clean_target}",
-                            "snippet": f"Rekod pertikaian dalam pangkalan komuniti KANTOI ({src})",
-                            "link": ""
-                        })
-                if len(snippets) >= max_results:
-                    break
-        except Exception:
-            pass
+            where_clauses = []
+            params = []
+
+            if search_phone and len(search_phone) >= 3:
+                where_clauses.append("phone_norm = ?")
+                params.append(search_phone)
+                where_clauses.append("all_phones LIKE ?")
+                params.append(f"%{search_phone}%")
+
+            if clean_target and len(clean_target) >= 4 and clean_target != search_phone:
+                where_clauses.append("bank_accounts LIKE ?")
+                params.append(f"%{clean_target}%")
+                where_clauses.append("suspect_name LIKE ?")
+                params.append(f"%{clean_target}%")
+
+            if where_clauses:
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                sql = f"""
+                    SELECT suspect_name, source, evidence_links, risk_tag 
+                    FROM threat_numbers 
+                    WHERE {' OR '.join(where_clauses)}
+                    LIMIT ?
+                """
+                params.append(max_results * 2)
+                cur.execute(sql, tuple(params))
+                rows = cur.fetchall()
+                conn.close()
+
+                for r in rows:
+                    s_name, src, ev_links, r_tag = r
+                    if ev_links and ev_links != "N/A":
+                        for lk in ev_links.split(" | "):
+                            lk = lk.strip()
+                            if not lk or lk in seen_links:
+                                continue
+                            seen_links.add(lk)
+                            domain = urllib.parse.urlparse(lk).netloc.replace("www.", "") or src
+                            snippets.append({
+                                "source": domain.upper(),
+                                "title": f"Aduan: {s_name}" if s_name else f"Kes {src}",
+                                "snippet": f"Aduan dilaporkan di {src} ({r_tag})",
+                                "link": lk
+                            })
+                            if len(snippets) >= max_results:
+                                break
+                    elif src:
+                        key_tag = f"{src}:{s_name}"
+                        if key_tag not in seen_links:
+                            seen_links.add(key_tag)
+                            snippets.append({
+                                "source": src.upper(),
+                                "title": f"Aduan: {s_name or clean_target}",
+                                "snippet": f"Rekod pertikaian dalam pangkalan komuniti KANTOI ({src})",
+                                "link": ""
+                            })
+                    if len(snippets) >= max_results:
+                        break
+        except Exception as e:
+            print(f"[CSE LOCAL DB ERR] {e}")
 
     return snippets[:max_results]
 
@@ -1668,6 +1819,14 @@ def format_social_media_intel_report(target_q):
     Menjana laporan risikan media sosial & forum KANTOI terus di dalam Telegram chat
     tanpa memerlukan pengguna membuka tetingkap pelayar web luaran.
     """
+    if not target_q or not str(target_q).strip() or str(target_q).strip().lower() in ["none", "unknown", "n/a", "tidak dinyatakan", "tiada", "0"]:
+        return (
+            "⚠️ <b>Maklumat Sasaran Tidak Sah:</b>\n\n"
+            "Sila masukkan nombor telefon atau nombor akaun bank yang ingin disemak.\n"
+            "Contoh carian:\n"
+            "• <code>/cse 01139444255</code>\n"
+            "• <code>/cse 112028138548</code>"
+        )
     clean_display = str(target_q).strip()
     norm = normalize_phone(clean_display)
     search_key = norm if norm else clean_display
@@ -2007,7 +2166,9 @@ def get_help_detail(topic):
             "2. *Tangkap Layar (Screenshot) WhatsApp / Telegram:*\n"
             "   Enjin OCR mengekstrak nombor telefon suspek, akaun bank, dan cerita scammer secara automatik.\n\n"
             "3. *Slip / Resit Transaksi Bank:*\n"
-            "   Mengekstrak maklumat akaun keldai untuk semakan segera."
+            "   Mengekstrak maklumat akaun keldai untuk semakan segera.\n\n"
+            "🔑 *Gunakan Kuota AI Sendiri (BYOK):*\n"
+            "   Dapatkan kunci percuma di https://aistudio.google.com/ dan taip `/mykey <API_KEY>` untuk kelajuan maksimum tanpa had!"
         )
         return text, back_button
 
@@ -3165,7 +3326,7 @@ def run_bot():
 
                     try:
                         hud.update(25, "🔍 Membaca matriks imej & mengesan Kod QR...", "OpenCV Matrix Decoder")
-                        intel = extract_hybrid_image_intel(tmp_img, GEMINI_API_KEY, progress_callback=hud.update)
+                        intel = extract_hybrid_image_intel(tmp_img, user_id=t_chat_id, progress_callback=hud.update)
                         if intel.get("has_intel"):
                             qr_data = intel.get("qr_data")
                             target_phone = intel.get("phone_norm") or ""
@@ -3269,18 +3430,18 @@ def run_bot():
 
                             # B. Semakan Sasaran Nombor / Akaun
                             check_target = target_acc if (target_acc and target_acc != "N/A") else target_phone
-                            clean_digits = re.sub(r'[^\d]', '', check_target)
+                            clean_digits = re.sub(r'[^\d]', '', check_target) if check_target else ""
                             check_cat = "bank" if (target_acc and target_acc != "N/A" and len(clean_digits) > 8) else "telefon"
 
                             rec_kantoi = None
-                            if target_phone and target_phone != "N/A":
+                            if target_phone and target_phone not in ["N/A", ""]:
                                 rec_kantoi, _ = query_threat(target_phone)
-                            if not rec_kantoi and target_acc and target_acc != "N/A":
+                            if not rec_kantoi and target_acc and target_acc not in ["N/A", ""]:
                                 rec_kantoi, _ = query_threat(target_acc)
 
                             # Semakan Siap-Sedia PDRM CCID SemakMule Secara Langsung
                             hud.update(80, "🏛️ Menyemak pangkalan data PDRM SemakMule & Komuniti KANTOI...", "CCID Live + Lowyat/KenaScam DB")
-                            pdrm_info = query_pdrm_semakmule_live(check_cat, check_target) if check_target else {"success": False}
+                            pdrm_info = query_pdrm_semakmule_live(check_cat, check_target) if (check_target and len(clean_digits) >= 6) else {"success": False}
                             pdrm_reports = pdrm_info.get("police_reports", 0) if pdrm_info.get("success") else 0
                             pdrm_searches = pdrm_info.get("search_count", 0) if pdrm_info.get("success") else 0
 
@@ -3444,14 +3605,22 @@ def run_bot():
                                 hud.complete_with_message("\n".join(clean_lines), reply_markup=markup, parse_mode="HTML")
                         else:
                             # Tiada maklumat dapat dikesan daripada imej
-                            active_k, src_file, _ = get_gemini_api_key_details()
+                            active_k, src_label, k_type = get_effective_gemini_key(t_chat_id)
                             g_status = intel.get("gemini_status", "")
                             g_err = intel.get("gemini_error", "")
 
                             if not active_k:
-                                ai_diag = "⚠️ <b>AI Vision Belum Ditetapkan:</b> Kunci Gemini API belum dimasukkan di pelayan.\n👉 <i>Taip <code>/gemini &lt;API_KEY&gt;</code> untuk aktifkan analisis tangkap layar WhatsApp secara percuma!</i>"
+                                ai_diag = (
+                                    "⚠️ <b>AI Vision Belum Ditetapkan:</b>\n"
+                                    "Kunci Gemini API belum didaftarkan untuk akaun anda atau pelayan.\n"
+                                    "👉 <i>Daftar kunci percuma anda sendiri (BYOK) dengan arahan: <code>/mykey &lt;API_KEY&gt;</code>!</i>"
+                                )
                             elif g_err:
-                                ai_diag = f"⚠️ <b>Status AI Gemini ({html.escape(g_status)}):</b>\n<code>{html.escape(g_err[:180])}</code>\n👉 <i>Sila semak semula kunci anda melalui arahan <code>/gemini</code>.</i>"
+                                ai_diag = (
+                                    f"⚠️ <b>Status AI Gemini ({html.escape(g_status)}):</b>\n"
+                                    f"<code>{html.escape(g_err[:180])}</code>\n"
+                                    f"👉 <i>Kunci digunakan: {html.escape(src_label)}. Semak semula dengan <code>/mykey</code> atau <code>/gemini</code>.</i>"
+                                )
                             else:
                                 ai_diag = "🔍 <b>Pengecaman Teks:</b> Tiada nombor telefon (+60 / 01x), akaun bank, atau nama suspek yang jelas ditemui dalam gambar."
 
@@ -3677,6 +3846,112 @@ def run_bot():
                             send_message(chat_id, "\n".join(lines))
                         continue
 
+                # ------------------------------------------------------------------
+                # MOD CHAT PERIBADI: BYOK (BRING YOUR OWN KEY) UNTUK PENGGUNA AWAM
+                # ------------------------------------------------------------------
+                if text.startswith(("/mykey", "/kuncisaya", "/byok")):
+                    parts = text.split(maxsplit=1)
+                    subcmd = parts[1].strip() if len(parts) > 1 else ""
+
+                    if subcmd.lower() in ["padam", "reset", "buang", "hapus", "delete", "remove"]:
+                        if remove_user_gemini_key(chat_id):
+                            send_message(
+                                chat_id,
+                                "✅ <b>Kunci API Peribadi (BYOK) Berjaya Dipadam!</b>\n\n"
+                                "Akaun anda kini kembali menggunakan kuota pelayan KANTOI.\n"
+                                "Jika anda ingin mendaftarkan kunci baharu semula pada bila-bila masa, taip:\n"
+                                "<code>/mykey &lt;KUNCI_API_ANDA&gt;</code>",
+                                parse_mode="HTML"
+                            )
+                        else:
+                            send_message(chat_id, "ℹ️ Anda belum mendaftarkan sebarang kunci peribadi (BYOK). Anda kini menggunakan kuota pelayan KANTOI.")
+                        continue
+
+                    if subcmd:
+                        candidate_k = subcmd.strip(" \t\r\n\'\"")
+                        is_valid_pattern = bool(candidate_k.startswith(("AQ.", "AQ", "AIza")) or len(candidate_k) >= 15)
+                        if not is_valid_pattern:
+                            send_message(
+                                chat_id,
+                                "⚠️ <b>Format Kunci API Tidak Sah:</b>\n"
+                                f"Teks <code>{html.escape(candidate_k[:20])}</code> bukan format kunci Google Gemini yang sah.\n\n"
+                                "💡 <b>Format Rasmi Google AI Studio:</b>\n"
+                                "• <b>Format Terkini:</b> Bermula dengan <code>AQ....</code> (~53 aksara)\n"
+                                "• <b>Format Standard:</b> Bermula dengan <code>AIzaSy...</code> (39 aksara)\n\n"
+                                "Dapatkan kunci percuma di https://aistudio.google.com/ dan taip:\n"
+                                "<code>/mykey &lt;KUNCI_API_PENUH&gt;</code>",
+                                parse_mode="HTML"
+                            )
+                            continue
+
+                        api_call("sendChatAction", {"chat_id": chat_id, "action": "typing"})
+                        is_ok, res_model_or_err = test_gemini_api_key(candidate_k)
+                        if is_ok:
+                            set_user_gemini_key(chat_id, candidate_k, model=res_model_or_err)
+                            masked = f"{candidate_k[:8]}...{candidate_k[-4:]}"
+                            send_message(
+                                chat_id,
+                                "🎉 <b>TAHNIAH! KUNCI GEMINI PERIBADI ANDA BERJAYA DIAKTIFKAN (BYOK)!</b>\n"
+                                "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🔑 <b>Kunci Disimpan:</b> <code>{masked}</code>\n"
+                                f"⚡ <b>Model Beroperasi:</b> <code>{res_model_or_err}</code> (Google AI Vision)\n"
+                                f"👤 <b>Status Kuota:</b> 100% Kuota Peribadi Anda (Percuma & Berasingan)\n\n"
+                                "🛡️ <b>Kelebihan Menggunakan BYOK:</b>\n"
+                                "1. Imbasan tangkap layar WhatsApp & profil suspek sentiasa pantas tanpa had perkongsian awam.\n"
+                                "2. Kunci disimpan selamat dan hanya digunakan khusus untuk pertanyaan akaun Telegram anda.\n"
+                                "3. Anda boleh memadamkan kunci bila-bila masa dengan arahan <code>/mykey padam</code>.\n\n"
+                                "📸 <i>Sila hantarkan tangkap layar (screenshot) WhatsApp, panggilan scammer, atau resit bank untuk mula menguji!</i>",
+                                parse_mode="HTML"
+                            )
+                        else:
+                            send_message(
+                                chat_id,
+                                f"❌ <b>Pengesahan Kunci Gagal:</b>\n"
+                                f"Google tidak menerima kunci yang anda berikan.\n"
+                                f"<b>Sebab:</b> <code>{html.escape(str(res_model_or_err))}</code>\n\n"
+                                "💡 <i>Pastikan kunci disalin penuh daripada <a href=\"https://aistudio.google.com/\">Google AI Studio</a>.</i>",
+                                parse_mode="HTML"
+                            )
+                        continue
+
+                    # Jika pengguna menaip /mykey sahaja tanpa hujah: Paparkan Status BYOK
+                    user_k = get_user_gemini_key(chat_id)
+                    server_k, server_src, _ = get_gemini_api_key_details()
+
+                    if user_k:
+                        masked_u = f"{user_k[:8]}...{user_k[-4:]}"
+                        send_message(
+                            chat_id,
+                            "🔑 <b>STATUS KUNCI PERIBADI ANDA (BYOK)</b>\n"
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            "✅ <b>Status:</b> 🟢 Aktif & Digunakan\n"
+                            f"🔑 <b>Kunci Anda:</b> <code>{masked_u}</code>\n"
+                            "⚡ <b>Enjin:</b> Google Gemini AI Vision (Kuota Peribadi)\n\n"
+                            "💡 Semua imbasan gambar, resit dan tangkap layar anda menggunakan kuota peribadi ini.\n\n"
+                            "🗑️ <b>Padam Kunci:</b> Taip <code>/mykey padam</code> untuk memadam kunci anda dan kembali ke kuota pelayan.",
+                            parse_mode="HTML"
+                        )
+                    else:
+                        server_status = f"🟢 Tersedia ({server_src})" if server_k else "⚪ Belum Ditetapkan"
+                        send_message(
+                            chat_id,
+                            "🔑 <b>DAFTAR KUNCI GEMINI PERIBADI (BYOK - BRING YOUR OWN KEY)</b>\n"
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            "Status Anda: ⚪ <b>Menggunakan Kuota Pelayan KANTOI</b>\n"
+                            f"Status Pelayan: {server_status}\n\n"
+                            "💡 <b>Mengapa Galakkan BYOK?</b>\n"
+                            "Google AI Studio menyediakan Kunci API Gemini <b>100% PERCUMA</b> dengan had ribuan permintaan setiap hari. Mendaftarkan kunci anda sendiri memastikan bot tidak terganggu jika kuota awam pelayan telah penuh.\n\n"
+                            "👉 <b>Cara Mendapatkan Kunci Percuma (1 Minit):</b>\n"
+                            "1. Buka laman: https://aistudio.google.com/\n"
+                            "2. Log masuk akaun Google & klik butang <b>'Get API key'</b>\n"
+                            "3. Salin kunci (bermula <code>AQ...</code> atau <code>AIzaSy...</code>)\n"
+                            "4. Hantar ke sini dengan arahan:\n"
+                            "   <code>/mykey &lt;KUNCI_API_ANDA&gt;</code>\n\n"
+                            "<i>(Privasi: Kunci anda hanya digunakan untuk semakan mesej akaun anda sendiri)</i>",
+                            parse_mode="HTML"
+                        )
+                    continue
+
                 # Arahan Konfigurasi & Status Gemini API: /gemini, /key, /ai, /ai_status
                 if text.startswith(("/gemini", "/key", "/ai_status", "/ai")):
                     parts = text.split(maxsplit=2)
@@ -3713,7 +3988,7 @@ def run_bot():
                     if candidate_key and is_valid_key_pattern:
                         api_call("sendChatAction", {"chat_id": chat_id, "action": "typing"})
                         # Uji kunci secara langsung ke Google Gemini API (Model Terpantas: gemini-2.0-flash)
-                        test_models = ["gemini-3.8-flash", "gemini-4-argon", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash"]
+                        test_models = AVAILABLE_GEMINI_MODELS
                         t_resp = None
                         success_model = ""
                         for tm in test_models:
@@ -3776,7 +4051,7 @@ def run_bot():
                     google_status = "⚪ Belum Ditetapkan"
                     active_model_info = "gemini-3.8-flash / gemini-4-argon (Generasi Terkini 2026)"
                     if current_k:
-                        test_models_diag = ["gemini-3.8-flash", "gemini-4-argon", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash"]
+                        test_models_diag = AVAILABLE_GEMINI_MODELS
                         r_chk = None
                         working_m = ""
                         for tm in test_models_diag:
