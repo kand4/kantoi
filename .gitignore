@@ -67,3 +67,13 @@ ocr_cache.json
 parsed_scammers.json
 /kantoi_threats.db
 kenascam_vault.json
+
+
+# Sensitive Runtime & User Data (STRICT PRIVACY)
+user_api_keys.json
+admin_config.json
+pending_reports.json
+secret.json
+secrets.json
+scratch/
+*.bak
