@@ -109,13 +109,14 @@ assert "TIADA REKOD SCAMMER DITEMUI" in safe_msg, "Missing safe title"
 assert "SEMAKAN MEDIA SOSIAL" in safe_msg, "Missing CSE section in safe msg"
 print("    -> Format Mesej Bersih (Kad Hijau) : LENGKAP")
 
-# 10. Ujian 4 Imej Lampiran Pengguna
-print("\n[10] Ujian Enjin Risikan Imej (4 Arketip Pengguna):")
+# 10. Ujian 5 Imej Lampiran Pengguna Termasuk Tangkapan Skrin Terbaharu
+print("\n[10] Ujian Enjin Risikan Imej (5 Arketip Pengguna):")
 images = [
     ("Imej 1 (Call Screen)", r"C:/Users/fisaa/.gemini/antigravity/brain/4722c81a-3024-452d-ba19-045cf9141738/.user_uploaded/media_1792730643889_dbdd8d5d.png", "0146272791"),
     ("Imej 2 (Business Bio)", r"C:/Users/fisaa/.gemini/antigravity/brain/4722c81a-3024-452d-ba19-045cf9141738/.user_uploaded/media_1792730658570_6d6bbf36.png", "0145057539"),
     ("Imej 3 (Contact Info ~)", r"C:/Users/fisaa/.gemini/antigravity/brain/4722c81a-3024-452d-ba19-045cf9141738/.user_uploaded/media_1792730668685_15a3b0c6.png", "0146272791"),
     ("Imej 4 (TNG Quishing)", r"C:/Users/fisaa/.gemini/antigravity/brain/4722c81a-3024-452d-ba19-045cf9141738/.user_uploaded/media_1792730710217_a42f5a2e.png", ""),
+    ("Imej 5 (Prem Kumar ~)", r"C:/Users/fisaa/.gemini/antigravity/brain/4722c81a-3024-452d-ba19-045cf9141738/.user_uploaded/media_1792805670040_e124a012.png", "0146272791"),
 ]
 for lbl, path, exp_num in images:
     if os.path.exists(path):
