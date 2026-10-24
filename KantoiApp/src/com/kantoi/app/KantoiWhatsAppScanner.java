@@ -282,6 +282,39 @@ public class KantoiWhatsAppScanner {
                 });
                 btnRow.addView(btnProfile);
 
+                Button btnShare = new Button(activity);
+                btnShare.setText("📤 KONGSI");
+                btnShare.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+                btnShare.setTextColor(Color.WHITE);
+                GradientDrawable sBg = new GradientDrawable();
+                sBg.setColor(0xFF059669); // WhatsApp Green
+                sBg.setCornerRadius(dpToPx(activity, 6));
+                btnShare.setBackground(sBg);
+                LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                sLp.leftMargin = dpToPx(activity, 8);
+                btnShare.setLayoutParams(sLp);
+                btnShare.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        try {
+                            String msg = "⚠️ Amaran KANTOI: Nombor " + match.phoneNumber + " (" + match.contactName + ") mempunyai rekod penipuan siber: " + match.riskTag + ". Sila semak segera di Telegram: @crowdcallerbot";
+                            Intent sIt = new Intent(Intent.ACTION_SEND);
+                            sIt.setType("text/plain");
+                            sIt.putExtra(Intent.EXTRA_TEXT, msg);
+                            sIt.setPackage("com.whatsapp");
+                            activity.startActivity(sIt);
+                        } catch (Throwable t) {
+                            try {
+                                Intent gIt = new Intent(Intent.ACTION_SEND);
+                                gIt.setType("text/plain");
+                                gIt.putExtra(Intent.EXTRA_TEXT, "⚠️ Amaran KANTOI: Nombor " + match.phoneNumber + " adalah scammer!");
+                                activity.startActivity(Intent.createChooser(gIt, "Kongsi Amaran"));
+                            } catch (Throwable ignored) {}
+                        }
+                    }
+                });
+                btnRow.addView(btnShare);
+
                 card.addView(btnRow);
                 content.addView(card);
             }
