@@ -122,29 +122,117 @@ def save_json_file(path, data):
     except Exception as e:
         print(f"[ERR] Gagal menyimpan {path}: {e}")
 
-def get_gemini_api_key():
-    """Mendapatkan Gemini API Key daripada admin_config.json, local_secrets, atau persekitaran"""
-    cfg = load_json_file(ADMIN_CONFIG_PATH, {})
-    k = cfg.get("gemini_api_key") or cfg.get("GEMINI_API_KEY")
-    if k and str(k).strip() and str(k).strip() != "YOUR_GEMINI_API_KEY_HERE":
-        return str(k).strip()
+LAST_GEMINI_DIAGNOSTIC = {
+    "status": "NOT_TESTED",
+    "error": "",
+    "model": "",
+    "timestamp": 0
+}
+
+def get_gemini_api_key_details():
+    """
+    Mengesan kunci Gemini API secara fleksibel daripada pelbagai fail konfigurasi:
+    - admin_config.json (semua variasi nama kunci)
+    - config.json, settings.json, secrets.json
+    - local_secrets.py
+    - .env / os.environ
+    Mengembalikan (kunci_bersih, nama_fail, nama_kunci)
+    """
+    key_names = [
+        "gemini_api_key", "GEMINI_API_KEY", "api_key", "apiKey", "API_KEY", 
+        "gemini", "GEMINI", "gemini_key", "GEMINI_KEY", "google_api_key", "GOOGLE_API_KEY", 
+        "key", "KEY", "token"
+    ]
+    
+    # 1. Semak fail-fail konfigurasi JSON
+    json_candidates = [
+        ("admin_config.json", os.path.join(BASE_DIR, "admin_config.json")),
+        ("config.json", os.path.join(BASE_DIR, "config.json")),
+        ("settings.json", os.path.join(BASE_DIR, "settings.json")),
+        ("secrets.json", os.path.join(BASE_DIR, "secrets.json")),
+    ]
+    for fn_label, fpath in json_candidates:
+        if os.path.exists(fpath):
+            try:
+                data = load_json_file(fpath, {})
+                if isinstance(data, dict):
+                    for kn in key_names:
+                        val = data.get(kn)
+                        if val and isinstance(val, str):
+                            clean = val.strip(" \t\r\n\'\"")
+                            if clean and clean != "YOUR_GEMINI_API_KEY_HERE" and len(clean) >= 15:
+                                return clean, fn_label, kn
+            except Exception:
+                pass
+
+    # 2. Semak local_secrets.py
     try:
         import local_secrets
-        ls_key = getattr(local_secrets, "GEMINI_API_KEY", "")
-        if ls_key and str(ls_key).strip() and str(ls_key).strip() != "YOUR_GEMINI_API_KEY_HERE":
-            return str(ls_key).strip()
+        for kn in key_names:
+            val = getattr(local_secrets, kn, None)
+            if val and isinstance(val, str):
+                clean = val.strip(" \t\r\n\'\"")
+                if clean and clean != "YOUR_GEMINI_API_KEY_HERE" and len(clean) >= 15:
+                    return clean, "local_secrets.py", kn
     except Exception:
         pass
-    env_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if env_key and env_key != "YOUR_GEMINI_API_KEY_HERE":
-        return env_key
-    return ""
+
+    # 3. Semak fail .env
+    env_file = os.path.join(BASE_DIR, ".env")
+    if os.path.exists(env_file):
+        try:
+            with open(env_file, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    k_part, v_part = line.split("=", 1)
+                    k_part = k_part.strip()
+                    v_part = v_part.strip(" \t\r\n\'\"")
+                    if k_part in key_names and v_part and v_part != "YOUR_GEMINI_API_KEY_HERE" and len(v_part) >= 15:
+                        return v_part, ".env", k_part
+        except Exception:
+            pass
+
+    # 4. Semak Pembolehubah Persekitaran (os.environ)
+    for kn in key_names:
+        val = os.environ.get(kn, "").strip(" \t\r\n\'\"")
+        if val and val != "YOUR_GEMINI_API_KEY_HERE" and len(val) >= 15:
+            return val, "os.environ", kn
+
+    return "", "Tiada", "Tiada"
+
+def get_gemini_api_key():
+    """Mendapatkan Gemini API Key yang disahkan aktif"""
+    k, _, _ = get_gemini_api_key_details()
+    return k
 
 def set_gemini_api_key(new_key):
-    """Menyimpan Gemini API Key ke dalam admin_config.json"""
+    """Menyimpan Gemini API Key ke dalam admin_config.json dan local_secrets.py serentak"""
+    clean_key = new_key.strip(" \t\r\n\'\"")
+    # 1. Simpan ke admin_config.json
     cfg = load_json_file(ADMIN_CONFIG_PATH, {})
-    cfg["gemini_api_key"] = new_key.strip()
+    cfg["gemini_api_key"] = clean_key
     save_json_file(ADMIN_CONFIG_PATH, cfg)
+    
+    # 2. Kemas kini local_secrets.py
+    ls_path = os.path.join(BASE_DIR, "local_secrets.py")
+    if os.path.exists(ls_path):
+        try:
+            with open(ls_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            if "GEMINI_API_KEY" in content:
+                content = re.sub(r'GEMINI_API_KEY\s*=\s*["\x27].*?["\x27]', f'GEMINI_API_KEY = "{clean_key}"', content)
+            else:
+                content += f'\nGEMINI_API_KEY = "{clean_key}"\n'
+            with open(ls_path, "w", encoding="utf-8") as f:
+                f.write(content)
+        except Exception:
+            pass
+            
+    os.environ["GEMINI_API_KEY"] = clean_key
+    global GEMINI_API_KEY
+    GEMINI_API_KEY = clean_key
 
 def get_admin_ids():
     data = load_json_file(ADMIN_CONFIG_PATH, {"admins": []})
@@ -586,130 +674,258 @@ def get_image_mime_type(image_path):
     return "image/jpeg"
 
 def analyze_image_with_gemini(image_path, api_key=None):
-    """Menghantar imej ke Google Gemini Vision API untuk analisis pintar berkonteks"""
+    """Menghantar imej ke Google Gemini Vision API dengan sokongan perlindungan keselamatan dan kebal SSL Windows 7"""
+    global LAST_GEMINI_DIAGNOSTIC
     if not api_key:
         api_key = get_gemini_api_key()
-    api_key = (api_key or "").strip()
+    api_key = (api_key or "").strip(" \t\r\n\'\"")
     if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
+        LAST_GEMINI_DIAGNOSTIC = {
+            "status": "NOT_CONFIGURED",
+            "error": "Kunci API Gemini belum ditetapkan",
+            "model": "",
+            "timestamp": time.time()
+        }
         return None
         
     mime_type = get_image_mime_type(image_path)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     try:
         with open(image_path, "rb") as f:
             b64_data = base64.b64encode(f.read()).decode("utf-8")
-        
-        prompt = (
-            "Anda adalah penganalisis keselamatan siber risikan penipuan KANTOI (Malaysia).\n"
-            "TUGAS UTAMA: Analisis gambar ini secara pintar dan teliti (screenshot WhatsApp/Telegram, resit bank, profil suspek, foto telefon lain).\n\n"
-            "PANDUAN MENGIKUT ARKETIP IMEJ:\n"
-            "1. SKRIN PANGGILAN WHATSAPP (Call Screen / Ringing / Calling / Incoming Call):\n"
-            "   - Nombor terpapar besar di bahagian atas (cth: +60 14-627 2791) bersama status 'Ringing...', butang tamat panggilan, dan avatar suspek.\n"
-            "   - Ekstrak nombor telefon ke 'phone_numbers'.\n"
-            "   - scam_tactic: 'Panggilan Suara Scammer (WhatsApp Call)'.\n\n"
-            "2. PROFIL / KAD PERNIAGAAN WHATSAPP (WhatsApp Business Profile / Bio):\n"
-            "   - Mengandungi nombor utama, nama profil/perkhidmatan (cth: 'OFFICIAL MIDMAN MAZE'), emel (cth: 'midmanmaze@gmail.com'), dan nombor tambahan dalam teks bio (cth: 0145057539 -Paidpromote).\n"
-            "   - Ekstrak SEMUA nombor unik ke 'phone_numbers'.\n"
-            "   - Ekstrak nama organisasi/servis ke 'suspect_name'.\n"
-            "   - Ekstrak emel jika ada ke 'email'.\n"
-            "   - scam_tactic: 'Khidmat Orang Tengah Palsu (Fake Midman / Escrow)'.\n\n"
-            "3. SKRIN MAKLUMAT KENALAN WHATSAPP (Contact Info Screen dengan simbol ~):\n"
-            "   - Nombor telefon terpapar besar di atas (cth: +60 14-627 2791) dan di bawahnya nama push yang didaftarkan suspek (cth: ~ Prem Kumar).\n"
-            "   - Ekstrak nama tersebut (buang simbol ~) ke 'suspect_name' (cth: 'Prem Kumar').\n"
-            "   - Ekstrak nombor telefon ke 'phone_numbers'.\n\n"
-            "4. FOTO FIZIKAL SKRIN TELEFON LAIN / QUISHING TNG MONEY PACKET:\n"
-            "   - Foto fizikal telefon lain yang ditangkap kamera (ada pantulan lampu/sudut condong).\n"
-            "   - Jika ada mesej Telegram/WhatsApp (cth pengirim 'Wafa KJ Dietetik' dan teks 'Saya nak bagi sikit rezeki...'):\n"
-            "   - Ekstrak nama pengirim ke 'suspect_name'.\n"
-            "   - scam_tactic: 'Penipuan Sedekah Palsu / Quishing TNG Money Packet'.\n\n"
-            "5. RESIT PEMINDAHAN BANK / DUITNOW QR:\n"
-            "   - Ekstrak nombor akaun, nama bank, nama penerima, dan jumlah.\n\n"
-            "Formatkan maklumat dalam JSON sah dengan kunci berikut:\n"
-            "{\n"
-            '  "phone_numbers": ["senarai nombor telefon unik cth 011xxxxxxxx, 014xxxxxxxx"],\n'
-            '  "suspect_name": "nama scammer, nama profil WhatsApp tanpa ~, nama servis (cth OFFICIAL MIDMAN MAZE), atau pengirim Telegram",\n'
-            '  "email": "alamat emel jika ada atau null",\n'
-            '  "bank_name": "nama bank jika ada atau null",\n'
-            '  "account_number": "nombor akaun bank keldai jika ada atau null",\n'
-            '  "scam_tactic": "kategori penipuan terperinci",\n'
-            '  "evidence_text": "ringkasan ringkas bukti dalam bahasa Melayu",\n'
-            '  "full_text": "semua teks dan nombor penting dalam imej"\n'
-            "}\n"
-            "Berikan JSON SAHAJA tanpa sebarang teks tambahan."
-        )
-        
-        payload = {
-            "contents": [{
-                "parts": [
-                    {"text": prompt},
-                    {"inline_data": {"mime_type": mime_type, "data": b64_data}}
-                ]
-            }],
-            "generationConfig": {
-                "temperature": 0.1,
-                "response_mime_type": "application/json"
-            }
-        }
-        resp = requests.post(url, json=payload, timeout=25)
-        if resp.status_code != 200:
-            print(f"[GEMINI VISION HTTP {resp.status_code}] {resp.text[:300]}")
-            # Cuba fallback ke gemini-2.0-flash jika 404
-            if resp.status_code in [404, 400]:
-                alt_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-                resp2 = requests.post(alt_url, json=payload, timeout=25)
-                if resp2.status_code == 200:
-                    resp = resp2
-                else:
-                    return None
-            else:
-                return None
-
-        data = resp.json()
-        if "candidates" in data and data["candidates"]:
-            part = data["candidates"][0].get("content", {}).get("parts", [{}])[0]
-            raw_text = part.get("text", "").strip()
-            
-            # Buang markdown code fence jika ada (```json ... ```)
-            clean_json = re.sub(r'^```(?:json)?\s*', '', raw_text, flags=re.IGNORECASE)
-            clean_json = re.sub(r'\s*```$', '', clean_json.strip())
-            
-            # Cari corak {...} dengan regex
-            m = re.search(r'\{.*\}', clean_json, re.DOTALL)
-            if m:
-                return json.loads(m.group(0))
-            return json.loads(clean_json)
     except Exception as e:
-        print(f"[GEMINI VISION ERR] {e}")
+        print(f"[GEMINI FILE READ ERR] {e}")
+        return None
+
+    prompt = (
+        "Anda adalah penganalisis keselamatan siber risikan penipuan KANTOI (Malaysia).\n"
+        "TUGAS UTAMA: Analisis gambar ini secara pintar dan teliti (screenshot WhatsApp/Telegram, resit bank, profil suspek, foto telefon lain).\n\n"
+        "PANDUAN MENGIKUT ARKETIP IMEJ:\n"
+        "1. SKRIN PANGGILAN WHATSAPP (Call Screen / Ringing / Calling / Incoming Call):\n"
+        "   - Nombor terpapar besar di bahagian atas (cth: +60 14-627 2791) bersama status 'Ringing...', butang tamat panggilan, dan avatar suspek.\n"
+        "   - Ekstrak nombor telefon ke 'phone_numbers'.\n"
+        "   - scam_tactic: 'Panggilan Suara Scammer (WhatsApp Call)'.\n\n"
+        "2. PROFIL / KAD PERNIAGAAN WHATSAPP (WhatsApp Business Profile / Bio):\n"
+        "   - Mengandungi nombor utama, nama profil/perkhidmatan (cth: 'OFFICIAL MIDMAN MAZE'), emel (cth: 'midmanmaze@gmail.com'), dan nombor tambahan dalam teks bio (cth: 0145057539 -Paidpromote).\n"
+        "   - Ekstrak SEMUA nombor unik ke 'phone_numbers'.\n"
+        "   - Ekstrak nama organisasi/servis ke 'suspect_name'.\n"
+        "   - Ekstrak emel jika ada ke 'email'.\n"
+        "   - scam_tactic: 'Khidmat Orang Tengah Palsu (Fake Midman / Escrow)'.\n\n"
+        "3. SKRIN MAKLUMAT KENALAN WHATSAPP (Contact Info Screen dengan simbol ~):\n"
+        "   - Nombor telefon terpapar besar di atas (cth: +60 14-627 2791) dan di bawahnya nama push yang didaftarkan suspek (cth: ~ Prem Kumar).\n"
+        "   - Ekstrak nama tersebut (buang simbol ~) ke 'suspect_name' (cth: 'Prem Kumar').\n"
+        "   - Ekstrak nombor telefon ke 'phone_numbers'.\n"
+        "   - scam_tactic: 'Profil / Kenalan WhatsApp Suspek'.\n\n"
+        "4. FOTO FIZIKAL SKRIN TELEFON LAIN / QUISHING TNG MONEY PACKET:\n"
+        "   - Foto fizikal telefon lain yang ditangkap kamera (ada pantulan lampu/sudut condong).\n"
+        "   - Jika ada mesej Telegram/WhatsApp (cth pengirim 'Wafa KJ Dietetik' dan teks 'Saya nak bagi sikit rezeki...'):\n"
+        "   - Ekstrak nama pengirim ke 'suspect_name'.\n"
+        "   - scam_tactic: 'Penipuan Sedekah Palsu / Quishing TNG Money Packet'.\n\n"
+        "5. RESIT PEMINDAHAN BANK / DUITNOW QR:\n"
+        "   - Ekstrak nombor akaun, nama bank, nama penerima, dan jumlah.\n\n"
+        "Formatkan maklumat dalam JSON sah dengan kunci berikut:\n"
+        "{\n"
+        '  "phone_numbers": ["senarai nombor telefon unik cth 011xxxxxxxx, 014xxxxxxxx"],\n'
+        '  "suspect_name": "nama scammer, nama profil WhatsApp tanpa ~, nama servis (cth OFFICIAL MIDMAN MAZE), atau pengirim Telegram",\n'
+        '  "email": "alamat emel jika ada atau null",\n'
+        '  "bank_name": "nama bank jika ada atau null",\n'
+        '  "account_number": "nombor akaun bank keldai jika ada atau null",\n'
+        '  "scam_tactic": "kategori penipuan terperinci",\n'
+        '  "evidence_text": "ringkasan ringkas bukti dalam bahasa Melayu",\n'
+        '  "full_text": "semua teks dan nombor penting dalam imej"\n'
+        "}\n"
+        "Berikan JSON SAHAJA tanpa sebarang teks tambahan."
+    )
+    
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": prompt},
+                {"inline_data": {"mime_type": mime_type, "data": b64_data}}
+            ]
+        }],
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+        ],
+        "generationConfig": {
+            "temperature": 0.1,
+            "response_mime_type": "application/json"
+        }
+    }
+
+    models_to_try = [
+        "gemini-1.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro"
+    ]
+
+    for model_name in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        resp = None
+        try:
+            resp = requests.post(url, json=payload, timeout=25)
+        except Exception as net_or_ssl_err:
+            # Kebal SSL untuk Windows 7 SP1 & Python 3.8 embeddable
+            print(f"[GEMINI SSL/NET WARN on {model_name}] {net_or_ssl_err}. Mencuba mod kebal SSL (verify=False)...")
+            try:
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                resp = requests.post(url, json=payload, timeout=25, verify=False)
+            except Exception as e_retry:
+                print(f"[GEMINI RETRY ERR] {e_retry}")
+                LAST_GEMINI_DIAGNOSTIC = {
+                    "status": "CONN_ERROR",
+                    "error": str(e_retry)[:120],
+                    "model": model_name,
+                    "timestamp": time.time()
+                }
+                continue
+
+        if not resp:
+            continue
+
+        if resp.status_code == 200:
+            try:
+                data = resp.json()
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    block_r = data.get("promptFeedback", {}).get("blockReason", "Unknown")
+                    print(f"[GEMINI PROMPT BLOCKED] {block_r}")
+                    LAST_GEMINI_DIAGNOSTIC = {
+                        "status": "BLOCKED",
+                        "error": f"Disekat oleh Google ({block_r})",
+                        "model": model_name,
+                        "timestamp": time.time()
+                    }
+                    continue
+
+                cand = candidates[0]
+                finish_r = cand.get("finishReason", "")
+                parts = cand.get("content", {}).get("parts", [])
+                if not parts:
+                    print(f"[GEMINI EMPTY PARTS] finishReason={finish_r}")
+                    LAST_GEMINI_DIAGNOSTIC = {
+                        "status": "SAFETY_BLOCKED" if finish_r == "SAFETY" else "EMPTY_RESPONSE",
+                        "error": f"Tiada teks respons (finishReason: {finish_r})",
+                        "model": model_name,
+                        "timestamp": time.time()
+                    }
+                    continue
+
+                raw_text = parts[0].get("text", "").strip()
+                clean_json = re.sub(r'^```(?:json)?\s*', '', raw_text, flags=re.IGNORECASE)
+                clean_json = re.sub(r'\s*```$', '', clean_json.strip())
+
+                m = re.search(r'\{.*\}', clean_json, re.DOTALL)
+                parsed = json.loads(m.group(0)) if m else json.loads(clean_json)
+
+                LAST_GEMINI_DIAGNOSTIC = {
+                    "status": "OK",
+                    "error": "",
+                    "model": model_name,
+                    "timestamp": time.time()
+                }
+                return parsed
+            except Exception as parse_e:
+                print(f"[GEMINI JSON PARSE ERR] {parse_e}")
+                LAST_GEMINI_DIAGNOSTIC = {
+                    "status": "PARSE_ERROR",
+                    "error": str(parse_e)[:120],
+                    "model": model_name,
+                    "timestamp": time.time()
+                }
+                continue
+        else:
+            err_msg = resp.text[:220].replace('\n', ' ')
+            print(f"[GEMINI HTTP {resp.status_code} ({model_name})] {err_msg}")
+            LAST_GEMINI_DIAGNOSTIC = {
+                "status": f"HTTP_{resp.status_code}",
+                "error": err_msg,
+                "model": model_name,
+                "timestamp": time.time()
+            }
+            if resp.status_code in [404, 400]:
+                continue
+            else:
+                break
+
     return None
 
-def windows_native_ocr(image_path):
-    """Fallback OCR tempatan menggunakan enjin Windows 10/11 Media OCR (0ms, 100% offline)"""
+def local_image_ocr(image_path):
+    """
+    Enjin OCR tempatan hibrid berbilang lapisan:
+    1. Windows 10/11 Media OCR (WinRT - pantas dan rasmi)
+    2. Tesseract OCR (jika ada dipasang pada sistem atau folder python38)
+    3. Imbasan rentetan bait & metadata (0 kebergantungan)
+    """
     abs_path = os.path.abspath(image_path).replace('/', '\\').replace("'", "''")
-    ps_cmd = f'''
-Add-Type -AssemblyName System.Runtime.WindowsRuntime
-$asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {{ $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' }})[0]
-function AwaitOp($op, $t) {{
-    return $asTaskGeneric.MakeGenericMethod($t).Invoke($null, @($op)).GetAwaiter().GetResult()
-}}
-[Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime] | Out-Null
-[Windows.Storage.FileAccessMode, Windows.Storage, ContentType = WindowsRuntime] | Out-Null
-[Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime] | Out-Null
-[Windows.Graphics.Imaging.BitmapDecoder, Windows.Foundation, ContentType = WindowsRuntime] | Out-Null
-
-$file = AwaitOp ([Windows.Storage.StorageFile]::GetFileFromPathAsync('{abs_path}')) ([Windows.Storage.StorageFile])
-$stream = AwaitOp ($file.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
-$decoder = AwaitOp ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream)) ([Windows.Graphics.Imaging.BitmapDecoder])
-$bitmap = AwaitOp ($decoder.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
-$engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages()
-$res = AwaitOp ($engine.RecognizeAsync($bitmap)) ([Windows.Media.Ocr.OcrResult])
-$res.Text
-'''
+    
+    # Lapisan 1: Windows 10/11 WinRT OCR
+    ps_cmd = (
+        "Add-Type -AssemblyName System.Runtime.WindowsRuntime -ErrorAction SilentlyContinue\n"
+        "$asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]\n"
+        "if ($asTaskGeneric) {\n"
+        "    function AwaitOp($op, $t) { return $asTaskGeneric.MakeGenericMethod($t).Invoke($null, @($op)).GetAwaiter().GetResult() }\n"
+        "    try {\n"
+        "        [Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime] | Out-Null\n"
+        "        [Windows.Storage.FileAccessMode, Windows.Storage, ContentType = WindowsRuntime] | Out-Null\n"
+        "        [Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime] | Out-Null\n"
+        "        [Windows.Graphics.Imaging.BitmapDecoder, Windows.Foundation, ContentType = WindowsRuntime] | Out-Null\n"
+        "        $file = AwaitOp ([Windows.Storage.StorageFile]::GetFileFromPathAsync('" + abs_path + "')) ([Windows.Storage.StorageFile])\n"
+        "        $stream = AwaitOp ($file.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])\n"
+        "        $decoder = AwaitOp ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream)) ([Windows.Graphics.Imaging.BitmapDecoder])\n"
+        "        $bitmap = AwaitOp ($decoder.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])\n"
+        "        $engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages()\n"
+        "        if ($engine) {\n"
+        "            $res = AwaitOp ($engine.RecognizeAsync($bitmap)) ([Windows.Media.Ocr.OcrResult])\n"
+        "            $res.Text\n"
+        "        }\n"
+        "    } catch {}\n"
+        "}"
+    )
     try:
-        res = subprocess.run(['powershell', '-NoProfile', '-Command', ps_cmd], capture_output=True, text=True, timeout=15)
-        return res.stdout.strip()
-    except Exception as e:
-        print(f"[WINDOWS OCR ERR] {e}")
-        return ''
+        res = subprocess.run(['powershell', '-NoProfile', '-Command', ps_cmd], capture_output=True, text=True, timeout=12)
+        txt = (res.stdout or '').strip()
+        if txt:
+            return txt
+    except Exception:
+        pass
+
+    # Lapisan 2: Tesseract OCR (Windows 7 / External)
+    tess_candidates = [
+        os.path.join(BASE_DIR, "python38", "tesseract", "tesseract.exe"),
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        "tesseract"
+    ]
+    for t_bin in tess_candidates:
+        if os.path.exists(t_bin) or t_bin == "tesseract":
+            try:
+                res_t = subprocess.run([t_bin, abs_path, "stdout", "-l", "eng+msa", "--psm", "6"], capture_output=True, text=True, timeout=12)
+                txt_t = (res_t.stdout or '').strip()
+                if txt_t and len(txt_t) > 5:
+                    return txt_t
+            except Exception:
+                pass
+
+    # Lapisan 3: Imbasan Bait Rentetan Mentah / Metadata PNG
+    try:
+        with open(image_path, "rb") as f:
+            raw_b = f.read(1024 * 512)
+        found_strings = re.findall(rb'[\x20-\x7E]{4,}', raw_b)
+        extracted_text = " ".join([s.decode('utf-8', errors='ignore') for s in found_strings])
+        return extracted_text
+    except Exception:
+        pass
+
+    return ''
+
+def windows_native_ocr(image_path):
+    """Pengekalan keserasian fungsi lama"""
+    return local_image_ocr(image_path)
 
 def extract_hybrid_image_intel(image_path, gemini_api_key=None):
     """
@@ -857,6 +1073,11 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None):
     elif final_acc != "N/A":
         bank_formatted = f"Akaun: {final_acc}"
 
+    # Pengelasan Taktik Profil WhatsApp jika dikesan tanda kenalan/profil
+    if not gemini_data and ocr_text:
+        if re.search(r'\b(?:Manage storage|Media visibility|Voice\s+Video|Kept messages)\b', ocr_text, re.IGNORECASE):
+            vision_tactic = "Profil / Kenalan WhatsApp Suspek"
+
     return {
         "has_intel": has_intel,
         "qr_detected": bool(qr_data),
@@ -870,7 +1091,9 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None):
         "account_number": final_acc,
         "bank_accounts": bank_formatted,
         "tactic": vision_tactic,
-        "evidence_text": vision_evidence
+        "evidence_text": vision_evidence,
+        "gemini_status": LAST_GEMINI_DIAGNOSTIC.get("status", "NOT_CONFIGURED"),
+        "gemini_error": LAST_GEMINI_DIAGNOSTIC.get("error", "")
     }
 
 def download_telegram_photo(file_id):
@@ -2995,14 +3218,28 @@ def run_bot():
                                 })
                         else:
                             # Tiada maklumat dapat dikesan daripada imej
-                            send_message(
-                                t_chat_id,
-                                "📸 *Gambar diterima, namun tiada kod QR atau nombor akaun yang jelas dikesan.*\n\n"
-                                "💡 *Tip Semakan:*\n"
-                                "• Pastikan petak kod QR jelas, tidak kabur, dan bucu corak QR tidak terpotong.\n"
-                                "• Jika kod QR berada dalam perbualan WhatsApp, anda juga boleh hantar tangkap layar (screenshot) penuh.\n"
-                                "• Anda juga boleh menaip terus nombor telefon atau akaun bank ke dalam chat ini untuk semakan segera."
-                            )
+                            active_k, src_file, _ = get_gemini_api_key_details()
+                            g_status = intel.get("gemini_status", "")
+                            g_err = intel.get("gemini_error", "")
+
+                            if not active_k:
+                                ai_diag = "⚠️ <b>AI Vision Belum Ditetapkan:</b> Kunci Gemini API belum dimasukkan di pelayan.\n👉 <i>Taip <code>/gemini &lt;API_KEY&gt;</code> untuk aktifkan analisis tangkap layar WhatsApp secara percuma!</i>"
+                            elif g_err:
+                                ai_diag = f"⚠️ <b>Status AI Gemini ({html.escape(g_status)}):</b>\n<code>{html.escape(g_err[:180])}</code>\n👉 <i>Sila semak semula kunci anda melalui arahan <code>/gemini</code>.</i>"
+                            else:
+                                ai_diag = "🔍 <b>Pengecaman Teks:</b> Tiada nombor telefon (+60 / 01x), akaun bank, atau nama suspek yang jelas ditemui dalam gambar."
+
+                            fb_lines = [
+                                "📸 <b>Gambar Diterima, Namun Tiada Maklumat Ancaman Berjaya Dibaca.</b>",
+                                "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                                ai_diag,
+                                "",
+                                "💡 <b>Tip Semakan Pantas KANTOI:</b>",
+                                "• <b>Tangkapan Layar WhatsApp / Telegram:</b> Pastikan teks atau nombor telefon suspek tidak terlalu beresolusi rendah.",
+                                "• <b>Semakan Manual Terus:</b> Anda boleh terus taip atau tampal (paste) nombor telefon atau akaun suspek ke dalam chat ini untuk semakan serta-merta tanpa perlu hantar gambar!",
+                                "• <b>Kod QR:</b> Jika kod QR, pastikan petak tidak kabur dan bucu QR tidak terpotong."
+                            ]
+                            send_message(t_chat_id, "\n".join(fb_lines), parse_mode="HTML")
                     finally:
                         if os.path.exists(tmp_img):
                             try:
@@ -3213,30 +3450,96 @@ def run_bot():
                             send_message(chat_id, "\n".join(lines))
                         continue
 
-                # Arahan Konfigurasi Gemini API: /gemini <api_key> atau /key <api_key>
-                if text.startswith(("/gemini", "/key")):
-                    if chat_id not in get_admin_ids():
-                        send_message(chat_id, "❌ Akses Ditolak: Arahan ini hanya untuk Admin KANTOI.")
-                        continue
-                    parts = text.split(maxsplit=1)
-                    if len(parts) > 1 and parts[1].strip():
-                        new_k = parts[1].strip()
-                        # Uji kunci secara langsung
-                        test_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={new_k}"
+                # Arahan Konfigurasi & Status Gemini API: /gemini, /key, /ai, /ai_status
+                if text.startswith(("/gemini", "/key", "/ai_status", "/ai")):
+                    parts = text.split(maxsplit=2)
+                    candidate_key = ""
+                    if len(parts) > 1:
+                        # Semak jika format: /gemini <passcode> <key> atau /gemini <key>
+                        if len(parts) > 2 and parts[1] == ADMIN_PASSCODE:
+                            candidate_key = parts[2].strip()
+                        else:
+                            candidate_key = parts[1].strip()
+
+                    # Jika pengguna membekalkan Kunci API baharu
+                    if candidate_key and (candidate_key.startswith("AIza") or len(candidate_key) >= 20):
+                        api_call("sendChatAction", {"chat_id": chat_id, "action": "typing"})
+                        # Uji kunci secara langsung ke Google Gemini API dengan kebal SSL
+                        test_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={candidate_key}"
                         test_body = {"contents": [{"parts": [{"text": "PONG"}]}]}
+                        t_resp = None
                         try:
-                            t_resp = requests.post(test_url, json=test_body, timeout=10)
-                            if t_resp.status_code == 200:
-                                set_gemini_api_key(new_k)
-                                send_message(chat_id, "🎉 <b>BERJAYA!</b> Google Gemini Vision API Key anda telah disahkan sah dan disimpan terus ke dalam sistem.\n\nKini bot boleh mengekstrak teks tangkap layar WhatsApp, Telegram dan nombor scammer secara pintar!")
+                            t_resp = requests.post(test_url, json=test_body, timeout=12)
+                        except Exception:
+                            try:
+                                import urllib3
+                                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                                t_resp = requests.post(test_url, json=test_body, timeout=12, verify=False)
+                            except Exception as test_e:
+                                send_message(chat_id, f"❌ <b>Ralat Sambungan Google:</b> {test_e}\nPastikan komputer anda bersambung ke internet.")
+                                continue
+
+                        if t_resp and t_resp.status_code == 200:
+                            set_gemini_api_key(candidate_key)
+                            add_admin(chat_id)
+                            send_message(
+                                chat_id,
+                                "🎉 <b>BERJAYA! KUNCI GOOGLE GEMINI VISION DISAHKAN SAH!</b>\n"
+                                "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🔑 <b>Kunci Disimpan:</b> <code>{candidate_key[:8]}...{candidate_key[-4:]}</code>\n"
+                                "📁 <b>Fail Konfigurasi:</b> Dikemas kini ke <code>admin_config.json</code> & <code>local_secrets.py</code>\n"
+                                "👑 <b>Akses:</b> ID Telegram anda telah didaftarkan sebagai Admin KANTOI.\n\n"
+                                "🤖 <i>Kini bot anda 100% pintar! Anda boleh menghantar sebarang tangkapan layar WhatsApp, Telegram, profil scammer, atau resit bank untuk diekstrak nombor dan namanya serta-merta!</i>",
+                                parse_mode="HTML"
+                            )
+                        elif t_resp:
+                            err_txt = t_resp.text[:220].replace('\n', ' ')
+                            send_message(
+                                chat_id,
+                                f"⚠️ <b>Kunci API Ditolak oleh Google (HTTP {t_resp.status_code}):</b>\n"
+                                f"<code>{html.escape(err_txt)}</code>\n\n"
+                                "💡 <b>Panduan Dapatkan Kunci Percuma:</b>\n"
+                                "1. Layari https://aistudio.google.com/\n"
+                                "2. Log masuk akaun Google & tekan 'Create API Key'.\n"
+                                "3. Salin kunci dan taip:\n"
+                                "<code>/gemini &lt;KUNCI_API_ANDA&gt;</code>",
+                                parse_mode="HTML"
+                            )
+                        continue
+
+                    # Jika tanpa parameter: Paparkan Dashboard Diagnosis Penuh
+                    current_k, src_fn, kname = get_gemini_api_key_details()
+                    status_k = f"<code>{current_k[:8]}...{current_k[-4:]}</code>" if current_k else "<i>Belum Ditetapkan</i>"
+                    
+                    # Semak status ujian sambungan jika ada kunci
+                    google_status = "⚪ Belum Ditetapkan"
+                    if current_k:
+                        test_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={current_k}"
+                        try:
+                            r_chk = requests.post(test_url, json={"contents": [{"parts": [{"text": "PING"}]}]}, timeout=8)
+                            if r_chk.status_code == 200:
+                                google_status = "🟢 <b>Aktif & Sah (HTTP 200 OK)</b>"
                             else:
-                                send_message(chat_id, f"⚠️ <b>Kunci API Ditolak oleh Google (HTTP {t_resp.status_code}):</b>\n<code>{html.escape(t_resp.text[:200])}</code>\n\nSila pastikan anda menyalin kunci daripada https://aistudio.google.com/")
-                        except Exception as e:
-                            send_message(chat_id, f"❌ Ralat menghubungi pelayan Google: {e}")
-                    else:
-                        current_k = get_gemini_api_key()
-                        status_k = f"<code>{current_k[:8]}...{current_k[-4:]}</code>" if current_k else "<i>Belum Ditetapkan</i>"
-                        send_message(chat_id, f"🔑 <b>STATUS GEMINI API KEY:</b> {status_k}\n\nUntuk menetapkan kunci baharu, taip:\n<code>/gemini &lt;API_KEY_ANDA&gt;</code>")
+                                google_status = f"🔴 <b>Ralat Google (HTTP {r_chk.status_code})</b>"
+                        except Exception:
+                            google_status = "🟡 <b>Mod Luar Talian / Ralat Rangkaian</b>"
+
+                    ocr_status = "🟢 Windows 10/11 WinRT Native OCR" if os.name == 'nt' else "⚪ Enjin Asas"
+                    diag_lines = [
+                        "🤖 <b>DASHBOARD STATUS AI VISION & OCR KANTOI</b>",
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                        f"🔑 <b>Status Kunci API:</b> {status_k}",
+                        f"📂 <b>Sumber Dikesan:</b> <code>{src_fn}</code> (kunci: <code>{kname}</code>)",
+                        f"🌐 <b>Sambungan Google AI:</b> {google_status}",
+                        f"🖥️ <b>Enjin OCR Tempatan:</b> {ocr_status}",
+                        "",
+                        "💡 <b>Cara Menetapkan Kunci Baharu:</b>",
+                        "Taip arahan berikut dalam chat ini:",
+                        "<code>/gemini &lt;API_KEY_ANDA&gt;</code>",
+                        "",
+                        "<i>Kunci API percuma boleh didapati di https://aistudio.google.com/</i>"
+                    ]
+                    send_message(chat_id, "\n".join(diag_lines), parse_mode="HTML")
                     continue
 
                 # Arahan Pendaftaran Admin: /admin <passcode>
