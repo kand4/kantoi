@@ -3924,6 +3924,51 @@ def run_bot():
                     send_message(chat_id, f"✅ *Buletin Radar Ancaman berjaya disiarkan ke saluran {CHANNEL_ID}!*")
                     continue
 
+                if text.startswith(("/siar_roadmap", "/roadmap")):
+                    if text.startswith("/siar_roadmap") and chat_id not in get_admin_ids():
+                        send_message(chat_id, "❌ Akses Ditolak: Perintah ini hanya untuk Admin KANTOI.")
+                        continue
+                    roadmap_msg = (
+                        "🗺️ <b>PENGUMUMAN RASMI: PELAN HALA TUJU KANTOI (ROADMAP 2026/2027)</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                        "Terima kasih kepada ribuan ahli komuniti yang sentiasa bersama KANTOI dalam memerangi sindiket penipuan siber dan akaun keldai di Malaysia.\n\n"
+                        "Bagi memastikan projek KANTOI terus berkembang aktif dan memberi impak perlindungan maksimum, berikut adalah <b>Pelan Hala Tuju Pembangunan Rasmi</b> yang telah dijadualkan secara berperingkat:\n\n"
+                        "🚀 <b>FASA 1: BULAN INI (KINI DILANCARKAN!)</b>\n"
+                        "• 🛡️ <b>1-Tap Floating Threat HUD (Gelembung Terapung):</b>\n"
+                        "  Pemeriksa pantas KANTOI kini boleh terapung di atas WhatsApp, Telegram, FB, dan Aplikasi Perbankan. Ketik 1 kali untuk membuka kad risikan tanpa perlu menutup chat anda!\n"
+                        "• 🤖 <b>Dossier Risikan Bersepadu 1-Paparan (@crowdcallerbot):</b>\n"
+                        "  Hantar tangkapan layar (screenshot) yang mengandungi Nombor Telefon, Akaun Bank, dan Kod QR DuitNow sekali gus — bot akan menyemak kesemuanya serentak dalam 1 mesej kemas!\n\n"
+                        "⏳ <b>FASA 2: BULAN DEPAN (NOVEMBER 2026)</b>\n"
+                        "• 📋 <b>Auto-Clipboard Mule Sentinel:</b>\n"
+                        "  Pengesanan automatik di latar belakang sebaik sahaja anda 'Copy' nombor akaun bank atau telefon di WhatsApp sebelum membuat sebarang pemindahan wang.\n\n"
+                        "⏳ <b>FASA 3: BULAN DISEMBER 2026</b>\n"
+                        "• 📱 <b>Native In-App Dossier View:</b>\n"
+                        "  Paparan terus data siasatan SemakMule CCID PDRM dan forum Lowyat secara natif di dalam aplikasi KANTOI tanpa perlu membuka pelayar web luaran.\n\n"
+                        "⏳ <b>FASA 4: AWAL TAHUN 2027</b>\n"
+                        "• 📞 <b>WhatsApp Call & Contact Risk Sentinel:</b>\n"
+                        "  Perlindungan masa nyata daripada panggilan suara WhatsApp scammer dan audit keselamatan buku kenalan dalam 1 ketikan.\n\n"
+                        "💡 <b>FASA MASA DEPAN (DALAM PENYELIDIKAN):</b>\n"
+                        "• 📸 <i>Pengecam Resit Bank Palsu (AI Slip Forgery Detector)</i>\n"
+                        "• 👨‍👩‍👧 <i>Mod Perlindungan Keluarga & Warga Emas (Family Shield)</i>\n\n"
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                        "📲 <b>Kekal dilindungi & sebarkan benteng ini:</b>\n"
+                        "• Telegram Bot: @crowdcallerbot\n"
+                        "• Saluran Rasmi: https://t.me/crowdcaller\n"
+                        "• Kod Sumber GitHub: https://github.com/kand4/kantoi\n\n"
+                        "🛡️ <i>Bersama Komuniti KANTOI — Sekali Kena, Selamanya Kantoi!</i>"
+                    )
+                    if text.startswith("/siar_roadmap"):
+                        api_call("sendMessage", {
+                            "chat_id": CHANNEL_ID,
+                            "text": roadmap_msg,
+                            "parse_mode": "HTML",
+                            "disable_web_page_preview": True
+                        })
+                        send_message(chat_id, f"✅ <b>Pelan Hala Tuju (Roadmap) berjaya disiarkan ke saluran {CHANNEL_ID}!</b>", parse_mode="HTML")
+                    else:
+                        send_message(chat_id, roadmap_msg, parse_mode="HTML")
+                    continue
+
                 # ------------------------------------------------------------------
                 # MOD CHAT PERIBADI: SEMAKAN MANUAL /SEMAK & /CHECK (1-CLICK DOSSIER)
                 # ------------------------------------------------------------------
