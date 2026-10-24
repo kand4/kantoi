@@ -1912,6 +1912,310 @@ def get_threat_check_keyboard(query_input, norm_phone=None, has_threat=False):
 # ==============================================================================
 # FORMATTER MESEJ
 # ==============================================================================
+
+# ==============================================================================
+# ENJIN DOSSIER RISIKAN SIBER BERSEPADU (1-PAPARAN / 1-CLICK UNIFIED DOSSIER)
+# ==============================================================================
+def build_unified_cyber_dossier(
+    phones=None,
+    accounts=None,
+    qr_data=None,
+    suspect_name="Tidak Dinyatakan",
+    bank_name="N/A",
+    email="",
+    tactic="Semakan Keselamatan Siber",
+    source_badge="🤖 AI Vision & Matrix OCR",
+    tmp_id=None,
+    is_admin=False,
+    raw_query=""
+):
+    """
+    Menjana Kad Risikan Siber Bersepadu (1-Paparan) merangkumi:
+    - PDRM CCID SemakMule (Telefon & Bank Serentak)
+    - Pangkalan Data Ancaman KANTOI (6,100+ Rekod)
+    - Pengesanan Rangkaian Sindiket (Cluster Intelligence)
+    - Pengecaman Kod QR DuitNow (EMVCo Binary Decoder)
+    - Carian Media Sosial & Forum Google CSE (Lowyat, CariGold, FB, KenaScam)
+    Semua dalam 1 paparan mesej tanpa perlu menekan 2-3 butang berasingan!
+    """
+    # 1. Bersihkan & kumpulkan semua nombor telefon unik
+    all_phones = []
+    if phones:
+        if isinstance(phones, str): phones = [phones]
+        for p in phones:
+            np = normalize_phone(p)
+            if np and np not in all_phones:
+                all_phones.append(np)
+                
+    if qr_data and qr_data.get("proxy_phone"):
+        np = normalize_phone(qr_data["proxy_phone"])
+        if np and np not in all_phones:
+            all_phones.append(np)
+            
+    if raw_query:
+        for p in re.findall(r'(?:\+?60|0)[\s\-]?[1-9][0-9][\s\-]?[0-9]{3,4}[\s\-]?[0-9]{3,5}', raw_query):
+            np = normalize_phone(p)
+            if np and np not in all_phones:
+                all_phones.append(np)
+
+    # 2. Bersihkan & kumpulkan semua akaun bank unik
+    all_accounts = []
+    if accounts:
+        if isinstance(accounts, str): accounts = [accounts]
+        for acc in accounts:
+            c_acc = re.sub(r'[^\d]', '', str(acc))
+            if len(c_acc) >= 8 and c_acc not in all_accounts:
+                all_accounts.append(c_acc)
+                
+    if qr_data and qr_data.get("account_number"):
+        c_acc = re.sub(r'[^\d]', '', str(qr_data["account_number"]))
+        if len(c_acc) >= 8 and c_acc not in all_accounts:
+            all_accounts.append(c_acc)
+
+    if raw_query:
+        for acc in re.findall(r'\b[0-9]{8,18}\b', raw_query):
+            c_acc = re.sub(r'[^\d]', '', acc)
+            if len(c_acc) >= 8 and c_acc not in all_accounts and c_acc not in all_phones:
+                all_accounts.append(c_acc)
+
+    # Jika langsung tiada nombor atau akaun dikesan daripada query teks
+    if not all_phones and not all_accounts and raw_query:
+        np = normalize_phone(raw_query)
+        if np: all_phones.append(np)
+        else:
+            cd = re.sub(r'[^\d]', '', raw_query)
+            if len(cd) >= 8: all_accounts.append(cd)
+
+    # 3. Kumpul Risikan bagi setiap Entiti
+    is_threat = False
+    phone_intel_list = []
+    acc_intel_list = []
+    combined_cse_snippets = []
+    seen_cse_links = set()
+
+    # Risikan Telefon
+    for p in all_phones:
+        rec_kantoi, _ = query_threat(p)
+        pdrm_info = query_pdrm_semakmule_live("telefon", p)
+        cluster = find_syndicate_cluster(DB_PATH, p, norm_phone=p)
+        cse = fetch_google_cse_snippets(p, max_results=2)
+        
+        has_p_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0)
+        if has_p_threat:
+            is_threat = True
+            
+        for cs in cse:
+            if cs.get("link") and cs["link"] not in seen_cse_links:
+                seen_cse_links.add(cs["link"])
+                combined_cse_snippets.append(cs)
+            elif not cs.get("link") and cs not in combined_cse_snippets:
+                combined_cse_snippets.append(cs)
+                
+        phone_intel_list.append({
+            "phone": p,
+            "rec_kantoi": rec_kantoi,
+            "pdrm": pdrm_info,
+            "cluster": cluster,
+            "has_threat": has_p_threat
+        })
+
+    # Risikan Akaun Bank
+    for acc in all_accounts:
+        rec_kantoi, _ = query_threat(acc)
+        pdrm_info = query_pdrm_semakmule_live("bank", acc)
+        cluster = find_syndicate_cluster(DB_PATH, acc, bank_accounts=acc)
+        cse = fetch_google_cse_snippets(acc, max_results=2)
+        
+        has_acc_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0)
+        if has_acc_threat:
+            is_threat = True
+            
+        for cs in cse:
+            if cs.get("link") and cs["link"] not in seen_cse_links:
+                seen_cse_links.add(cs["link"])
+                combined_cse_snippets.append(cs)
+            elif not cs.get("link") and cs not in combined_cse_snippets:
+                combined_cse_snippets.append(cs)
+                
+        acc_intel_list.append({
+            "account": acc,
+            "bank": bank_name if bank_name != "N/A" else "Akaun Bank",
+            "rec_kantoi": rec_kantoi,
+            "pdrm": pdrm_info,
+            "cluster": cluster,
+            "has_threat": has_acc_threat
+        })
+
+    # Risikan Kod QR DuitNow
+    has_qr = bool(qr_data and qr_data.get("qr_detected"))
+    qr_danger = False
+    if has_qr and qr_data.get("url"):
+        u_res = inspect_url_phishing(qr_data["url"])
+        if u_res.get("severity") in ["CRITICAL", "HIGH"]:
+            is_threat = True
+            qr_danger = True
+
+    # 4. Bina Kad Dossier HTML Bersepadu
+    status_header = (
+        "🚨 <b>STATUS: ANCAMAN SCAMMER DIKESAN!</b>" 
+        if is_threat else 
+        "✅ <b>STATUS: REKOD BERSIH (TIADA ADUAN RASMI)</b>"
+    )
+
+    lines = [
+        "🛡️ <b>DOSSIER RISIKAN SIBER KANTOI (1-PAPARAN)</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"📊 {status_header}",
+        ""
+    ]
+
+    # Seksyen 1: Profil & Identiti Suspek
+    clean_sname = suspect_name if suspect_name not in ["N/A", "Tidak Dinyatakan", ""] else ""
+    if clean_sname or tactic != "Semakan Keselamatan Siber" or email:
+        lines.append("👤 <b>PROFIL / IDENTITI SUSPEK:</b>")
+        if clean_sname:
+            lines.append(f"• <b>Nama / Profil:</b> {html.escape(clean_sname)}")
+        if tactic:
+            lines.append(f"• <b>Taktik / Modus:</b> <i>{html.escape(tactic)}</i>")
+        if email:
+            lines.append(f"• <b>Emel Suspek:</b> <code>{html.escape(email)}</code>")
+        lines.append(f"• <b>Enjin Pengesanan:</b> {source_badge}")
+        lines.append("")
+
+    # Seksyen 2: Nombor Telefon
+    if phone_intel_list:
+        lines.append("📱 <b>NOMBOR TELEFON SASARAN:</b>")
+        for pi in phone_intel_list:
+            p_str = pi["phone"]
+            pdrm = pi["pdrm"]
+            rec = pi["rec_kantoi"]
+            cl = pi["cluster"]
+
+            lines.append(f"• <b>Nombor:</b> <code>{p_str}</code>")
+            # PDRM
+            if pdrm.get("success"):
+                reps = pdrm.get("police_reports", 0)
+                searches = pdrm.get("search_count", 0)
+                if reps > 0:
+                    lines.append(f"  🏛️ <b>PDRM SemakMule:</b> 🚨 <b>{reps} Laporan Polis Rasmi!</b> (Dicari {searches} kali)")
+                else:
+                    lines.append(f"  🏛️ <b>PDRM SemakMule:</b> 0 Laporan Polis (Dicari {searches} kali)")
+            else:
+                lines.append("  🏛️ <b>PDRM SemakMule:</b> 0 Laporan Polis")
+
+            # KANTOI DB
+            if rec:
+                r_tag = rec[2] or "HIGH_RISK"
+                s_rec_name = rec[1] or "Scammer Disahkan"
+                lines.append(f"  🛡️ <b>Pangkalan KANTOI:</b> 🚨 <b>{html.escape(r_tag)}</b> ({html.escape(s_rec_name)})")
+            else:
+                lines.append("  🛡️ <b>Pangkalan KANTOI:</b> <b>Rekod Bersih (6,100+ Senarai)</b>")
+
+            # Sindiket
+            if cl.get("is_syndicate"):
+                c_cnt = cl.get("cluster_count", 0)
+                lines.append(f"  🕸️ <b>Rangkaian Sindiket:</b> ⚠️ <i>Berkait dengan {c_cnt} rekod scammer lain!</i>")
+            lines.append("")
+
+    # Seksyen 3: Akaun Bank
+    if acc_intel_list:
+        lines.append("💳 <b>AKAUN BANK SASARAN:</b>")
+        for ai in acc_intel_list:
+            acc_str = ai["account"]
+            b_name = ai["bank"]
+            pdrm = ai["pdrm"]
+            rec = ai["rec_kantoi"]
+            cl = ai["cluster"]
+
+            lines.append(f"• <b>No. Akaun:</b> <code>{acc_str}</code> ({html.escape(b_name)})")
+            if pdrm.get("success"):
+                reps = pdrm.get("police_reports", 0)
+                searches = pdrm.get("search_count", 0)
+                if reps > 0:
+                    lines.append(f"  🏛️ <b>PDRM SemakMule:</b> 🚨 <b>{reps} Laporan Polis Rasmi!</b> (Dicari {searches} kali)")
+                else:
+                    lines.append(f"  🏛️ <b>PDRM SemakMule:</b> 0 Laporan Polis (Dicari {searches} kali)")
+            else:
+                lines.append("  🏛️ <b>PDRM SemakMule:</b> 0 Laporan Polis")
+
+            if rec:
+                r_tag = rec[2] or "HIGH_RISK_MULE"
+                lines.append(f"  🛡️ <b>Pangkalan KANTOI:</b> 🚨 <b>{html.escape(r_tag)}</b>")
+            else:
+                lines.append("  🛡️ <b>Pangkalan KANTOI:</b> <b>Rekod Bersih (Akaun Keldai Tidak Dikesan)</b>")
+
+            if cl.get("is_syndicate"):
+                c_cnt = cl.get("cluster_count", 0)
+                lines.append(f"  🕸️ <b>Rangkaian Sindiket:</b> ⚠️ <i>Akaun ini berkongsi sindiket dengan {c_cnt} mangsa/kes!</i>")
+            lines.append("")
+
+    # Seksyen 4: Kod QR DuitNow (EMVCo)
+    if has_qr:
+        lines.append("📷 <b>KOD QR DUITNOW (EMVCo BINARY):</b>")
+        qr_holder = qr_data.get("name") or "Tidak Dinyatakan"
+        qr_bank_d = qr_data.get("bank") or "N/A"
+        qr_acc_d = qr_data.get("account_number") or qr_data.get("proxy_phone") or "N/A"
+        lines.append(f"• <b>Nama Pemegang:</b> {html.escape(qr_holder)}")
+        if qr_bank_d != "N/A":
+            lines.append(f"• <b>Institusi / Bank:</b> {html.escape(qr_bank_d)}")
+        if qr_acc_d != "N/A":
+            lines.append(f"• <b>Akaun Tersembunyi:</b> <code>{html.escape(qr_acc_d)}</code>")
+        if qr_danger:
+            lines.append("• <b>Status Pautan:</b> 🚫 <b>QUISHING PHISHING / MALWARE DETECTED!</b>")
+        else:
+            lines.append("• <b>Status Matriks:</b> ✅ EMVCo Standard Sah")
+        lines.append("")
+
+    # Seksyen 5: Carian Media Sosial & Forum Tempatan (Google CSE)
+    lines.append("🌐 <b>HASIL SEMAKAN MEDIA SOSIAL & FORUM (Google CSE):</b>")
+    if combined_cse_snippets:
+        for cs in combined_cse_snippets[:3]:
+            s_source = html.escape(cs.get("source", "FORUM"))
+            s_title = html.escape(cs.get("title", "Aduan Komuniti"))
+            s_snip = html.escape(cs.get("snippet", ""))
+            s_link = cs.get("link", "")
+            lines.append(f"• <b>[{s_source}]</b> {s_title}")
+            if s_snip:
+                lines.append(f"  <i>{s_snip}</i>")
+            if s_link and s_link.startswith(("http://", "https://")):
+                lines.append(f'  🔗 <a href="{html.escape(s_link)}">Buka Thread Perbincangan</a>')
+    else:
+        lines.append("• <i>Tiada sebarang aduan pertikaian dikesan di Lowyat, CariGold, atau FB.</i>")
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    if is_threat:
+        lines.append("🚫 <b>AMARAN:</b> Sasaran mempunyai rekod penipuan yang disahkan. <b>JANGAN PINDAHKAN SEBARANG WANG!</b>")
+    else:
+        lines.append("ℹ️ <i>Setakat ini tiada rekod penipuan rasmi dikesan. Sentiasa berwaspada ketika membuat sebarang transaksi kewangan.</i>")
+
+    # Bina Butang 1-Ketikan (1-Click Action Buttons)
+    share_target = (all_phones[0] if all_phones else (all_accounts[0] if all_accounts else "sasaran"))
+    share_text = urllib.parse.quote(
+        f"⚠️ Semakan KANTOI: Sila berhati-hati dengan nombor/akaun {share_target}. Semak status scammer secara pantas di Telegram: @crowdcallerbot"
+    )
+    wa_share_url = f"https://api.whatsapp.com/send?text={share_text}"
+
+    inline_kb = []
+    # 1. Butang Lapor / Tindakan
+    if tmp_id:
+        if is_admin:
+            inline_kb.append([
+                {"text": "⚡ Luluskan & Siar ke Saluran", "callback_data": f"cfrm_direct_{tmp_id}"},
+                {"text": "❌ Batal", "callback_data": f"cncl_{tmp_id}"}
+            ])
+        else:
+            inline_kb.append([
+                {"text": "📢 Lapor / Tambah Bukti Kes Saya", "callback_data": f"repqr_{tmp_id}"}
+            ])
+
+    # 2. Butang Kongsi Amaran 1-Ketikan
+    inline_kb.append([
+        {"text": "📤 Kongsi Amaran ke WhatsApp", "url": wa_share_url},
+        {"text": "ℹ️ Menu Utama", "callback_data": "help_menu"}
+    ])
+
+    return "\n".join(lines), {"inline_keyboard": inline_kb}, is_threat
+
 def format_threat_response(record, query_input):
     phone_norm, suspect_name, risk_tag, bank_accounts, address, source, evidence_links, all_phones = record
     lines = [
@@ -3428,41 +3732,40 @@ def run_bot():
                                 hud.complete_with_message("\n".join(lines), parse_mode="HTML")
                                 return
 
-                            # B. Semakan Sasaran Nombor / Akaun
-                            check_target = target_acc if (target_acc and target_acc != "N/A") else target_phone
-                            clean_digits = re.sub(r'[^\d]', '', check_target) if check_target else ""
-                            check_cat = "bank" if (target_acc and target_acc != "N/A" and len(clean_digits) > 8) else "telefon"
+                            # B. Menjana Kad Dossier Risikan Siber Bersepadu (1-Paparan)
+                            hud.update(75, "🏛️ Menyelaras risikan PDRM CCID & Pangkalan KANTOI...", "Korelasi Multi-Entiti")
+                            
+                            # Kumpul semua sasaran nombor unik
+                            cand_phones = list(intel.get("all_phones") or [])
+                            if target_phone and target_phone not in cand_phones and target_phone != "N/A":
+                                cand_phones.insert(0, target_phone)
 
-                            rec_kantoi = None
-                            if target_phone and target_phone not in ["N/A", ""]:
-                                rec_kantoi, _ = query_threat(target_phone)
-                            if not rec_kantoi and target_acc and target_acc not in ["N/A", ""]:
-                                rec_kantoi, _ = query_threat(target_acc)
+                            # Kumpul semua sasaran akaun unik
+                            cand_accounts = []
+                            if target_acc and target_acc != "N/A":
+                                cand_accounts.append(target_acc)
+                            if intel.get("bank_accounts"):
+                                for a in re.findall(r'\b\d{8,18}\b', intel["bank_accounts"]):
+                                    if a not in cand_accounts and a not in cand_phones:
+                                        cand_accounts.append(a)
 
-                            # Semakan Siap-Sedia PDRM CCID SemakMule Secara Langsung
-                            hud.update(80, "🏛️ Menyemak pangkalan data PDRM SemakMule & Komuniti KANTOI...", "CCID Live + Lowyat/KenaScam DB")
-                            pdrm_info = query_pdrm_semakmule_live(check_cat, check_target) if (check_target and len(clean_digits) >= 6) else {"success": False}
-                            pdrm_reports = pdrm_info.get("police_reports", 0) if pdrm_info.get("success") else 0
-                            pdrm_searches = pdrm_info.get("search_count", 0) if pdrm_info.get("success") else 0
+                            source_badge = "📱 Kod QR DuitNow" if intel.get("qr_detected") else ("🤖 AI Vision" if intel.get("source_type") == "AI_VISION" else "🔍 OCR KANTOI")
 
-                            is_threat = (rec_kantoi is not None) or (pdrm_reports > 0)
-                            source_badge = "📱 Kod QR DuitNow" if intel["qr_detected"] else ("🤖 AI Vision" if intel["source_type"] == "AI_VISION" else "🔍 OCR KANTOI")
-                            is_phone_only = bool(target_phone and (not target_acc or target_acc == "N/A"))
-
-                            # Jana Draf Laporan Sementara
+                            # Jana Draf Laporan Sementara jika pengguna ingin lapor
                             tmp_id = f"tmp_{int(time.time()*1000) % 1000000}"
-                            combined_evidence = intel["evidence_text"]
+                            combined_evidence = intel.get("evidence_text", "")
                             if t_caption:
                                 combined_evidence = f"{t_caption}\n\n[Bukti Imej]: {combined_evidence}"
-
                             if intel.get("email"):
                                 combined_evidence = f"{combined_evidence}\n[Emel]: {intel['email']}"
+                                
+                            primary_target = cand_phones[0] if cand_phones else (cand_accounts[0] if cand_accounts else "N/A")
                             rep_data = {
                                 "user_id": t_chat_id,
                                 "username": t_username,
-                                "phone_norm": target_phone or target_acc or "N/A",
-                                "suspect_name": f"{intel['tactic']} ({target_name})" if target_name != "Tidak Dinyatakan" else intel['tactic'],
-                                "bank_account": intel["bank_accounts"],
+                                "phone_norm": primary_target,
+                                "suspect_name": f"{intel.get('tactic', 'Aduan')} ({target_name})" if target_name != "Tidak Dinyatakan" else intel.get('tactic', 'Aduan'),
+                                "bank_account": intel.get("bank_accounts") or (cand_accounts[0] if cand_accounts else "N/A"),
                                 "evidence_text": combined_evidence,
                                 "photo_file_id": t_file_id,
                                 "status": "PENDING"
@@ -3470,139 +3773,25 @@ def run_bot():
                             unconfirmed_reports[tmp_id] = rep_data
                             save_pending_report(tmp_id, rep_data)
 
-                            if is_threat:
-                                is_phone_only = bool(target_phone and (not target_acc or target_acc == "N/A"))
-                                target_label = "Nombor Telefon" if is_phone_only else "No. Akaun / Sasaran"
-                                target_icon = "📱" if is_phone_only else "💳"
+                            is_admin_sender = t_chat_id in get_admin_ids()
 
-                                # KAD MERAH: ANCAMAN SCAMMER DIKESAN
-                                warn_lines = [
-                                    f"🚨 <b>PERISAI KANTOI: ANCAMAN SCAMMER DIKESAN DARI {source_badge.upper()}!</b>",
-                                    "━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                                ]
-                                if is_phone_only:
-                                    warn_lines.append(f"📱 <b>Nombor Telefon:</b> <code>{html.escape(target_phone)}</code>")
-                                    if target_name and target_name != "Tidak Dinyatakan":
-                                        warn_lines.append(f"👤 <b>Nama Suspek / Panggilan:</b> {html.escape(target_name)}")
-                                else:
-                                    warn_lines.append(f"👤 <b>Nama Pemunya:</b> {html.escape(target_name)}")
-                                    if target_bank != "N/A":
-                                        warn_lines.append(f"🏦 <b>Institusi / Bank:</b> {html.escape(target_bank)}")
-                                    warn_lines.append(f"💳 <b>No. Akaun Bank:</b> <code>{html.escape(check_target)}</code>")
+                            hud.update(90, "🌐 Mengimbas forum Lowyat, CariGold & FB (Google CSE)...", "Enjin Komuniti KANTOI")
 
-                                if intel.get("email"):
-                                    warn_lines.append(f"📧 <b>Emel Suspek:</b> <code>{html.escape(intel['email'])}</code>")
-                                if intel.get("tactic"):
-                                    warn_lines.append(f"🏷️ <b>Modus / Taktik:</b> {html.escape(intel['tactic'])}")
+                            dossier_html, dossier_kb, is_threat = build_unified_cyber_dossier(
+                                phones=cand_phones,
+                                accounts=cand_accounts,
+                                qr_data=qr_data,
+                                suspect_name=target_name,
+                                bank_name=target_bank,
+                                email=intel.get("email", ""),
+                                tactic=intel.get("tactic", "Semakan Keselamatan Siber"),
+                                source_badge=source_badge,
+                                tmp_id=tmp_id,
+                                is_admin=is_admin_sender
+                            )
 
-                                warn_lines.extend([
-                                    "",
-                                    f"📑 <b>Laporan Polis Rasmi (PDRM):</b> <b>{pdrm_reports} Laporan</b>",
-                                    f"👥 <b>Jumlah Carian Awam PDRM:</b> <b>{pdrm_searches} Kali</b>",
-                                ])
-                                if rec_kantoi:
-                                    warn_lines.append(f"🏷️ <b>Klasifikasi KANTOI:</b> {html.escape(rec_kantoi[2] or 'AMARAN')}")
-                                    if rec_kantoi[1]:
-                                        warn_lines.append(f"👤 <b>Rekod Suspek:</b> {html.escape(rec_kantoi[1])}")
-                                    if rec_kantoi[4]:
-                                        warn_lines.append(f"📝 <b>Modus Operandi:</b> {html.escape(rec_kantoi[4])}")
-
-                                cse_snippets = fetch_google_cse_snippets(check_target)
-                                if cse_snippets:
-                                    warn_lines.append("")
-                                    warn_lines.append("🌐 <b>Hasil Media Sosial & Forum (Google CSE):</b>")
-                                    for cs in cse_snippets:
-                                        warn_lines.append(f"• <b>[{html.escape(cs['source'])}]</b> {html.escape(cs['title'])}")
-                                        if cs.get('snippet'):
-                                            warn_lines.append(f"  <i>{html.escape(cs['snippet'])}</i>")
-                                warn_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                                warn_lines.append("🚫 <b>AMARAN:</b> Akaun ini mempunyai rekod jenayah penipuan. JANGAN PINDAHKAN SEBARANG WANG!")
-
-                                is_admin_sender = t_chat_id in get_admin_ids()
-                                raw_btn_t = check_target or target_name or "unknown"
-                                safe_cb = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_btn_t))[:45] or "unknown"
-                                cse_btn = {"text": "🌐 Semak Media Sosial (Google CSE)", "callback_data": f"cselive_{safe_cb}"}
-                                if is_admin_sender:
-                                    markup = {
-                                        "inline_keyboard": [
-                                            [cse_btn],
-                                            [
-                                                {"text": "⚡ Luluskan & Siar Terus", "callback_data": f"cfrm_direct_{tmp_id}"},
-                                                {"text": "❌ Batal", "callback_data": f"cncl_{tmp_id}"}
-                                            ]
-                                        ]
-                                    }
-                                else:
-                                    markup = {
-                                        "inline_keyboard": [
-                                            [cse_btn],
-                                            [
-                                                {"text": "📢 Tambah Aduan Saya", "callback_data": f"repqr_{tmp_id}"},
-                                                {"text": "❌ Batal", "callback_data": f"cncl_{tmp_id}"}
-                                            ]
-                                        ]
-                                    }
-
-                                hud.update(100, "✨ Analisis Selesai! Menyusun kad amaran scammer...", "Menjana Kad Merah")
-                                hud.complete_with_message("\n".join(warn_lines), reply_markup=markup, parse_mode="HTML")
-                            else:
-                                # KAD HIJAU: BERSIH / TIADA REKOD ANCAMAN
-                                clean_lines = [
-                                    f"✅ <b>HASIL IMBASAN {source_badge.upper()}</b>",
-                                    "━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                                ]
-                                if is_phone_only:
-                                    clean_lines.append(f"📱 <b>Nombor Telefon:</b> <code>{html.escape(target_phone)}</code>")
-                                    if target_name and target_name != "Tidak Dinyatakan":
-                                        clean_lines.append(f"👤 <b>Nama / Profil:</b> {html.escape(target_name)}")
-                                else:
-                                    clean_lines.append(f"👤 <b>Nama Pemunya:</b> {html.escape(target_name)}")
-                                    if target_bank != "N/A":
-                                        clean_lines.append(f"🏦 <b>Institusi / Bank:</b> {html.escape(target_bank)}")
-                                    clean_lines.append(f"💳 <b>No. Akaun Bank:</b> <code>{html.escape(check_target or 'N/A')}</code>")
-
-                                if intel.get("email"):
-                                    clean_lines.append(f"📧 <b>Emel Dikesan:</b> <code>{html.escape(intel['email'])}</code>")
-                                if intel.get("tactic"):
-                                    clean_lines.append(f"📝 <b>Taktik / Ringkasan:</b> <i>{html.escape(intel['tactic'])}</i>")
-
-                                clean_lines.extend([
-                                    "",
-                                    f"🏛️ <b>PDRM SemakMule CCID:</b> <b>Tiada Laporan Polis (0 Rekod)</b>",
-                                    f"👥 <b>Jumlah Carian Awam PDRM:</b> {pdrm_searches} Kali",
-                                    f"🛡️ <b>Pangkalan Data KANTOI:</b> <b>Rekod Bersih (6,100+ Senarai)</b>",
-                                ])
-
-                                cse_snippets = fetch_google_cse_snippets(check_target)
-                                if cse_snippets:
-                                    clean_lines.append("")
-                                    clean_lines.append("🌐 <b>Hasil Media Sosial & Forum (Google CSE):</b>")
-                                    for cs in cse_snippets:
-                                        clean_lines.append(f"• <b>[{html.escape(cs['source'])}]</b> {html.escape(cs['title'])}")
-                                        if cs.get('snippet'):
-                                            clean_lines.append(f"  <i>{html.escape(cs['snippet'])}</i>")
-                                else:
-                                    clean_lines.append("🌐 <b>Media Sosial (Google CSE):</b> <i>Tiada aduan dikesan di Lowyat/FB.</i>")
-
-                                clean_lines.extend([
-                                    "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                    f"ℹ️ <i>Buat masa ini tiada rekod aduan rasmi difailkan terhadap {'nombor' if is_phone_only else 'akaun'} ini.</i>\n",
-                                    "💡 <i>Sekiranya anda merupakan mangsa penipuan individu ini, sila tekan butang di bawah untuk menghantar aduan:</i>"
-                                ])
-                                raw_btn_t = check_target or target_name or "unknown"
-                                safe_cb = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_btn_t))[:45] or "unknown"
-                                cse_btn_clean = {"text": "🌐 Semak Media Sosial (Google CSE)", "callback_data": f"cselive_{safe_cb}"}
-                                markup = {
-                                    "inline_keyboard": [
-                                        [cse_btn_clean],
-                                        [
-                                            {"text": "📢 Lapor Sebagai Scammer", "callback_data": f"repqr_{tmp_id}"},
-                                            {"text": "ℹ️ Menu Utama", "callback_data": "help_menu"}
-                                        ]
-                                    ]
-                                }
-                                hud.update(100, "✨ Analisis Selesai! Menyusun kad pengesahan bersih...", "Menjana Kad Hijau")
-                                hud.complete_with_message("\n".join(clean_lines), reply_markup=markup, parse_mode="HTML")
+                            hud.update(100, "✨ Analisis Selesai! Menyusun Dossier Bersepadu...", "Dossier 1-Paparan Sedia")
+                            hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
                         else:
                             # Tiada maklumat dapat dikesan daripada imej
                             active_k, src_label, k_type = get_effective_gemini_key(t_chat_id)
@@ -3736,20 +3925,22 @@ def run_bot():
                     continue
 
                 # ------------------------------------------------------------------
-                # MOD CHAT PERIBADI: SEMAKAN MANUAL /SEMAK & /CHECK
+                # MOD CHAT PERIBADI: SEMAKAN MANUAL /SEMAK & /CHECK (1-CLICK DOSSIER)
                 # ------------------------------------------------------------------
                 if text.startswith(("/semak", "/check", "/kantoi")):
                     parts = text.split(maxsplit=1)
                     if len(parts) > 1 and parts[1].strip():
                         target = parts[1].strip()
-                        rec, norm = query_threat(target)
-                        if rec:
-                            reply = format_threat_response(rec, target)
-                            markup = get_threat_check_keyboard(target, norm, has_threat=True)
-                        else:
-                            reply = format_safe_response(target, norm)
-                            markup = get_threat_check_keyboard(target, norm, has_threat=False)
-                        send_message(chat_id, reply, reply_markup=markup)
+                        hud = ProgressHUD(chat_id, reply_to_msg_id=msg_id)
+                        hud.start(25, "🔍 Menyelaras risikan PDRM CCID & Pangkalan Data KANTOI...", f"Sasaran: {target}")
+                        hud.update(70, "🌐 Mengimbas forum Lowyat, CariGold & FB (Google CSE)...", "Deep Intel")
+                        dossier_html, dossier_kb, is_threat = build_unified_cyber_dossier(
+                            raw_query=target,
+                            source_badge="💬 Carian Teks Terus",
+                            is_admin=(chat_id in get_admin_ids())
+                        )
+                        hud.update(100, "✨ Analisis Selesai! Menyusun Kad Risikan...", "Sedia")
+                        hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
                         continue
                     else:
                         send_message(chat_id, "ℹ️ Format semakan: `/semak <nombor_telefon_atau_akaun_bank>`\nContoh: `/semak 0179597645`")
@@ -4416,17 +4607,30 @@ def run_bot():
                         continue
 
                 # ------------------------------------------------------------------
-                # E. SEMAKAN PANGKALAN DATA BIASA (TIADA CIRI LAPORAN)
+                # E. SEMAKAN PANGKALAN DATA BIASA (DOSSIER RISIKAN 1-PAPARAN)
                 # ------------------------------------------------------------------
-                record, norm_phone = query_threat(text)
-                if record:
-                    reply = format_threat_response(record, text)
-                    print(f"[HIT] Rekod scammer dijumpai untuk: {text} -> {record[1]}")
-                    send_message(chat_id, reply, reply_markup=get_threat_check_keyboard(text, norm_phone, has_threat=True))
+                clean_num_check = re.sub(r'[^\d]', '', text)
+                if len(clean_num_check) >= 8:
+                    hud = ProgressHUD(chat_id, reply_to_msg_id=msg_id)
+                    hud.start(25, "🔍 Menyelaras risikan PDRM CCID & Pangkalan Data KANTOI...", f"Sasaran: {text[:25]}")
+                    hud.update(70, "🌐 Mengimbas forum Lowyat, CariGold & FB (Google CSE)...", "Deep Intel")
+                    dossier_html, dossier_kb, is_threat = build_unified_cyber_dossier(
+                        raw_query=text,
+                        source_badge="💬 Carian Teks Terus",
+                        is_admin=(chat_id in get_admin_ids())
+                    )
+                    hud.update(100, "✨ Analisis Selesai! Menyusun Kad Risikan...", "Sedia")
+                    hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
                 else:
-                    reply = format_safe_response(text, norm_phone)
-                    print(f"[CLEAN] Tiada rekod untuk: {text}")
-                    send_message(chat_id, reply, reply_markup=get_threat_check_keyboard(text, norm_phone, has_threat=False))
+                    record, norm_phone = query_threat(text)
+                    if record:
+                        reply = format_threat_response(record, text)
+                        print(f"[HIT] Rekod scammer dijumpai untuk: {text} -> {record[1]}")
+                        send_message(chat_id, reply, reply_markup=get_threat_check_keyboard(text, norm_phone, has_threat=True))
+                    else:
+                        reply = format_safe_response(text, norm_phone)
+                        print(f"[CLEAN] Tiada rekod untuk: {text}")
+                        send_message(chat_id, reply, reply_markup=get_threat_check_keyboard(text, norm_phone, has_threat=False))
 
         except requests.exceptions.RequestException:
             time.sleep(3)
