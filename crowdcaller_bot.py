@@ -756,11 +756,12 @@ def analyze_image_with_gemini(image_path, api_key=None):
     }
 
     models_to_try = [
-        "gemini-2.0-flash",       # TERPANTAS & PALING PINTAR UNTUK VISION (Google Gemini 2.0)
-        "gemini-1.5-flash",       # Sandaran stabil pantas (Google Gemini 1.5)
-        "gemini-1.5-flash-8b",    # Sandaran latensi ultra-rendah
-        "gemini-2.0-flash-exp",   # Model eksperimental 2.0
-        "gemini-1.5-pro"          # Sandaran penalaran mendalam
+        "gemini-3.5-flash",       # TERPANTAS UNTUK VISION (Google Gemini 3.5 Flash - Latensi Terendah)
+        "gemini-4-argon",         # FLAGSHIP TERPINTAR (Google Gemini 4 Argon - Penalaran Siber Mendalam)
+        "gemini-3-flash",         # Sandaran Generasi 3 Flash
+        "gemini-2.0-flash",       # Sandaran Generasi 2 Flash
+        "gemini-1.5-flash",       # Sandaran Standard
+        "gemini-1.5-flash-8b"     # Sandaran Ringan
     ]
 
     for model_name in models_to_try:
@@ -3514,7 +3515,7 @@ def run_bot():
                     if candidate_key and is_valid_key_pattern:
                         api_call("sendChatAction", {"chat_id": chat_id, "action": "typing"})
                         # Uji kunci secara langsung ke Google Gemini API (Model Terpantas: gemini-2.0-flash)
-                        test_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"]
+                        test_models = ["gemini-3.5-flash", "gemini-4-argon", "gemini-3-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
                         t_resp = None
                         success_model = ""
                         for tm in test_models:
@@ -3575,9 +3576,9 @@ def run_bot():
                     
                     # Semak status ujian sambungan jika ada kunci
                     google_status = "⚪ Belum Ditetapkan"
-                    active_model_info = "gemini-2.0-flash (Ultra-Fast Vision)"
+                    active_model_info = "gemini-3.5-flash / gemini-4-argon (Generasi Terkini)"
                     if current_k:
-                        test_models_diag = ["gemini-2.0-flash", "gemini-1.5-flash"]
+                        test_models_diag = ["gemini-3.5-flash", "gemini-4-argon", "gemini-3-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
                         r_chk = None
                         working_m = ""
                         for tm in test_models_diag:
