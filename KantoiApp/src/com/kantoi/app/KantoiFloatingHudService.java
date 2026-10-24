@@ -370,9 +370,11 @@ public class KantoiFloatingHudService extends Service {
                         String s = cs.toString().trim();
                         String digits = s.replaceAll("[^0-9]", "");
                         if (digits.length() >= 8 && digits.length() <= 18) {
-                            mEtTarget.setText(digits);
-                            // Terus laksanakan imbasan jika dikesan nombor sah dari clipboard!
-                            performHudScan();
+                            String curr = mEtTarget.getText().toString().trim();
+                            if (curr.isEmpty()) {
+                                mEtTarget.setText(digits);
+                                performHudScan();
+                            }
                         }
                     }
                 }
@@ -393,7 +395,8 @@ public class KantoiFloatingHudService extends Service {
             return;
         }
 
-        final boolean isPhone = cleanDigits.startsWith("01") || cleanDigits.startsWith("601") || cleanDigits.startsWith("1");
+        final boolean isPhone = (cleanDigits.startsWith("01") || cleanDigits.startsWith("601") || cleanDigits.startsWith("1")
+                || ((cleanDigits.startsWith("0") || cleanDigits.startsWith("60")) && cleanDigits.length() <= 11));
         final String local = isPhone ? KantoiThreatEngine.normalizeToLocal(cleanDigits) : cleanDigits;
 
         mResultCard.setVisibility(View.VISIBLE);
@@ -427,15 +430,19 @@ public class KantoiFloatingHudService extends Service {
         }).start();
     }
 
-    private void renderDossierResult(final String target, boolean isPhone, KantoiThreatEngine.ScammerThreat threat, KantoiThreatEngine.SemakMuleData smData) {
+    private void renderDossierResult(final String target, final boolean isPhone, final KantoiThreatEngine.ScammerThreat threat, final KantoiThreatEngine.SemakMuleData smData) {
         int reports = (smData != null && smData.reportCount > 0) ? smData.reportCount : 0;
         int searches = (smData != null && smData.searchCount > 0) ? smData.searchCount : 0;
-        boolean hasThreat = (threat != null) || (reports > 0);
+        boolean hasConfirmedThreat = (threat != null) || (reports > 0);
+        boolean hasSuspicion = !hasConfirmedThreat && (searches >= 5);
 
         GradientDrawable resBg = new GradientDrawable();
         resBg.setCornerRadius(dpToPx(8));
 
-        if (hasThreat) {
+        final String shareMsg;
+
+        if (hasConfirmedThreat) {
+            // TIER 1: ANCAMAN SCAMMER DISAHKAN (Merah)
             resBg.setColor(0xFF7F1D1D); // Deep Crimson
             resBg.setStroke(dpToPx(1), 0xFFEF4444);
             mResultCard.setBackground(resBg);
@@ -444,11 +451,11 @@ public class KantoiFloatingHudService extends Service {
             mTvResultHeader.setTextColor(0xFFFECACA);
 
             StringBuilder sb = new StringBuilder();
-            sb.append("• Sasaran: ").append(target).append(" (").append(isPhone ? "Telefon" : "Bank").append(")\n");
+            sb.append("• Sasaran: ").append(target).append(" (").append(isPhone ? "Telefon" : "Akaun Bank").append(")\n");
             if (reports > 0) {
                 sb.append("• 🏛️ PDRM CCID: 🚨 ").append(reports).append(" Laporan Polis! (Dicari ").append(searches).append(" kali)\n");
             } else {
-                sb.append("• 🏛️ PDRM CCID: 0 Laporan (Dicari ").append(searches).append(" kali)\n");
+                sb.append("• 🏛️ PDRM CCID: 0 Laporan Polis Rasmi (Dicari ").append(searches).append(" kali)\n");
             }
 
             if (threat != null) {
@@ -459,10 +466,46 @@ public class KantoiFloatingHudService extends Service {
                 if (threat.bankAccounts != null && !threat.bankAccounts.equals("N/A")) {
                     sb.append("• 🏦 Bank Terlibat: ").append(threat.bankAccounts).append("\n");
                 }
+                if (threat.source != null && !threat.source.isEmpty()) {
+                    sb.append("• 📚 Sumber: ").append(threat.source).append("\n");
+                }
             }
-            sb.append("⚠️ JANGAN PINDAHKAN WANG!");
+            sb.append("⚠️ PERINGATAN KRITIKAL: JANGAN PINDAHKAN WANG!");
             mTvResultBody.setText(sb.toString());
+
+            mBtnShareWa.setText("📤 KONGSI AMARAN SCAMMER");
+            GradientDrawable btnBg = new GradientDrawable();
+            btnBg.setColor(0xFFDC2626);
+            btnBg.setCornerRadius(dpToPx(8));
+            mBtnShareWa.setBackground(btnBg);
+            shareMsg = "🚨 AMARAN KANTOI: Sila berhati-hati dengan nombor/akaun " + target + "! Rekod ancaman scammer dikesan. Semak di bot Telegram: @crowdcallerbot";
+
+        } else if (hasSuspicion) {
+            // TIER 2: DALAM RADAR PERHATIAN / KERAGUAN SEDERHANA (Oren/Kuning)
+            resBg.setColor(0xFF78350F); // Deep Amber
+            resBg.setStroke(dpToPx(1), 0xFFF59E0B);
+            mResultCard.setBackground(resBg);
+
+            mTvResultHeader.setText("⚠️ DALAM RADAR PERHATIAN");
+            mTvResultHeader.setTextColor(0xFFFEF08A);
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("• Sasaran: ").append(target).append(" (").append(isPhone ? "Telefon" : "Akaun Bank").append(")\n");
+            sb.append("• 🏛️ PDRM CCID: 0 Laporan Polis Rasmi\n");
+            sb.append("• 👁️ Semakan Awam: Dicari ").append(searches).append(" kali di CCID\n");
+            sb.append("• 🛡️ Pangkalan KANTOI: Tiada rekod hitam\n");
+            sb.append("💡 Nasihat: Tiada laporan jenayah rasmi, namun kerap disemak orang ramai. Sila berwaspada sebelum membuat pembayaran.");
+            mTvResultBody.setText(sb.toString());
+
+            mBtnShareWa.setText("📤 KONGSI STATUS PERHATIAN");
+            GradientDrawable btnBg = new GradientDrawable();
+            btnBg.setColor(0xFFD97706);
+            btnBg.setCornerRadius(dpToPx(8));
+            mBtnShareWa.setBackground(btnBg);
+            shareMsg = "⚠️ PERHATIAN KANTOI: Nombor/akaun " + target + " kerap disemak (" + searches + " kali) di portal CCID walaupun tiada laporan polis rasmi. Semak di @crowdcallerbot";
+
         } else {
+            // TIER 3: REKOD BERSIH / TIADA ANCAMAN (Hijau)
             resBg.setColor(0xFF064E3B); // Deep Emerald
             resBg.setStroke(dpToPx(1), 0xFF10B981);
             mResultCard.setBackground(resBg);
@@ -471,26 +514,31 @@ public class KantoiFloatingHudService extends Service {
             mTvResultHeader.setTextColor(0xFFA7F3D0);
 
             StringBuilder sb = new StringBuilder();
-            sb.append("• Sasaran: ").append(target).append("\n");
-            sb.append("• 🏛️ PDRM CCID: 0 Laporan Polis (Dicari ").append(searches).append(" kali)\n");
-            sb.append("• 🛡️ Pangkalan KANTOI: Rekod Bersih (6,100+ Senarai)\n");
-            sb.append("ℹ️ Tiada laporan jenayah rasmi dikesan setakat ini.");
+            sb.append("• Sasaran: ").append(target).append(" (").append(isPhone ? "Telefon" : "Akaun Bank").append(")\n");
+            sb.append("• 🏛️ PDRM CCID: 0 Laporan Polis (Carian: ").append(searches > 0 ? searches + " kali" : "Pertama Kali").append(")\n");
+            sb.append("• 🛡️ Pangkalan KANTOI: Rekod Bersih (6,100+ Rekod)\n");
+            sb.append("ℹ️ Nombor normal. Tiada sebarang aduan jenayah dikesan setakat ini.");
             mTvResultBody.setText(sb.toString());
+
+            mBtnShareWa.setText("📤 KONGSI STATUS BERSIH");
+            GradientDrawable btnBg = new GradientDrawable();
+            btnBg.setColor(0xFF059669);
+            btnBg.setCornerRadius(dpToPx(8));
+            mBtnShareWa.setBackground(btnBg);
+            shareMsg = "✅ SEMAKAN KANTOI: Nombor/akaun " + target + " mempunyai rekod bersih tanpa sebarang laporan scam setakat ini. Semak di @crowdcallerbot";
         }
 
-        // Konfigurasi Butang Perkongsian WhatsApp 1-Ketikan
         mBtnShareWa.setVisibility(View.VISIBLE);
         mBtnShareWa.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                shareThreatToWhatsApp(target);
+                shareThreatToWhatsApp(shareMsg);
             }
         });
     }
 
-    private void shareThreatToWhatsApp(String target) {
+    private void shareThreatToWhatsApp(String msg) {
         try {
-            String msg = "⚠️ Semakan Keselamatan Siber KANTOI:\nSila berhati-hati dengan nombor/akaun " + target + ". Semak status scammer secara percuma di Telegram: @crowdcallerbot atau guna aplikasi KANTOI!";
             Intent sendIt = new Intent(Intent.ACTION_SEND);
             sendIt.setType("text/plain");
             sendIt.putExtra(Intent.EXTRA_TEXT, msg);
@@ -499,9 +547,8 @@ public class KantoiFloatingHudService extends Service {
             try {
                 startActivity(sendIt);
             } catch (Throwable notFound) {
-                // Jika WhatsApp tidak dipasang, buka general chooser
                 sendIt.setPackage(null);
-                startActivity(Intent.createChooser(sendIt, "Kongsi Amaran KANTOI").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                startActivity(Intent.createChooser(sendIt, "Kongsi Maklumat KANTOI").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             }
         } catch (Throwable t) {
             Toast.makeText(this, "Gagal melancarkan WhatsApp: " + t.getMessage(), Toast.LENGTH_SHORT).show();

@@ -580,7 +580,12 @@ public class KantoiThreatEngine {
             conn.setReadTimeout(12000);
             conn.setDoOutput(true);
 
-            String jsonPayload = "{\"data\":{\"category\":\"" + cat + "\",\"telNo\":\"" + cleanTarget + "\",\"captcha\":\"\"}}";
+            String jsonPayload;
+            if ("bank".equalsIgnoreCase(cat)) {
+                jsonPayload = "{\"data\":{\"category\":\"bank\",\"bankAccount\":\"" + cleanTarget + "\",\"telNo\":\"\",\"companyName\":\"\",\"captcha\":\"\"}}";
+            } else {
+                jsonPayload = "{\"data\":{\"category\":\"telefon\",\"telNo\":\"" + cleanTarget + "\",\"bankAccount\":\"\",\"companyName\":\"\",\"captcha\":\"\"}}";
+            }
             OutputStream os = conn.getOutputStream();
             os.write(jsonPayload.getBytes("UTF-8"));
             os.flush();
@@ -601,7 +606,22 @@ public class KantoiThreatEngine {
                 int status = json.optInt("status", 0);
                 if (status == 1) {
                     JSONArray tableData = json.optJSONArray("table_data");
-                    int reports = (tableData != null) ? tableData.length() : 0;
+                    int reports = 0;
+                    if (tableData != null && tableData.length() > 0) {
+                        try {
+                            JSONArray firstRow = tableData.optJSONArray(0);
+                            if (firstRow != null && firstRow.length() > 1) {
+                                reports = firstRow.optInt(1, 0);
+                            } else {
+                                Object first = tableData.get(0);
+                                if (first instanceof JSONArray) {
+                                    reports = ((JSONArray) first).optInt(1, 0);
+                                }
+                            }
+                        } catch (Throwable tRow) {
+                            Log.e(TAG, "Gagal memproses baris table_data: " + tRow.getMessage());
+                        }
+                    }
                     int searchCount = json.optInt("count", 0);
 
                     SemakMuleData data = new SemakMuleData();
