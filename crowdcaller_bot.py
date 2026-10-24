@@ -765,16 +765,20 @@ def analyze_image_with_gemini(image_path, api_key=None):
 
     for model_name in models_to_try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        headers = {
+            "x-goog-api-key": api_key,
+            "Content-Type": "application/json"
+        }
         resp = None
         try:
-            resp = requests.post(url, json=payload, timeout=25)
+            resp = requests.post(url, headers=headers, json=payload, timeout=25)
         except Exception as net_or_ssl_err:
             # Kebal SSL untuk Windows 7 SP1 & Python 3.8 embeddable
             print(f"[GEMINI SSL/NET WARN on {model_name}] {net_or_ssl_err}. Mencuba mod kebal SSL (verify=False)...")
             try:
                 import urllib3
                 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                resp = requests.post(url, json=payload, timeout=25, verify=False)
+                resp = requests.post(url, headers=headers, json=payload, timeout=25, verify=False)
             except Exception as e_retry:
                 print(f"[GEMINI RETRY ERR] {e_retry}")
                 LAST_GEMINI_DIAGNOSTIC = {
@@ -3484,23 +3488,30 @@ def run_bot():
                         else:
                             candidate_key = parts[1].strip()
 
-                    # Jika pengguna menaip teks tetapi bukan kunci yang sah
-                    if candidate_key and not (candidate_key.startswith("AIza") or len(candidate_key) >= 20):
+                    # Pengesahan format: Terima kunci format baharu (AQ...) atau lama (AIza...) atau panjang >= 15
+                    is_valid_key_pattern = bool(
+                        candidate_key and (
+                            candidate_key.startswith(("AQ.", "AQ", "AIza")) or len(candidate_key) >= 15
+                        )
+                    )
+
+                    # Jika pengguna menaip teks yang terlalu pendek atau perkataan rawak (cth /gemini APIKEY)
+                    if candidate_key and not is_valid_key_pattern:
                         send_message(
                             chat_id,
                             "⚠️ <b>Format Kunci API Tidak Sah:</b>\n"
-                            f"Teks yang anda masukkan (<code>{html.escape(candidate_key[:25])}</code>) bukan kunci Google Gemini yang sah.\n\n"
-                            "💡 <b>Kunci rasmi Google AI Studio:</b>\n"
-                            "• Bermula dengan <code>AIzaSy...</code>\n"
-                            "• Mempunyai panjang 39 aksara.\n\n"
+                            f"Teks yang anda masukkan (<code>{html.escape(candidate_key[:25])}</code>) bukan format kunci Google Gemini yang sah.\n\n"
+                            "💡 <b>Format Kunci Rasmi Google AI Studio:</b>\n"
+                            "• <b>Format Terkini (Auth Key):</b> Bermula dengan <code>AQ....</code> (~53 aksara)\n"
+                            "• <b>Format Standard (API Key):</b> Bermula dengan <code>AIzaSy...</code> (39 aksara)\n\n"
                             "Sila salin kunci penuh daripada https://aistudio.google.com/ dan taip:\n"
                             "<code>/gemini &lt;KUNCI_API_PENUH&gt;</code>",
                             parse_mode="HTML"
                         )
                         continue
 
-                    # Jika pengguna membekalkan Kunci API sah yang baharu
-                    if candidate_key and (candidate_key.startswith("AIza") or len(candidate_key) >= 20):
+                    # Jika pengguna membekalkan Kunci API baharu
+                    if candidate_key and is_valid_key_pattern:
                         api_call("sendChatAction", {"chat_id": chat_id, "action": "typing"})
                         # Uji kunci secara langsung ke Google Gemini API (Model Terpantas: gemini-2.0-flash)
                         test_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"]
@@ -3508,14 +3519,18 @@ def run_bot():
                         success_model = ""
                         for tm in test_models:
                             test_url = f"https://generativelanguage.googleapis.com/v1beta/models/{tm}:generateContent?key={candidate_key}"
+                            test_headers = {
+                                "x-goog-api-key": candidate_key,
+                                "Content-Type": "application/json"
+                            }
                             test_body = {"contents": [{"parts": [{"text": "PONG"}]}]}
                             try:
-                                t_resp = requests.post(test_url, json=test_body, timeout=12)
+                                t_resp = requests.post(test_url, headers=test_headers, json=test_body, timeout=12)
                             except Exception:
                                 try:
                                     import urllib3
                                     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                                    t_resp = requests.post(test_url, json=test_body, timeout=12, verify=False)
+                                    t_resp = requests.post(test_url, headers=test_headers, json=test_body, timeout=12, verify=False)
                                 except Exception:
                                     continue
                             if t_resp and t_resp.status_code == 200:
@@ -3525,15 +3540,17 @@ def run_bot():
                         if t_resp and t_resp.status_code == 200:
                             set_gemini_api_key(candidate_key)
                             add_admin(chat_id)
+                            key_type_label = "Google Auth Key (Format Terkini AQ)" if candidate_key.startswith("AQ") else "Google API Key"
                             send_message(
                                 chat_id,
                                 "🎉 <b>BERJAYA! KUNCI GOOGLE GEMINI VISION DISAHKAN AKTIF!</b>\n"
                                 "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                                 f"🔑 <b>Kunci Disimpan:</b> <code>{candidate_key[:8]}...{candidate_key[-4:]}</code>\n"
-                                f"⚡ <b>Enjin AI Terpantas:</b> <code>{success_model}</code> (Vision Mode)\n"
-                                "📁 <b>Fail Konfigurasi:</b> Dikemas kini ke <code>admin_config.json</code> & <code>local_secrets.py</code>\n"
+                                f"🏷️ <b>Jenis Kunci:</b> {key_type_label}\n"
+                                f"⚡ <b>Model Vision Terpantas:</b> <code>{success_model}</code> (Ultra-Fast Vision)\n"
+                                "📁 <b>Fail Konfigurasi:</b> Disimpan ke <code>admin_config.json</code> & <code>local_secrets.py</code>\n"
                                 "👑 <b>Akses Admin:</b> ID Telegram anda didaftarkan sebagai Admin KANTOI.\n\n"
-                                "🤖 <i>Kini bot anda 100% pintar! Anda boleh menghantar sebarang tangkapan layar WhatsApp, Telegram, profil scammer, atau resit bank untuk diekstrak nombor dan namanya serta-merta!</i>",
+                                "🤖 <i>Kini bot anda 100% berkuasa tinggi! Hantarkan sebarang tangkapan skrin WhatsApp, kenalan (~ Prem Kumar), resit bank, atau panggilan masuk untuk diekstrak nombornya secara automatik!</i>",
                                 parse_mode="HTML"
                             )
                         elif t_resp:
@@ -3542,11 +3559,10 @@ def run_bot():
                                 chat_id,
                                 f"⚠️ <b>Kunci API Ditolak oleh Google (HTTP {t_resp.status_code}):</b>\n"
                                 f"<code>{html.escape(err_txt)}</code>\n\n"
-                                "💡 <b>Panduan Dapatkan Kunci Percuma:</b>\n"
-                                "1. Layari https://aistudio.google.com/\n"
-                                "2. Log masuk akaun Google & tekan 'Create API Key'.\n"
-                                "3. Salin kunci dan taip:\n"
-                                "<code>/gemini &lt;KUNCI_API_ANDA&gt;</code>",
+                                "💡 <b>Sila pastikan:</b>\n"
+                                "1. Anda telah menyalin keseluruhan kunci tanpa tertinggal sebarang aksara.\n"
+                                "2. Kunci telah diaktifkan di https://aistudio.google.com/\n"
+                                "3. Taip semula: <code>/gemini &lt;KUNCI_API_ANDA&gt;</code>",
                                 parse_mode="HTML"
                             )
                         else:
@@ -3566,13 +3582,17 @@ def run_bot():
                         working_m = ""
                         for tm in test_models_diag:
                             test_url = f"https://generativelanguage.googleapis.com/v1beta/models/{tm}:generateContent?key={current_k}"
+                            test_headers = {
+                                "x-goog-api-key": current_k,
+                                "Content-Type": "application/json"
+                            }
                             try:
-                                r_chk = requests.post(test_url, json={"contents": [{"parts": [{"text": "PING"}]}]}, timeout=8)
+                                r_chk = requests.post(test_url, headers=test_headers, json={"contents": [{"parts": [{"text": "PING"}]}]}, timeout=8)
                             except Exception:
                                 try:
                                     import urllib3
                                     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                                    r_chk = requests.post(test_url, json={"contents": [{"parts": [{"text": "PING"}]}]}, timeout=8, verify=False)
+                                    r_chk = requests.post(test_url, headers=test_headers, json={"contents": [{"parts": [{"text": "PING"}]}]}, timeout=8, verify=False)
                                 except Exception:
                                     pass
                             if r_chk and r_chk.status_code == 200:
@@ -3594,10 +3614,14 @@ def run_bot():
                         f"🔑 <b>Status Kunci API:</b> {status_k}",
                         f"📂 <b>Sumber Dikesan:</b> <code>{src_fn}</code> (kunci: <code>{kname}</code>)",
                         f"🌐 <b>Sambungan Google AI:</b> {google_status}",
-                        f"⚡ <b>Enjin AI Vision Utama:</b> <code>{active_model_info}</code>",
+                        f"⚡ <b>Model Vision Utama:</b> <code>{active_model_info}</code>",
                         f"🖥️ <b>Enjin OCR Tempatan:</b> {ocr_status}",
                         "",
-                        "💡 <b>Cara Menetapkan Kunci Baharu:</b>",
+                        "💡 <b>Format Kunci yang Disokong:</b>",
+                        "• <b>Kunci Baharu Google AI Studio:</b> <code>AQ....</code> (~53 aksara)",
+                        "• <b>Kunci Standard (Legacy):</b> <code>AIzaSy...</code> (39 aksara)",
+                        "",
+                        "💡 <b>Cara Menetapkan / Mengemas Kini Kunci:</b>",
                         "Taip arahan berikut dalam chat ini:",
                         "<code>/gemini &lt;API_KEY_ANDA&gt;</code>",
                         "",
