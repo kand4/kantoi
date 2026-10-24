@@ -1,9 +1,18 @@
 # 🛡️ KANTOI: Sistem Pertahanan Siber, Pengenal Pemanggil & Anti-Trojan Android
 
-[![Versi Terkini](https://img.shields.io/badge/Versi-v1.13.9-emerald?style=for-the-badge&logo=android)](https://t.me/crowdcaller)
-[![Android SDK](https://img.shields.io/badge/Android-8.0%20hingga%2012L%20(API%2026--32)-sky?style=for-the-badge&logo=android)](https://developer.android.com)
-[![Lesen](https://img.shields.io/badge/Lesen-GPL--3.0-blue?style=for-the-badge)](LICENSE)
-[![Komuniti Telegram](https://img.shields.io/badge/Saluran_Telegram-@crowdcaller-26A5E4?style=for-the-badge&logo=telegram)](https://t.me/crowdcaller)
+<p align="center">
+  <a href="https://github.com/kand4/kantoi/releases/latest"><img src="https://img.shields.io/badge/📥_Muat_Turun_APK-v1.13.10_Release-success?style=for-the-badge&logo=android&logoColor=white" height="36"/></a>
+  &nbsp;&nbsp;
+  <a href="https://t.me/crowdcaller"><img src="https://img.shields.io/badge/💬_Saluran_Telegram-@crowdcaller-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" height="36"/></a>
+  &nbsp;&nbsp;
+  <a href="https://t.me/crowdcallerbot"><img src="https://img.shields.io/badge/🤖_Bot_Telegram-@crowdcallerbot-blue?style=for-the-badge&logo=telegram&logoColor=white" height="36"/></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/kand4/kantoi/releases"><img src="https://img.shields.io/badge/Versi-v1.13.10-emerald?style=flat-square&logo=android" /></a>
+  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-8.0_hingga_12L_(API_26--32)-sky?style=flat-square&logo=android" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Lesen-GPL--3.0-blue?style=flat-square" /></a>
+</p>
 
 **KANTOI** ialah aplikasi pertahanan siber mudah alih berprestasi tinggi (*zero-lag architecture*) yang direka khas untuk melindungi rakyat Malaysia daripada ancaman panggilan penipuan (*scammer*), skim akaun keldai (*mule accounts*), pancingan data SMS (*phishing*), dan trojan pencuri OTP/TAC perbankan (*banking malware* seperti MaliBot & Godfather).
 
@@ -55,6 +64,7 @@ TrueCaller/
 │   ├── res/                       # Antaramuka XML, Ikon Vektor & Warna
 │   └── src/com/kantoi/app/
 │       ├── MainActivity.java           # Hab Utama (Panggilan, Kenalan, Pad Dail, Pertahanan)
+│       ├── KantoiFloatingHudService.java # Gelembung Terapung Pantas (1-Tap Floating Threat HUD)
 │       ├── KantoiThreatEngine.java     # Enjin Pemadanan Ancaman PDRM & Kapsul Terapung
 │       ├── KantoiVirusTotalEngine.java # Enjin Heuristik Trojan & VirusTotal API v3
 │       ├── KantoiDownloadSentry.java   # Penjaga Muat Turun Latar Belakang (/Download)
@@ -107,8 +117,27 @@ Projek ini menyokong kompilasi berdiri sendiri (*standalone automated build pipe
    ```
 3. Fail APK yang telah siap ditandatangani akan dijana di direktori utama:
    ```
-   Kantoi_v1.13.9_Release_signed.apk
+   Kantoi_v1.13.10_Release_signed.apk
    ```
+
+---
+
+## 🗺️ Pelan Hala Tuju Pembangunan (Release Roadmap 2026/2027)
+
+Bagi memastikan KANTOI terus berkembang secara teratur dan aktif, ciri-ciri baharu dijadualkan mengikut fasa bulanan:
+
+- 🚀 **Fasa 1: Bulan Ini (v1.13.10 — Kini Dilancarkan)**
+  - 🛡️ **1-Tap Floating Threat HUD (Gelembung Terapung):** Akses semakan pantas scammer terapung di atas WhatsApp, Telegram, FB, dan Aplikasi Bank.
+  - 🤖 **Multi-Entity Cyber Dossier (@crowdcallerbot):** Semakan automatik serentak untuk No Telefon + Akaun Bank + Kod QR DuitNow daripada 1 keping tangkapan layar.
+- ⏳ **Fasa 2: Bulan Depan (November 2026)**
+  - 📋 **Auto-Clipboard Mule Sentinel:** Pengesanan proaktif di latar belakang saat nombor akaun bank disalin (*copy*) sebelum transaksi kewangan dibuat.
+- ⏳ **Fasa 3: Bulan Disember 2026**
+  - 📱 **Native In-App Dossier View:** Paparan siasatan SemakMule CCID & forum Lowyat secara terus dalam aplikasi tanpa pelayar web luar.
+- ⏳ **Fasa 4: Awal Tahun 2027**
+  - 📞 **WhatsApp Call & Contact Risk Sentinel:** Perlindungan masa nyata panggilan WhatsApp scammer & audit keselamatan buku kenalan.
+- 💡 **Fasa Penyelidikan (Future Pipeline):**
+  - 📸 *AI Slip Forgery Detector (Pengecam Resit Bank Palsu)*
+  - 👨‍👩‍👧 *Family Shield (Mod Perlindungan Keluarga & Warga Emas)*
 
 ---
 
