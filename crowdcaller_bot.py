@@ -947,7 +947,7 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None, progress_callbac
     gemini_data = None
     if active_key:
         if progress_callback:
-            progress_callback(60, "🧠 Menjalankan Gemini Vision OCR & Pengecaman Nombor...", "gemini-3.8-flash (Sub-Second Vision)")
+            progress_callback(60, "🧠 Pengecaman Teks & Nombor Telefon...", "Enjin AI Vision KANTOI")
         gemini_data = analyze_image_with_gemini(image_path, active_key)
         
     ocr_text = ""
