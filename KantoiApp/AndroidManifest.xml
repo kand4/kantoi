@@ -163,6 +163,12 @@
             android:name=".KantoiClipboardService"
             android:exported="false" />
 
+        <!-- 1-Tap Floating Threat HUD (Quick Scanner) Service -->
+        <service
+            android:name=".KantoiFloatingHudService"
+            android:enabled="true"
+            android:exported="false" />
+
         <!-- Pendail Pintar KANTOI (Smart Dialer) -->
         <activity
             android:name=".DialerActivity"

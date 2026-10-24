@@ -557,8 +557,11 @@ public class KantoiThreatEngine {
         }
     }
 
-    private static SemakMuleData querySemakMuleNetwork(String localPhone) {
-        if (localPhone == null || localPhone.length() < 8) return null;
+    public static SemakMuleData querySemakMuleNetworkDirect(String category, String queryTarget) {
+        if (queryTarget == null || queryTarget.length() < 8) return null;
+        String cleanTarget = queryTarget.replaceAll("[^0-9]", "");
+        if (cleanTarget.length() < 8) return null;
+        String cat = ("bank".equalsIgnoreCase(category)) ? "bank" : "telefon";
         try {
             URL url = new URL("https://semakmule.rmp.gov.my/api/mule/get_search_data.php");
             java.net.URLConnection rawConn = url.openConnection();
@@ -577,7 +580,7 @@ public class KantoiThreatEngine {
             conn.setReadTimeout(12000);
             conn.setDoOutput(true);
 
-            String jsonPayload = "{\"data\":{\"category\":\"telefon\",\"telNo\":\"" + localPhone + "\",\"captcha\":\"\"}}";
+            String jsonPayload = "{\"data\":{\"category\":\"" + cat + "\",\"telNo\":\"" + cleanTarget + "\",\"captcha\":\"\"}}";
             OutputStream os = conn.getOutputStream();
             os.write(jsonPayload.getBytes("UTF-8"));
             os.flush();
@@ -605,14 +608,18 @@ public class KantoiThreatEngine {
                     data.searchCount = searchCount;
                     data.reportCount = reports;
                     data.loading = false;
-                    Log.i(TAG, "SemakMule network response for [" + localPhone + "]: count=" + searchCount + ", reports=" + reports);
+                    Log.i(TAG, "SemakMule direct response for [" + cleanTarget + "] (" + cat + "): count=" + searchCount + ", reports=" + reports);
                     return data;
                 }
             }
         } catch (Throwable t) {
-            Log.e(TAG, "querySemakMuleNetwork error for " + localPhone + ": " + t.getMessage());
+            Log.e(TAG, "querySemakMuleNetworkDirect error for " + queryTarget + ": " + t.getMessage());
         }
         return null;
+    }
+
+    private static SemakMuleData querySemakMuleNetwork(String localPhone) {
+        return querySemakMuleNetworkDirect("telefon", localPhone);
     }
 
     public static void querySemakMuleAsync(final Activity activity, final String localPhone) {
@@ -5106,6 +5113,7 @@ public class KantoiThreatEngine {
             Intent openApp = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             PendingIntent pi = null;
             if (openApp != null) {
+                openApp.putExtra("extra_dossier_target", phone);
                 pi = PendingIntent.getActivity(
                     context, 0, openApp,
                     (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? (PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE) : PendingIntent.FLAG_UPDATE_CURRENT
@@ -5705,7 +5713,7 @@ public class KantoiThreatEngine {
     }
 
     public ScammerThreat checkBankThreat(String bankAcc) {
-        if (bankAcc == null || bankAcc.trim().isEmpty() || mDb == null || !mDb.isOpen()) return null;
+        if (bankAcc == null || bankAcc.trim().length() < 8 || mDb == null || !mDb.isOpen()) return null;
         try {
             Cursor cursor = mDb.rawQuery("SELECT phone_norm, profile_id, suspect_name, all_phones, bank_accounts, ic_number, address, evidence_links, risk_tag, source FROM threat_numbers WHERE bank_accounts LIKE ? LIMIT 1", new String[]{"%" + bankAcc.trim() + "%"});
             if (cursor != null) {
@@ -6028,6 +6036,7 @@ public class KantoiThreatEngine {
             Intent openApp = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             PendingIntent pi = null;
             if (openApp != null) {
+                openApp.putExtra("extra_dossier_target", phone);
                 pi = PendingIntent.getActivity(
                     context, 105, openApp,
                     (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? (PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE) : PendingIntent.FLAG_UPDATE_CURRENT

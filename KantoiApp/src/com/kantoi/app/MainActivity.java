@@ -237,9 +237,22 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (getIntent() != null && getIntent().getBooleanExtra("extra_open_defense_tab", false)) {
-            selectTab(1);
-            getIntent().removeExtra("extra_open_defense_tab");
+        if (getIntent() != null) {
+            if (getIntent().getBooleanExtra("extra_open_defense_tab", false)) {
+                selectTab(1);
+                getIntent().removeExtra("extra_open_defense_tab");
+            }
+            String dossierTarget = getIntent().getStringExtra("extra_dossier_target");
+            if (dossierTarget == null) dossierTarget = getIntent().getStringExtra("extra_check_bank");
+            if (dossierTarget != null && !dossierTarget.trim().isEmpty()) {
+                selectTab(0);
+                if (mEtSearchPhone != null) {
+                    mEtSearchPhone.setText(dossierTarget);
+                    performSearch();
+                }
+                getIntent().removeExtra("extra_dossier_target");
+                getIntent().removeExtra("extra_check_bank");
+            }
         }
         mEngine.preloadDeviceContactsAsync();
         mEngine.checkAndAutoSyncTelegramAsync(this, false);
@@ -1310,6 +1323,71 @@ public class MainActivity extends Activity {
         reportBotCard.addView(btnLaunchBot);
         root.addView(reportBotCard);
 
+        // 2c. Kad Gelembung Terapung 1-Ketikan (Idea 1: Floating Threat HUD)
+        LinearLayout hudCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
+        hudCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+        setMarginTop(hudCard, 10);
+
+        TextView tvHudTitle = new TextView(this);
+        tvHudTitle.setText("🛡️ GELEMBUNG TERAPUNG 1-KETIKAN (FLOATING THREAT HUD)");
+        tvHudTitle.setTextColor(0xFF38BDF8);
+        tvHudTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvHudTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        hudCard.addView(tvHudTitle);
+
+        TextView tvHudDesc = new TextView(this);
+        tvHudDesc.setText("Pemeriksa pantas KANTOI terapung di atas WhatsApp, Telegram, FB, dan Aplikasi Bank. Ketik 1 kali untuk membuka kad risikan pantas tanpa perlu bertukar aplikasi!");
+        tvHudDesc.setTextColor(0xFFE2E8F0);
+        tvHudDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvHudDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
+        hudCard.addView(tvHudDesc);
+
+        final TextView tvHudStatus = new TextView(this);
+        boolean isHudActive = KantoiFloatingHudService.sIsRunning;
+        tvHudStatus.setText("Status Gelembung: " + (isHudActive ? "✅ AKTIF" : "⏹️ DIMATIKAN"));
+        tvHudStatus.setTextColor(isHudActive ? 0xFF34D399 : 0xFF94A3B8);
+        tvHudStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tvHudStatus.setTypeface(Typeface.DEFAULT_BOLD);
+        hudCard.addView(tvHudStatus);
+
+        final Button btnToggleHud = createButton(isHudActive ? "⏹️ HENTIKAN GELEMBUNG HUD" : "🚀 AKTIFKAN GELEMBUNG TERAPUNG", isHudActive ? 0xFF475569 : 0xFF0284C7, Color.WHITE);
+        setMarginTop(btnToggleHud, 6);
+        btnToggleHud.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(MainActivity.this)) {
+                    Toast.makeText(MainActivity.this, "Sila berikan kebenaran 'Paparkan di atas aplikasi lain'", Toast.LENGTH_LONG).show();
+                    Intent permIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
+                    startActivity(permIntent);
+                    return;
+                }
+
+                if (KantoiFloatingHudService.sIsRunning) {
+                    stopService(new Intent(MainActivity.this, KantoiFloatingHudService.class));
+                    tvHudStatus.setText("Status Gelembung: ⏹️ DIMATIKAN");
+                    tvHudStatus.setTextColor(0xFF94A3B8);
+                    btnToggleHud.setText("🚀 AKTIFKAN GELEMBUNG TERAPUNG");
+                    GradientDrawable bg = new GradientDrawable();
+                    bg.setColor(0xFF0284C7);
+                    bg.setCornerRadius(dpToPx(8));
+                    btnToggleHud.setBackground(bg);
+                    Toast.makeText(MainActivity.this, "Gelembung KANTOI dihentikan.", Toast.LENGTH_SHORT).show();
+                } else {
+                    startService(new Intent(MainActivity.this, KantoiFloatingHudService.class));
+                    tvHudStatus.setText("Status Gelembung: ✅ AKTIF");
+                    tvHudStatus.setTextColor(0xFF34D399);
+                    btnToggleHud.setText("⏹️ HENTIKAN GELEMBUNG HUD");
+                    GradientDrawable bg = new GradientDrawable();
+                    bg.setColor(0xFF475569);
+                    bg.setCornerRadius(dpToPx(8));
+                    btnToggleHud.setBackground(bg);
+                    Toast.makeText(MainActivity.this, "Gelembung KANTOI kini terapung di skrin anda!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        hudCard.addView(btnToggleHud);
+        root.addView(hudCard);
+
         // 3. Android Default Phone App (InCallService) & Screening Manager Card
         LinearLayout callMgrCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
         callMgrCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
@@ -1881,132 +1959,196 @@ public class MainActivity extends Activity {
     private void performSearch() {
         String raw = mEtSearchPhone.getText().toString().trim();
         if (raw.isEmpty()) {
-            Toast.makeText(this, "Sila masukkan nombor telefon.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Sila masukkan nombor telefon atau akaun bank.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        final String local = KantoiThreatEngine.normalizeToLocal(raw);
-        final KantoiThreatEngine.ScammerThreat threat = mEngine.checkThreat(local);
+        final String cleanDigits = raw.replaceAll("[^0-9]", "");
+        if (cleanDigits.length() < 8) {
+            Toast.makeText(this, "Sila masukkan sekurang-kurangnya 8 digit nombor.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final boolean isPhone = cleanDigits.startsWith("01") || cleanDigits.startsWith("601") || (cleanDigits.length() <= 12 && cleanDigits.startsWith("1"));
+        final String target = isPhone ? KantoiThreatEngine.normalizeToLocal(cleanDigits) : cleanDigits;
+        final String category = isPhone ? "telefon" : "bank";
+
+        // 1. Semakan Offline SQLite KANTOI
+        final KantoiThreatEngine.ScammerThreat threat = isPhone ? mEngine.checkThreat(target) : mEngine.checkBankThreat(cleanDigits);
 
         mSearchResultCard.removeAllViews();
         mSearchResultCard.setVisibility(View.VISIBLE);
 
-        if (threat != null) {
-            GradientDrawable redBg = new GradientDrawable();
-            redBg.setColor(0xFF7F1D1D); // Deep Crimson
-            redBg.setCornerRadius(dpToPx(8));
-            redBg.setStroke(dpToPx(1), 0xFFEF4444);
-            mSearchResultCard.setBackground(redBg);
+        // Status Kad Semasa Menunggu PDRM CCID
+        GradientDrawable loadingBg = new GradientDrawable();
+        loadingBg.setColor(0xFF1E293B);
+        loadingBg.setCornerRadius(dpToPx(8));
+        loadingBg.setStroke(dpToPx(1), 0xFF38BDF8);
+        mSearchResultCard.setBackground(loadingBg);
+        mSearchResultCard.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+
+        final TextView tvLoading = new TextView(this);
+        tvLoading.setText("⏳ Menyelaras risikan PDRM CCID SemakMule & Pangkalan Data KANTOI...\nSasaran: " + target + " (" + (isPhone ? "Telefon" : "Akaun Bank") + ")");
+        tvLoading.setTextColor(0xFF38BDF8);
+        tvLoading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvLoading.setTypeface(Typeface.DEFAULT_BOLD);
+        mSearchResultCard.addView(tvLoading);
+
+        // 2. Semakan Siap-Sedia PDRM CCID SemakMule secara langsung di latar belakang
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final KantoiThreatEngine.SemakMuleData smData = KantoiThreatEngine.querySemakMuleNetworkDirect(category, target);
+                mMainHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        renderNativeDossierCard(target, isPhone, threat, smData);
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void renderNativeDossierCard(final String target, final boolean isPhone, final KantoiThreatEngine.ScammerThreat threat, final KantoiThreatEngine.SemakMuleData smData) {
+        mSearchResultCard.removeAllViews();
+        int reports = (smData != null && smData.reportCount > 0) ? smData.reportCount : 0;
+        int searches = (smData != null && smData.searchCount > 0) ? smData.searchCount : 0;
+        boolean hasThreat = (threat != null) || (reports > 0);
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dpToPx(8));
+
+        if (hasThreat) {
+            bg.setColor(0xFF7F1D1D); // Deep Crimson
+            bg.setStroke(dpToPx(1), 0xFFEF4444);
+            mSearchResultCard.setBackground(bg);
             mSearchResultCard.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
 
-            TextView tv = new TextView(this);
-            tv.setText("🚨 KANTOI! NOMBOR SCAMMER DISAHKAN\n• Suspek: " + threat.suspectName + "\n• Kategori: " + threat.riskTag + "\n• Bank: " + threat.bankAccounts);
-            tv.setTextColor(Color.WHITE);
-            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            tv.setTypeface(Typeface.DEFAULT_BOLD);
-            mSearchResultCard.addView(tv);
+            TextView tvHeader = new TextView(this);
+            tvHeader.setText("🚨 KANTOI! REKOD SCAMMER DIKESAN");
+            tvHeader.setTextColor(Color.WHITE);
+            tvHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            tvHeader.setTypeface(Typeface.DEFAULT_BOLD);
+            mSearchResultCard.addView(tvHeader);
 
-            Button btnProfile = createButton("📖 BUKA PROFIL LENGKAP & RISIKAN", 0xFF0284C7, Color.WHITE);
-            setMarginTop(btnProfile, 8);
-            btnProfile.setOnClickListener(new View.OnClickListener() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("• Sasaran: ").append(target).append(" (").append(isPhone ? "Telefon" : "Akaun Bank").append(")\n");
+            if (reports > 0) {
+                sb.append("• 🏛️ PDRM CCID: 🚨 ").append(reports).append(" Laporan Polis Rasmi! (Dicari ").append(searches).append(" kali)\n");
+            } else {
+                sb.append("• 🏛️ PDRM CCID: 0 Laporan Polis (Dicari ").append(searches).append(" kali)\n");
+            }
+
+            if (threat != null) {
+                sb.append("• 🛡️ Pangkalan KANTOI: ").append(threat.riskTag).append("\n");
+                if (threat.suspectName != null && !threat.suspectName.isEmpty()) {
+                    sb.append("• 👤 Suspek: ").append(threat.suspectName).append("\n");
+                }
+                if (threat.bankAccounts != null && !threat.bankAccounts.equals("N/A")) {
+                    sb.append("• 🏦 Bank Terlibat: ").append(threat.bankAccounts).append("\n");
+                }
+                if (threat.source != null && !threat.source.isEmpty()) {
+                    sb.append("• 📚 Sumber: ").append(threat.source).append("\n");
+                }
+            }
+            sb.append("\n🚫 AMARAN: JANGAN PINDAHKAN SEBARANG WANG!");
+
+            TextView tvBody = new TextView(this);
+            tvBody.setText(sb.toString());
+            tvBody.setTextColor(0xFFFECACA);
+            tvBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            setMarginTop(tvBody, 4);
+            mSearchResultCard.addView(tvBody);
+
+            // Butang 1-Ketikan Kongsi ke WhatsApp
+            Button btnShareWa = createButton("📤 KONGSI AMARAN KE WHATSAPP (1-TAP)", 0xFF059669, Color.WHITE);
+            setMarginTop(btnShareWa, 8);
+            btnShareWa.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Intent it = new Intent(MainActivity.this, ContactProfileActivity.class);
-                    it.putExtra(ContactProfileActivity.EXTRA_PHONE_NUMBER, local);
-                    startActivity(it);
+                    shareTargetToWhatsApp(target);
                 }
             });
-            mSearchResultCard.addView(btnProfile);
+            mSearchResultCard.addView(btnShareWa);
 
-            Button btnDossier = createButton("🚨 DIALOG ANCAMAN KANTOI", 0xFFDC2626, Color.WHITE);
-            setMarginTop(btnDossier, 6);
-            btnDossier.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    mEngine.showThreatDialog(MainActivity.this, threat);
-                }
-            });
-            mSearchResultCard.addView(btnDossier);
+            if (isPhone) {
+                Button btnProfile = createButton("📖 BUKA PROFIL LENGKAP & RISIKAN", 0xFF0284C7, Color.WHITE);
+                setMarginTop(btnProfile, 6);
+                btnProfile.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Intent it = new Intent(MainActivity.this, ContactProfileActivity.class);
+                        it.putExtra(ContactProfileActivity.EXTRA_PHONE_NUMBER, target);
+                        startActivity(it);
+                    }
+                });
+                mSearchResultCard.addView(btnProfile);
+            }
         } else {
-            GradientDrawable yellowBg = new GradientDrawable();
-            yellowBg.setColor(0xFF451A03); // Deep amber
-            yellowBg.setCornerRadius(dpToPx(8));
-            yellowBg.setStroke(dpToPx(1), 0xFFF59E0B);
-            mSearchResultCard.setBackground(yellowBg);
+            bg.setColor(0xFF064E3B); // Deep Emerald
+            bg.setStroke(dpToPx(1), 0xFF10B981);
+            mSearchResultCard.setBackground(bg);
             mSearchResultCard.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
 
-            TextView tv = new TextView(this);
-            tv.setText("ℹ️ Nombor [" + local + "] tiada dalam pangkalan data offline.\nAnda boleh membuat semakan segera di portal SemakMule JSJK PDRM:");
-            tv.setTextColor(0xFFFEF3C7);
-            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            tv.setTypeface(Typeface.DEFAULT_BOLD);
-            mSearchResultCard.addView(tv);
+            TextView tvHeader = new TextView(this);
+            tvHeader.setText("✅ REKOD BERSIH (TIADA REKOD SCAMMER)");
+            tvHeader.setTextColor(Color.WHITE);
+            tvHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            tvHeader.setTypeface(Typeface.DEFAULT_BOLD);
+            mSearchResultCard.addView(tvHeader);
 
-            // 1. SemakMule PDRM Action Button (Diletakkan di posisi paling atas)
-            Button btnSemakMule = createButton("🏛️ SEMAK DI SEMAKMULE PDRM (1-KLIK)", 0xFF0284C7, Color.WHITE);
-            setMarginTop(btnSemakMule, 8);
-            btnSemakMule.setOnClickListener(new View.OnClickListener() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("• Sasaran: ").append(target).append(" (").append(isPhone ? "Telefon" : "Akaun Bank").append(")\n");
+            sb.append("• 🏛️ PDRM SemakMule CCID: 0 Laporan Polis (Dicari ").append(searches).append(" kali)\n");
+            sb.append("• 🛡️ Pangkalan Data KANTOI: Rekod Bersih (6,100+ Senarai)\n\n");
+            sb.append("ℹ️ Setakat ini tiada aduan jenayah difailkan terhadap nombor/akaun ini. Sentiasa berhati-hati sebelum melakukan pemindahan wang.");
+
+            TextView tvBody = new TextView(this);
+            tvBody.setText(sb.toString());
+            tvBody.setTextColor(0xFFA7F3D0);
+            tvBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            setMarginTop(tvBody, 4);
+            mSearchResultCard.addView(tvBody);
+
+            if (isPhone) {
+                Button btnSaveFriend = createButton("👥 SIMPAN SEBAGAI RAKAN SELAMAT", 0xFF059669, Color.WHITE);
+                setMarginTop(btnSaveFriend, 8);
+                btnSaveFriend.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        mEngine.showRegisterFriendDialog(MainActivity.this, target);
+                    }
+                });
+                mSearchResultCard.addView(btnSaveFriend);
+            }
+
+            Button btnReport = createButton("🚨 LAPOR SEBAGAI SCAMMER JIKA DITIPU", 0xFFDC2626, Color.WHITE);
+            setMarginTop(btnReport, 6);
+            btnReport.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    try {
-                        Intent bIt = new Intent(Intent.ACTION_VIEW, Uri.parse("https://semakmule.rmp.gov.my/"));
-                        startActivity(bIt);
-                    } catch (Throwable ignored) {}
+                    mEngine.showRegisterScammerDialog(MainActivity.this, target);
                 }
             });
-            mSearchResultCard.addView(btnSemakMule);
+            mSearchResultCard.addView(btnReport);
+        }
+    }
 
-            Button btnProfile = createButton("👤 BUKA PROFIL KESELAMATAN NOMBOR", 0xFF334155, Color.WHITE);
-            setMarginTop(btnProfile, 6);
-            btnProfile.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent it = new Intent(MainActivity.this, ContactProfileActivity.class);
-                    it.putExtra(ContactProfileActivity.EXTRA_PHONE_NUMBER, local);
-                    startActivity(it);
-                }
-            });
-            mSearchResultCard.addView(btnProfile);
-
-            Button btnSaveFriend = createButton("👥 SIMPAN SEBAGAI RAKAN SELAMAT", 0xFF059669, Color.WHITE);
-            setMarginTop(btnSaveFriend, 6);
-            btnSaveFriend.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    mEngine.showRegisterFriendDialog(MainActivity.this, local);
-                }
-            });
-            mSearchResultCard.addView(btnSaveFriend);
-
-            Button btnCheckSemak = createButton("🚨 LAPOR SCAMMER KE KOMUNITI KANTOI", 0xFFDC2626, Color.WHITE);
-            setMarginTop(btnCheckSemak, 6);
-            btnCheckSemak.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    mEngine.showRegisterScammerDialog(MainActivity.this, local);
-                }
-            });
-            mSearchResultCard.addView(btnCheckSemak);
-
-            Button btnCheckCse = createButton("🌐 SEMAK DI GOOGLE CSE", 0xFF1D4ED8, Color.WHITE);
-            setMarginTop(btnCheckCse, 6);
-            btnCheckCse.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    KantoiThreatEngine.openGoogleCseSearch(MainActivity.this, local);
-                }
-            });
-            mSearchResultCard.addView(btnCheckCse);
-
-            Button btnCheckWa = createButton("📸 SIASAT GAMBAR DP WHATSAPP (CHECKLEAKED)", 0xFF059669, Color.WHITE);
-            setMarginTop(btnCheckWa, 6);
-            btnCheckWa.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    KantoiThreatEngine.showWhatsAppIntelDialog(MainActivity.this, local);
-                }
-            });
-            mSearchResultCard.addView(btnCheckWa);
+    private void shareTargetToWhatsApp(String target) {
+        try {
+            String msg = "⚠️ Semakan Keselamatan Siber KANTOI:\nSila berhati-hati dengan sasaran " + target + ". Semak status scammer secara pantas di Telegram: @crowdcallerbot atau buka aplikasi KANTOI!";
+            Intent sendIt = new Intent(Intent.ACTION_SEND);
+            sendIt.setType("text/plain");
+            sendIt.putExtra(Intent.EXTRA_TEXT, msg);
+            sendIt.setPackage("com.whatsapp");
+            try {
+                startActivity(sendIt);
+            } catch (Throwable notFound) {
+                sendIt.setPackage(null);
+                startActivity(Intent.createChooser(sendIt, "Kongsi Amaran KANTOI"));
+            }
+        } catch (Throwable t) {
+            Toast.makeText(this, "Gagal melancarkan WhatsApp.", Toast.LENGTH_SHORT).show();
         }
     }
 
