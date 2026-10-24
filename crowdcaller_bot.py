@@ -756,10 +756,11 @@ def analyze_image_with_gemini(image_path, api_key=None):
     }
 
     models_to_try = [
-        "gemini-1.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-pro"
+        "gemini-2.0-flash",       # TERPANTAS & PALING PINTAR UNTUK VISION (Google Gemini 2.0)
+        "gemini-1.5-flash",       # Sandaran stabil pantas (Google Gemini 1.5)
+        "gemini-1.5-flash-8b",    # Sandaran latensi ultra-rendah
+        "gemini-2.0-flash-exp",   # Model eksperimental 2.0
+        "gemini-1.5-pro"          # Sandaran penalaran mendalam
     ]
 
     for model_name in models_to_try:
@@ -2026,28 +2027,51 @@ def api_call(method, payload=None, files=None):
         print(f"[API ERR] {method}: {e}")
         return {"ok": False, "description": str(e)}
 
-def send_message(chat_id, text, reply_markup=None):
+def send_message(chat_id, text, reply_markup=None, parse_mode="Markdown", disable_web_page_preview=True):
     payload = {
         "chat_id": chat_id,
         "text": text,
-        "parse_mode": "Markdown",
-        "disable_web_page_preview": True
+        "parse_mode": parse_mode,
+        "disable_web_page_preview": disable_web_page_preview
     }
     if reply_markup:
         payload["reply_markup"] = reply_markup
-    return api_call("sendMessage", payload)
+    res = api_call("sendMessage", payload)
+    if not res.get("ok") and "parse" in str(res.get("description", "")).lower():
+        clean_text = re.sub(r'<[^>]+>', '', text).replace('*', '').replace('_', '').replace('`', '')
+        plain_payload = {
+            "chat_id": chat_id,
+            "text": clean_text,
+            "disable_web_page_preview": disable_web_page_preview
+        }
+        if reply_markup:
+            plain_payload["reply_markup"] = reply_markup
+        return api_call("sendMessage", plain_payload)
+    return res
 
-def edit_message(chat_id, message_id, text, reply_markup=None):
+def edit_message(chat_id, message_id, text, reply_markup=None, parse_mode="Markdown", disable_web_page_preview=True):
     payload = {
         "chat_id": chat_id,
         "message_id": message_id,
         "text": text,
-        "parse_mode": "Markdown",
-        "disable_web_page_preview": True
+        "parse_mode": parse_mode,
+        "disable_web_page_preview": disable_web_page_preview
     }
     if reply_markup:
         payload["reply_markup"] = reply_markup
-    return api_call("editMessageText", payload)
+    res = api_call("editMessageText", payload)
+    if not res.get("ok") and "parse" in str(res.get("description", "")).lower():
+        clean_text = re.sub(r'<[^>]+>', '', text).replace('*', '').replace('_', '').replace('`', '')
+        plain_payload = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": clean_text,
+            "disable_web_page_preview": disable_web_page_preview
+        }
+        if reply_markup:
+            plain_payload["reply_markup"] = reply_markup
+        return api_call("editMessageText", plain_payload)
+    return res
 
 def answer_callback(callback_query_id, text, alert=False):
     return api_call("answerCallbackQuery", {
@@ -3455,40 +3479,60 @@ def run_bot():
                     parts = text.split(maxsplit=2)
                     candidate_key = ""
                     if len(parts) > 1:
-                        # Semak jika format: /gemini <passcode> <key> atau /gemini <key>
                         if len(parts) > 2 and parts[1] == ADMIN_PASSCODE:
                             candidate_key = parts[2].strip()
                         else:
                             candidate_key = parts[1].strip()
 
-                    # Jika pengguna membekalkan Kunci API baharu
+                    # Jika pengguna menaip teks tetapi bukan kunci yang sah
+                    if candidate_key and not (candidate_key.startswith("AIza") or len(candidate_key) >= 20):
+                        send_message(
+                            chat_id,
+                            "⚠️ <b>Format Kunci API Tidak Sah:</b>\n"
+                            f"Teks yang anda masukkan (<code>{html.escape(candidate_key[:25])}</code>) bukan kunci Google Gemini yang sah.\n\n"
+                            "💡 <b>Kunci rasmi Google AI Studio:</b>\n"
+                            "• Bermula dengan <code>AIzaSy...</code>\n"
+                            "• Mempunyai panjang 39 aksara.\n\n"
+                            "Sila salin kunci penuh daripada https://aistudio.google.com/ dan taip:\n"
+                            "<code>/gemini &lt;KUNCI_API_PENUH&gt;</code>",
+                            parse_mode="HTML"
+                        )
+                        continue
+
+                    # Jika pengguna membekalkan Kunci API sah yang baharu
                     if candidate_key and (candidate_key.startswith("AIza") or len(candidate_key) >= 20):
                         api_call("sendChatAction", {"chat_id": chat_id, "action": "typing"})
-                        # Uji kunci secara langsung ke Google Gemini API dengan kebal SSL
-                        test_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={candidate_key}"
-                        test_body = {"contents": [{"parts": [{"text": "PONG"}]}]}
+                        # Uji kunci secara langsung ke Google Gemini API (Model Terpantas: gemini-2.0-flash)
+                        test_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"]
                         t_resp = None
-                        try:
-                            t_resp = requests.post(test_url, json=test_body, timeout=12)
-                        except Exception:
+                        success_model = ""
+                        for tm in test_models:
+                            test_url = f"https://generativelanguage.googleapis.com/v1beta/models/{tm}:generateContent?key={candidate_key}"
+                            test_body = {"contents": [{"parts": [{"text": "PONG"}]}]}
                             try:
-                                import urllib3
-                                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                                t_resp = requests.post(test_url, json=test_body, timeout=12, verify=False)
-                            except Exception as test_e:
-                                send_message(chat_id, f"❌ <b>Ralat Sambungan Google:</b> {test_e}\nPastikan komputer anda bersambung ke internet.")
-                                continue
+                                t_resp = requests.post(test_url, json=test_body, timeout=12)
+                            except Exception:
+                                try:
+                                    import urllib3
+                                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                                    t_resp = requests.post(test_url, json=test_body, timeout=12, verify=False)
+                                except Exception:
+                                    continue
+                            if t_resp and t_resp.status_code == 200:
+                                success_model = tm
+                                break
 
                         if t_resp and t_resp.status_code == 200:
                             set_gemini_api_key(candidate_key)
                             add_admin(chat_id)
                             send_message(
                                 chat_id,
-                                "🎉 <b>BERJAYA! KUNCI GOOGLE GEMINI VISION DISAHKAN SAH!</b>\n"
+                                "🎉 <b>BERJAYA! KUNCI GOOGLE GEMINI VISION DISAHKAN AKTIF!</b>\n"
                                 "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                                 f"🔑 <b>Kunci Disimpan:</b> <code>{candidate_key[:8]}...{candidate_key[-4:]}</code>\n"
+                                f"⚡ <b>Enjin AI Terpantas:</b> <code>{success_model}</code> (Vision Mode)\n"
                                 "📁 <b>Fail Konfigurasi:</b> Dikemas kini ke <code>admin_config.json</code> & <code>local_secrets.py</code>\n"
-                                "👑 <b>Akses:</b> ID Telegram anda telah didaftarkan sebagai Admin KANTOI.\n\n"
+                                "👑 <b>Akses Admin:</b> ID Telegram anda didaftarkan sebagai Admin KANTOI.\n\n"
                                 "🤖 <i>Kini bot anda 100% pintar! Anda boleh menghantar sebarang tangkapan layar WhatsApp, Telegram, profil scammer, atau resit bank untuk diekstrak nombor dan namanya serta-merta!</i>",
                                 parse_mode="HTML"
                             )
@@ -3505,6 +3549,8 @@ def run_bot():
                                 "<code>/gemini &lt;KUNCI_API_ANDA&gt;</code>",
                                 parse_mode="HTML"
                             )
+                        else:
+                            send_message(chat_id, "❌ <b>Ralat Rangkaian:</b> Gagal menghubungi pelayan Google. Sila pastikan komputer anda bersambung ke internet.", parse_mode="HTML")
                         continue
 
                     # Jika tanpa parameter: Paparkan Dashboard Diagnosis Penuh
@@ -3513,15 +3559,32 @@ def run_bot():
                     
                     # Semak status ujian sambungan jika ada kunci
                     google_status = "⚪ Belum Ditetapkan"
+                    active_model_info = "gemini-2.0-flash (Ultra-Fast Vision)"
                     if current_k:
-                        test_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={current_k}"
-                        try:
-                            r_chk = requests.post(test_url, json={"contents": [{"parts": [{"text": "PING"}]}]}, timeout=8)
-                            if r_chk.status_code == 200:
-                                google_status = "🟢 <b>Aktif & Sah (HTTP 200 OK)</b>"
-                            else:
-                                google_status = f"🔴 <b>Ralat Google (HTTP {r_chk.status_code})</b>"
-                        except Exception:
+                        test_models_diag = ["gemini-2.0-flash", "gemini-1.5-flash"]
+                        r_chk = None
+                        working_m = ""
+                        for tm in test_models_diag:
+                            test_url = f"https://generativelanguage.googleapis.com/v1beta/models/{tm}:generateContent?key={current_k}"
+                            try:
+                                r_chk = requests.post(test_url, json={"contents": [{"parts": [{"text": "PING"}]}]}, timeout=8)
+                            except Exception:
+                                try:
+                                    import urllib3
+                                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                                    r_chk = requests.post(test_url, json={"contents": [{"parts": [{"text": "PING"}]}]}, timeout=8, verify=False)
+                                except Exception:
+                                    pass
+                            if r_chk and r_chk.status_code == 200:
+                                working_m = tm
+                                break
+
+                        if r_chk and r_chk.status_code == 200:
+                            google_status = f"🟢 <b>Aktif & Sah (HTTP 200 OK - Model: {working_m})</b>"
+                            active_model_info = f"{working_m} (Aktif)"
+                        elif r_chk:
+                            google_status = f"🔴 <b>Ralat Google (HTTP {r_chk.status_code})</b>"
+                        else:
                             google_status = "🟡 <b>Mod Luar Talian / Ralat Rangkaian</b>"
 
                     ocr_status = "🟢 Windows 10/11 WinRT Native OCR" if os.name == 'nt' else "⚪ Enjin Asas"
@@ -3531,6 +3594,7 @@ def run_bot():
                         f"🔑 <b>Status Kunci API:</b> {status_k}",
                         f"📂 <b>Sumber Dikesan:</b> <code>{src_fn}</code> (kunci: <code>{kname}</code>)",
                         f"🌐 <b>Sambungan Google AI:</b> {google_status}",
+                        f"⚡ <b>Enjin AI Vision Utama:</b> <code>{active_model_info}</code>",
                         f"🖥️ <b>Enjin OCR Tempatan:</b> {ocr_status}",
                         "",
                         "💡 <b>Cara Menetapkan Kunci Baharu:</b>",
