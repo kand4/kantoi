@@ -30,8 +30,9 @@
 - Pengguna boleh membuat carian nombor telefon dan nombor akaun bank secara setempat tanpa sambungan internet (0ms kependaman).
 
 ### 3. ⚡ Enjin Heuristik Trojan Perbankan Tempatan (0ms Offline, Zero-Data)
-- Mengesan formula berniat jahat APK scam yang popular di Malaysia (contoh: kad kahwin digital palsu, saman JPJ, pembersihan rumah):
-  $$\text{BIND\_ACCESSIBILITY\_SERVICE} + (\text{RECEIVE\_SMS} \lor \text{READ\_SMS}) \implies \text{CRITICAL BANKING TROJAN}$$
+- Mengesan formula kebenaran berniat jahat APK scam yang popular di Malaysia (contoh: kad kahwin digital palsu, saman JPJ palsu, pakej pembersihan rumah):
+  > 🚨 **Formula Heuristik Trojan:**  
+  > `BIND_ACCESSIBILITY_SERVICE` + (`RECEIVE_SMS` atau `READ_SMS`) ➔ **CRITICAL BANKING TROJAN**
 - Berfungsi sepenuhnya di dalam peranti secara luar talian tanpa menghantar maklumat pengguna ke mana-mana pelayan luar.
 
 ### 4. 🌐 Integrasi VirusTotal API v3 (70+ Enjin Antivirus Global) & Hibrid BYOK
