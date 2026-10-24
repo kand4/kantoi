@@ -10,7 +10,7 @@ import winocr
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-BASE_DIR = r"c:\Users\fisaa\Downloads\Telegram Desktop\ChatExport_2026-10-18"
+BASE_DIR = os.path.join(os.path.expanduser("~"), r"Downloads\Telegram Desktop\ChatExport_2026-10-18")
 JSON_PATH = os.path.join(BASE_DIR, "result.json")
 DB_PATH = "lowyat_threats.db"
 
