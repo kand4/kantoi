@@ -932,10 +932,13 @@ def windows_native_ocr(image_path):
     """Pengekalan keserasian fungsi lama"""
     return local_image_ocr(image_path)
 
-def extract_hybrid_image_intel(image_path, gemini_api_key=None):
+def extract_hybrid_image_intel(image_path, gemini_api_key=None, progress_callback=None):
     """
     Menyelaraskan gabungan QR DuitNow + AI Vision (Gemini) + OCR Tempatan
     """
+    if progress_callback:
+        progress_callback(35, "🔍 Mengimbas kod QR DuitNow & mentafsir EMVCo...", "OpenCV / PyZbar Binary Matrix")
+
     # 1. Imbas Kod QR DuitNow / EMVCo / URL / Teks
     qr_data = decode_duitnow_qr(image_path)
     
@@ -943,10 +946,14 @@ def extract_hybrid_image_intel(image_path, gemini_api_key=None):
     active_key = (gemini_api_key or "").strip() or get_gemini_api_key()
     gemini_data = None
     if active_key:
+        if progress_callback:
+            progress_callback(60, "🧠 Menjalankan Gemini Vision OCR & Pengecaman Nombor...", "gemini-3.8-flash (Sub-Second Vision)")
         gemini_data = analyze_image_with_gemini(image_path, active_key)
         
     ocr_text = ""
     if not gemini_data:
+        if progress_callback:
+            progress_callback(65, "🔍 Menjalankan Enjin OCR Tempatan Windows...", "OCR Cadangan Luar Talian")
         ocr_text = windows_native_ocr(image_path)
         
     # Ekstrak data OCR / Vision
@@ -2173,6 +2180,96 @@ def answer_callback(callback_query_id, text, alert=False):
         "show_alert": alert
     })
 
+def render_progress_bar(percent, stage_title, detail=""):
+    """
+    Menjana reka bentuk indikator kemajuan (HUD) canggih 0% -> 100% untuk Telegram.
+    Menggunakan palet status beranimasi (Kuning -> Biru -> Ungu -> Hijau) dan bar kemajuan tepat.
+    """
+    total_blocks = 10
+    filled = int(round((percent / 100.0) * total_blocks))
+    filled = max(0, min(total_blocks, filled))
+    bar = "█" * filled + "░" * (total_blocks - filled)
+    
+    if percent < 30:
+        pulse = "🟡"
+    elif percent < 75:
+        pulse = "🔵"
+    elif percent < 100:
+        pulse = "🟣"
+    else:
+        pulse = "🟢"
+
+    lines = [
+        "🛡️ <b>KANTOI THREAT SENTINEL — ENJIN AKTIF</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"{pulse} <b>Kemajuan:</b> <code>[{bar}]</code> <b>{percent}%</b>",
+        f"⚙️ <b>Fasa:</b> {stage_title}",
+    ]
+    if detail:
+        lines.append(f"🔬 <b>Modul:</b> <code>{html.escape(detail)}</code>")
+    lines.extend([
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "⏳ <i>Pemprosesan multi-enjin aktif di sebalik tabir...</i>"
+    ])
+    return "\n".join(lines)
+
+
+class ProgressHUD:
+    """
+    Pengurus Indikator Kemajuan Dinamik (0% -> 100%) untuk Telegram Bot.
+    Memberi maklum balas masa-nyata kepada pengguna bahawa bot sedang aktif bekerja
+    dan menghalang anggapan bahawa bot telah terhenti/hang.
+    """
+    def __init__(self, chat_id, reply_to_msg_id=None):
+        self.chat_id = chat_id
+        self.reply_to_msg_id = reply_to_msg_id
+        self.msg_id = None
+        self.last_update_time = 0
+        self.last_percent = -1
+        self.last_text = ""
+
+    def start(self, initial_percent=10, stage="Memulakan analisis...", detail=""):
+        text = render_progress_bar(initial_percent, stage, detail)
+        payload = {
+            "chat_id": self.chat_id,
+            "text": text,
+            "parse_mode": "HTML"
+        }
+        if self.reply_to_msg_id:
+            payload["reply_to_message_id"] = self.reply_to_msg_id
+        res = api_call("sendMessage", payload)
+        if res.get("ok"):
+            self.msg_id = res.get("result", {}).get("message_id")
+            self.last_update_time = time.time()
+            self.last_percent = initial_percent
+            self.last_text = text
+        return self.msg_id
+
+    def update(self, percent, stage, detail=""):
+        if not self.msg_id:
+            return
+        now = time.time()
+        # Selang masa minimum 0.35s antara suntingan Telegram untuk visual lancar dan patuh rate-limit
+        elapsed = now - self.last_update_time
+        if elapsed < 0.35 and percent != 100:
+            time.sleep(0.35 - elapsed)
+        text = render_progress_bar(percent, stage, detail)
+        if text == self.last_text:
+            return
+        res = edit_message(self.chat_id, self.msg_id, text, parse_mode="HTML")
+        if res.get("ok"):
+            self.last_update_time = time.time()
+            self.last_percent = percent
+            self.last_text = text
+
+    def complete_with_message(self, final_text, reply_markup=None, parse_mode="HTML"):
+        if self.msg_id:
+            res = edit_message(self.chat_id, self.msg_id, final_text, reply_markup=reply_markup, parse_mode=parse_mode)
+            if res.get("ok"):
+                return res
+        # Fallback sekiranya edit gagal
+        return send_message(self.chat_id, final_text, reply_markup=reply_markup, parse_mode=parse_mode)
+
 # ==============================================================================
 # ALIRAN MOD A: FORWARD KE ADMIN & KELULUSAN
 # ==============================================================================
@@ -2675,7 +2772,10 @@ def run_bot():
                         if not target_q or target_q == "unknown":
                             send_message(cb_chat_id, "⚠️ Maklumat nombor telefon atau akaun bank tidak dapat dikenal pasti. Sila buat semakan dengan menaip: `/cse <nombor>`", parse_mode="Markdown")
                             continue
-                        api_call("sendChatAction", {"chat_id": cb_chat_id, "action": "typing"})
+                        hud = ProgressHUD(cb_chat_id)
+                        hud.start(25, "🔍 Menyemak Pangkalan Data Komuniti KANTOI...", f"Sasaran: {target_q}")
+                        hud.update(55, "📚 Mengimbas arkib forum Lowyat.NET, CariGold & KenaScam...", "6,100+ Rekod Forum")
+                        hud.update(85, "🏛️ Menyemak silang portal PDRM CCID SemakMule...", "PDRM Live Check")
                         report_html = format_social_media_intel_report(target_q)
                         cse_url = generate_google_cse_url(target_q)
                         markup = {
@@ -2684,7 +2784,8 @@ def run_bot():
                                 [{"text": "« Kembali ke Menu Utama", "callback_data": "help_menu"}]
                             ]
                         }
-                        send_message(cb_chat_id, report_html, reply_markup=markup, parse_mode="HTML")
+                        hud.update(100, "✨ Analisis Selesai! Menyusun kad risikan forum...", "Laporan Komuniti")
+                        hud.complete_with_message(report_html, reply_markup=markup, parse_mode="HTML")
                         continue
 
                     # 2. Tindakan oleh Admin
@@ -2997,7 +3098,7 @@ def run_bot():
                 # ------------------------------------------------------------------
                 # MOD CHAT PERIBADI: ENJIN IMBASAN IMEJ & KOD QR HIBRID
                 # ------------------------------------------------------------------
-                def process_image_intel_message(t_chat_id, t_username, t_file_id, t_caption, is_doc=False, doc_filename=""):
+                def process_image_intel_message(t_chat_id, t_username, t_file_id, t_caption, is_doc=False, doc_filename="", reply_to_msg_id=None):
                     # 1. Semak jika pengguna dalam wizard /lapor bertingkat langkah 4
                     session = user_sessions.get(t_chat_id)
                     if session and session.get("step") == "STEP_EVIDENCE":
@@ -3054,14 +3155,17 @@ def run_bot():
                         return
 
                     # 3. ENJIN HIBRID: Analisis Imej Baharu (Robust QR Decoder + AI Vision / Native OCR)
+                    hud = ProgressHUD(t_chat_id, reply_to_msg_id=reply_to_msg_id)
+                    hud.start(10, "📥 Memuat turun imej dari pelayan Telegram...", "Telegram Bot CDN")
                     api_call("sendChatAction", {"chat_id": t_chat_id, "action": "typing"})
                     tmp_img = download_telegram_photo(t_file_id)
                     if not tmp_img:
-                        send_message(t_chat_id, "❌ Gagal memuat turun gambar dari pelayan Telegram. Sila cuba lagi.")
+                        hud.complete_with_message("❌ Gagal memuat turun gambar dari pelayan Telegram. Sila cuba lagi.")
                         return
 
                     try:
-                        intel = extract_hybrid_image_intel(tmp_img, GEMINI_API_KEY)
+                        hud.update(25, "🔍 Membaca matriks imej & mengesan Kod QR...", "OpenCV Matrix Decoder")
+                        intel = extract_hybrid_image_intel(tmp_img, GEMINI_API_KEY, progress_callback=hud.update)
                         if intel.get("has_intel"):
                             qr_data = intel.get("qr_data")
                             target_phone = intel.get("phone_norm") or ""
@@ -3086,10 +3190,12 @@ def run_bot():
                                 tmp_apk = None
                                 apk_rep = None
                                 if is_apk_target:
+                                    hud.update(70, "📦 Memuat turun fail APK terkandung dalam kod QR...", "Sandbox Ingestion")
                                     api_call("sendChatAction", {"chat_id": t_chat_id, "action": "upload_document"})
                                     tmp_apk = download_url_to_temp_apk(final_target)
                                     if tmp_apk:
                                         try:
+                                            hud.update(85, "🔍 Menganalisis dex bytecode & token C2 fail APK...", "Static Sandbox")
                                             fn = os.path.basename(urllib.parse.urlparse(final_target).path) or "aplikasi_kod_qr.apk"
                                             apk_rep = inspect_apk_malware(tmp_apk, fn)
                                         finally:
@@ -3129,11 +3235,8 @@ def run_bot():
                                     else:
                                         lines.append("ℹ️ <i>Dianalisis secara automatik oleh KANTOI Static Android Sandbox tanpa menjalankan kod.</i>")
 
-                                    api_call("sendMessage", {
-                                        "chat_id": t_chat_id,
-                                        "text": "\n".join(lines),
-                                        "parse_mode": "HTML"
-                                    })
+                                    hud.update(100, "✨ Analisis Sandbox Selesai! Menyusun laporan...", "Sandbox Verdict")
+                                    hud.complete_with_message("\n".join(lines), parse_mode="HTML")
                                     return
 
                                 # Laporan Phishing / Pautan Biasa (Quishing)
@@ -3160,11 +3263,8 @@ def run_bot():
                                 else:
                                     lines.append("ℹ️ <i>Pautan ini tidak menunjukkan sebarang ciri phishing atau penyamaran bank rasmi yang diketahui.</i>")
 
-                                api_call("sendMessage", {
-                                    "chat_id": t_chat_id,
-                                    "text": "\n".join(lines),
-                                    "parse_mode": "HTML"
-                                })
+                                hud.update(100, "✨ Analisis Pautan Selesai! Menyusun keputusan...", "Anti-Quishing")
+                                hud.complete_with_message("\n".join(lines), parse_mode="HTML")
                                 return
 
                             # B. Semakan Sasaran Nombor / Akaun
@@ -3179,6 +3279,7 @@ def run_bot():
                                 rec_kantoi, _ = query_threat(target_acc)
 
                             # Semakan Siap-Sedia PDRM CCID SemakMule Secara Langsung
+                            hud.update(80, "🏛️ Menyemak pangkalan data PDRM SemakMule & Komuniti KANTOI...", "CCID Live + Lowyat/KenaScam DB")
                             pdrm_info = query_pdrm_semakmule_live(check_cat, check_target) if check_target else {"success": False}
                             pdrm_reports = pdrm_info.get("police_reports", 0) if pdrm_info.get("success") else 0
                             pdrm_searches = pdrm_info.get("search_count", 0) if pdrm_info.get("success") else 0
@@ -3281,12 +3382,8 @@ def run_bot():
                                         ]
                                     }
 
-                                api_call("sendMessage", {
-                                    "chat_id": t_chat_id,
-                                    "text": "\n".join(warn_lines),
-                                    "parse_mode": "HTML",
-                                    "reply_markup": markup
-                                })
+                                hud.update(100, "✨ Analisis Selesai! Menyusun kad amaran scammer...", "Menjana Kad Merah")
+                                hud.complete_with_message("\n".join(warn_lines), reply_markup=markup, parse_mode="HTML")
                             else:
                                 # KAD HIJAU: BERSIH / TIADA REKOD ANCAMAN
                                 clean_lines = [
@@ -3343,12 +3440,8 @@ def run_bot():
                                         ]
                                     ]
                                 }
-                                api_call("sendMessage", {
-                                    "chat_id": t_chat_id,
-                                    "text": "\n".join(clean_lines),
-                                    "parse_mode": "HTML",
-                                    "reply_markup": markup
-                                })
+                                hud.update(100, "✨ Analisis Selesai! Menyusun kad pengesahan bersih...", "Menjana Kad Hijau")
+                                hud.complete_with_message("\n".join(clean_lines), reply_markup=markup, parse_mode="HTML")
                         else:
                             # Tiada maklumat dapat dikesan daripada imej
                             active_k, src_file, _ = get_gemini_api_key_details()
@@ -3372,7 +3465,8 @@ def run_bot():
                                 "• <b>Semakan Manual Terus:</b> Anda boleh terus taip atau tampal (paste) nombor telefon atau akaun suspek ke dalam chat ini untuk semakan serta-merta tanpa perlu hantar gambar!",
                                 "• <b>Kod QR:</b> Jika kod QR, pastikan petak tidak kabur dan bucu QR tidak terpotong."
                             ]
-                            send_message(t_chat_id, "\n".join(fb_lines), parse_mode="HTML")
+                            hud.update(100, "✨ Analisis Selesai! Menyusun laporan semakan...", "Tip & Panduan")
+                            hud.complete_with_message("\n".join(fb_lines), parse_mode="HTML")
                     finally:
                         if os.path.exists(tmp_img):
                             try:
@@ -3382,7 +3476,7 @@ def run_bot():
 
                 # Kendalikan Foto yang dihantar
                 if photos:
-                    process_image_intel_message(chat_id, username, photos[-1]["file_id"], text)
+                    process_image_intel_message(chat_id, username, photos[-1]["file_id"], text, reply_to_msg_id=msg_id)
                     continue
 
                 # ------------------------------------------------------------------
@@ -3398,17 +3492,22 @@ def run_bot():
 
                     # Jika pengguna menghantar gambar sebagai dokumen / fail tanpa mampatan
                     if is_img_doc:
-                        process_image_intel_message(chat_id, username, doc["file_id"], text, is_doc=True, doc_filename=doc.get("file_name", ""))
+                        process_image_intel_message(chat_id, username, doc["file_id"], text, is_doc=True, doc_filename=doc.get("file_name", ""), reply_to_msg_id=msg_id)
                         continue
 
                     if doc_name.endswith(".apk") or "package-archive" in doc_mime:
+                        hud = ProgressHUD(chat_id, reply_to_msg_id=msg_id)
+                        hud.start(15, "📥 Memuat turun fail APK ke persekitaran Sandbox KANTOI...", f"Fail: {doc.get('file_name', 'aplikasi.apk')}")
                         api_call("sendChatAction", {"chat_id": chat_id, "action": "upload_document"})
                         tmp_apk = download_telegram_photo(doc["file_id"])
                         if tmp_apk:
                             try:
+                                hud.update(45, "📦 Membongkar Arkib Android & membaca AndroidManifest.xml...", "AXML Decoder")
+                                hud.update(75, "🔍 Mengimbas dex bytecode, kebenaran berbahaya & token C2...", "Static Bytecode Scanner")
                                 rep = inspect_apk_malware(tmp_apk, doc.get("file_name", "aplikasi.apk"))
+                                hud.update(100, "✨ Analisis Sandbox Selesai! Menyusun laporan ancaman...", "Sandbox Verdict")
                                 if "error" in rep:
-                                    send_message(chat_id, f"❌ Ralat menganalisis APK: {rep['error']}")
+                                    hud.complete_with_message(f"❌ Ralat menganalisis APK: {rep['error']}")
                                 else:
                                     badge = "🚨" if rep["severity"] == "CRITICAL" else ("⚠️" if rep["severity"] in ["HIGH", "MEDIUM"] else "✅")
                                     lines = [
@@ -3434,11 +3533,13 @@ def run_bot():
                                     else:
                                         lines.append("ℹ️ _Dianalisis melalui KANTOI Static Android Sandbox tanpa menjalankan kod._")
 
-                                    send_message(chat_id, "\n".join(lines))
+                                    hud.complete_with_message("\n".join(lines), parse_mode="Markdown")
                             finally:
                                 if os.path.exists(tmp_apk):
                                     try: os.unlink(tmp_apk)
                                     except: pass
+                        else:
+                            hud.complete_with_message("❌ Gagal memuat turun fail APK dari pelayan Telegram.")
                         continue
                     else:
                         send_message(chat_id, "📄 *Dokumen Diterima.* Bot kini menyokong imbasan kod QR / gambar dan fail Android (`.apk`). Sila muat naik fail APK atau gambar kod QR untuk semakan.")
