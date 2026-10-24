@@ -8,12 +8,13 @@ import re
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "KantoiApp"))
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-AAPT2 = r"C:\Users\fisaa\AppData\Local\Android\Sdk\build-tools\32.0.0\aapt2.exe"
-ANDROID_JAR = r"C:\Users\fisaa\AppData\Local\Android\Sdk\platforms\android-32\android.jar"
-JAVAC = r"C:\Users\fisaa\Downloads\android\jdk17\jdk-17.0.19+10\bin\javac.exe"
-JAVA = r"C:\Users\fisaa\Downloads\android\jdk17\jdk-17.0.19+10\bin\java.exe"
-D8_JAR = r"C:\Users\fisaa\AppData\Local\Android\Sdk\build-tools\32.0.0\lib\d8.jar"
-UBER_SIGNER = r"C:\Users\fisaa\Downloads\android\moviebox\uber-apk-signer.jar"
+USER_HOME = os.path.expanduser("~")
+AAPT2 = os.path.join(USER_HOME, r"AppData\Local\Android\Sdk\build-tools\32.0.0\aapt2.exe")
+ANDROID_JAR = os.path.join(USER_HOME, r"AppData\Local\Android\Sdk\platforms\android-32\android.jar")
+JAVAC = os.path.join(USER_HOME, r"Downloads\android\jdk17\jdk-17.0.19+10\bin\javac.exe")
+JAVA = os.path.join(USER_HOME, r"Downloads\android\jdk17\jdk-17.0.19+10\bin\java.exe")
+D8_JAR = os.path.join(USER_HOME, r"AppData\Local\Android\Sdk\build-tools\32.0.0\lib\d8.jar")
+UBER_SIGNER = os.path.join(USER_HOME, r"Downloads\android\moviebox\uber-apk-signer.jar")
 
 # Read SemVer dynamically from AndroidManifest.xml
 manifest_xml_path = os.path.join(PROJECT_ROOT, "AndroidManifest.xml")

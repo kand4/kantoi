@@ -1,6 +1,7 @@
+import os
 import subprocess
 
-aapt = r'C:\Users\fisaa\AppData\Local\Android\Sdk\build-tools\32.0.0\aapt2.exe'
+aapt = os.path.join(os.path.expanduser("~"), r"AppData\Local\Android\Sdk\build-tools\32.0.0\aapt2.exe")
 cmd = [aapt, 'dump', 'xmltree', '_base_backup/truecaller_original_base.apk', '--file', 'AndroidManifest.xml']
 res = subprocess.run(cmd, capture_output=True, text=True, errors='ignore')
 

@@ -42,8 +42,8 @@ with zipfile.ZipFile(base_apk, 'r') as zin:
 print("Unsigned APK created successfully. Size:", os.path.getsize(unsigned_apk))
 
 print("Step 2: Signing APK with uber-apk-signer...")
-uber_signer = r"C:\Users\fisaa\Downloads\android\moviebox\uber-apk-signer.jar"
-java_exe = r"C:\Users\fisaa\Downloads\android\jdk17\jdk-17.0.19+10\bin\java.exe"
+uber_signer = os.path.join(os.path.expanduser("~"), r"Downloads\android\moviebox\uber-apk-signer.jar")
+java_exe = os.path.join(os.path.expanduser("~"), r"Downloads\android\jdk17\jdk-17.0.19+10\bin\java.exe")
 
 sign_cmd = [
     java_exe,

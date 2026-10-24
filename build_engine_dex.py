@@ -2,10 +2,10 @@ import os
 import shutil
 import subprocess
 
-android_jar = r'C:\Users\fisaa\AppData\Local\Android\Sdk\platforms\android-32\android.jar'
-javac_exe = r'C:\Users\fisaa\Downloads\android\jdk17\jdk-17.0.19+10\bin\javac.exe'
-java_exe = r'C:\Users\fisaa\Downloads\android\jdk17\jdk-17.0.19+10\bin\java.exe'
-d8_jar = r'C:\Users\fisaa\AppData\Local\Android\Sdk\build-tools\32.0.0\lib\d8.jar'
+android_jar = os.path.join(os.path.expanduser("~"), r"AppData\Local\Android\Sdk\platforms\android-32\android.jar")
+javac_exe = os.path.join(os.path.expanduser("~"), r"Downloads\android\jdk17\jdk-17.0.19+10\bin\javac.exe")
+java_exe = os.path.join(os.path.expanduser("~"), r"Downloads\android\jdk17\jdk-17.0.19+10\bin\java.exe")
+d8_jar = os.path.join(os.path.expanduser("~"), r"AppData\Local\Android\Sdk\build-tools\32.0.0\lib\d8.jar")
 
 threat_dir = os.path.join('src_patch', 'com', 'truecaller', 'threat')
 
