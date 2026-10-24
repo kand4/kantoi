@@ -5113,7 +5113,6 @@ public class KantoiThreatEngine {
             Intent openApp = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             PendingIntent pi = null;
             if (openApp != null) {
-                openApp.putExtra("extra_dossier_target", phone);
                 pi = PendingIntent.getActivity(
                     context, 0, openApp,
                     (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? (PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE) : PendingIntent.FLAG_UPDATE_CURRENT
@@ -6036,7 +6035,6 @@ public class KantoiThreatEngine {
             Intent openApp = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             PendingIntent pi = null;
             if (openApp != null) {
-                openApp.putExtra("extra_dossier_target", phone);
                 pi = PendingIntent.getActivity(
                     context, 105, openApp,
                     (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? (PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE) : PendingIntent.FLAG_UPDATE_CURRENT
