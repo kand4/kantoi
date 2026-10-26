@@ -58,7 +58,7 @@ except ImportError:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 except Exception:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-CHANNEL_ID = "@crowdcaller"
+CHANNEL_ID = "@kantoiradar"
 ADMIN_PASSCODE = "kantoi2026"
 
 DB_PATH = os.path.join(BASE_DIR, "kantoi_threats.db")
@@ -1711,7 +1711,7 @@ def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, so
                 bank_accounts or "N/A",
                 "N/A",
                 "Laporan Disahkan Komuniti",
-                "Telegram @crowdcaller",
+                "Telegram @kantoiradar",
                 category or "COMMUNITY_VERIFIED_SCAMMER",
                 source or "Sumbangan Komuniti KANTOI (Disahkan Admin)"
             ))
@@ -3182,7 +3182,7 @@ def get_help_detail(topic):
             "Ketahui modus operandi dan kes tangkapan penipuan terkini di Malaysia.\n\n"
             "💡 *Cara Penggunaan:*\n"
             "• Taip `/buletin` atau `/berita` untuk membaca 5 berita terkini daripada sumber berita utama (Astro Awani, Berita Harian, Harian Metro, TV3, Bernama).\n"
-            "• Bot juga menyiarkan buletin automatik setiap pagi di saluran rasmi @crowdcaller."
+            "• Bot juga menyiarkan buletin automatik setiap pagi di saluran rasmi @kantoiradar."
         )
         bulletin_kb = {
             "inline_keyboard": [
@@ -3421,7 +3421,7 @@ def forward_report_to_admins(rep_id, rep_data):
         + (f"💰 <b>Kerugian Mangsa:</b> <code>{html.escape(str(rep_data.get('victim_loss')))}</code>\n" if rep_data.get('victim_loss') else "")
         + f"📝 <b>Keterangan Kes:</b> {safe_ev[:900]}\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"Sila semak maklumat di atas sebelum meluluskan siaran ke @crowdcaller:"
+        f"Sila semak maklumat di atas sebelum meluluskan siaran ke @kantoiradar:"
     )
 
     markup = {
@@ -3489,7 +3489,7 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
         rep["reviewed_at"] = int(time.time())
         save_pending_report(rep_id, rep)
 
-        # 1. Pos ke saluran @crowdcaller dengan format HTML yang selamat dari ralat aksara khas
+        # 1. Pos ke saluran @kantoiradar dengan format HTML yang selamat dari ralat aksara khas
         safe_suspect = html.escape(str(suspect_name or 'N/A'))
         safe_bank = html.escape(str(bank_account or 'Tiada'))
         safe_rep_id = html.escape(str(rep_id))
@@ -3507,7 +3507,7 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
         channel_post += (
             f"📚 <b>SUMBER SITASI</b>  : Risikan Komuniti KANTOI (Ref: <code>{safe_rep_id}</code>)\n"
             "--------------------------------------------------\n"
-            "ℹ️ <i>Laporan disahkan oleh pentadbir Saluran Rasmi KANTOI Radar (@crowdcaller).</i>\n"
+            "ℹ️ <i>Laporan disahkan oleh pentadbir Saluran Rasmi KANTOI Radar (@kantoiradar).</i>\n"
             "📲 <i>Buka Tab Pertahanan Aplikasi KANTOI untuk perlindungan masa nyata.</i>\n"
             "💬 <i>Bantu komuniti: Hantar bukti scammer terus ke Bot Risikan KANTOI (@crowdcallerbot).</i>\n"
             "🔗 <i>Semak kod sumber projek di: https://github.com/kand4/kantoi</i>\n\n"
@@ -3549,7 +3549,7 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
                 f"🎉 <b>TERIMA KASIH! LAPORAN ANDA TELAH DILULUSKAN!</b>\n\n"
                 f"Nombor: <code>{phone_norm}</code>\n"
                 f"Status: <b>Telah disahkan oleh Admin KANTOI</b>\n\n"
-                f"📢 Maklumat ini telah disiarkan ke saluran @crowdcaller dan kini dimasukkan ke dalam enjin risikan KANTOI untuk melindungi orang ramai."
+                f"📢 Maklumat ini telah disiarkan ke saluran @kantoiradar dan kini dimasukkan ke dalam enjin risikan KANTOI untuk melindungi orang ramai."
             )
             api_call("sendMessage", {
                 "chat_id": user_chat_id,
@@ -3557,7 +3557,7 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
                 "parse_mode": "HTML"
             })
 
-        edit_message(admin_chat_id, message_id, f"✅ *DILULUSKAN & DISIARKAN KE @CROWDCALLER*\nRef ID: `{rep_id}`\nOleh Admin: @{admin_username}")
+        edit_message(admin_chat_id, message_id, f"✅ *DILULUSKAN & DISIARKAN KE @KANTOIRADAR*\nRef ID: `{rep_id}`\nOleh Admin: @{admin_username}")
         return "Berjaya! Laporan diluluskan, disimpan ke database dan disiarkan ke saluran."
 
     elif action == "reject":
@@ -3667,7 +3667,7 @@ def handle_admin_batch_decision(action, batch_id, admin_chat_id, admin_username,
                 inserted_count += 1
                 channel_threat_tags.append(f"{p} | {desc} | LAPORAN_KOMUNITI_DISAHKAN | Tiada")
 
-        # Pos ke saluran @crowdcaller
+        # Pos ke saluran @kantoiradar
         post_text = (
             f"🚨 <b>KEMASKINI PUKAL SCAMMER BAHARU ({inserted_count} NOMBOR DILULUSKAN)</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -3696,7 +3696,7 @@ def handle_admin_batch_decision(action, batch_id, admin_chat_id, admin_username,
         if user_chat_id:
             api_call("sendMessage", {
                 "chat_id": user_chat_id,
-                "text": f"🎉 <b>TAHNIAH! SEMUA {inserted_count} NOMBOR SCAMMER TELAH DILULUSKAN!</b>\n\nMaklumat telah dimasukkan ke pangkalan data KANTOI dan disiarkan ke saluran @crowdcaller.",
+                "text": f"🎉 <b>TAHNIAH! SEMUA {inserted_count} NOMBOR SCAMMER TELAH DILULUSKAN!</b>\n\nMaklumat telah dimasukkan ke pangkalan data KANTOI dan disiarkan ke saluran @kantoiradar.",
                 "parse_mode": "HTML"
             })
 
@@ -3799,7 +3799,7 @@ def execute_multi_photo_case(chat_id, username):
             f"📸 Gambar Bukti: {len(items)} tangkapan layar dilampirkan\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
             f"✅ *Laporan anda telah berjaya dihantar ke Bilik Admin KANTOI!*\n"
-            f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih!"
+            f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @kantoiradar. Terima kasih!"
         )
         send_message(chat_id, summary)
         forward_report_to_admins(rep_id, rep_data)
@@ -4096,7 +4096,7 @@ def run_bot():
                             confirm_post_text = (
                                 f"✅ *LAPORAN ANDA TELAH DIHANTAR KE BILIK ADMIN KANTOI!*\n"
                                 f"Ref ID: `{rep_id}`\n\n"
-                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih atas sumbangan anda!\n\n"
+                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @kantoiradar. Terima kasih atas sumbangan anda!\n\n"
                                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                                 f"🏛️ *TINDAKAN SUSULAN AGENSI PENGUATKUASAAN*\n"
                                 f"Adakah anda ingin kami sediakan dokumen aduan rasmi untuk dilaporkan terus kepada agensi penguatkuasaan Malaysia (NSRC 997, SKMM, Cyber999, BNM & PDRM CCID)?"
@@ -4161,7 +4161,7 @@ def run_bot():
                                 cb_msg_id, 
                                 f"✅ *LAPORAN PUKAL ({len(rep_data.get('items', []))} ENTRI) TELAH DIHANTAR KE BILIK ADMIN KANTOI!*\n"
                                 f"Ref ID: `{batch_id}`\n\n"
-                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih atas sumbangan anda!"
+                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @kantoiradar. Terima kasih atas sumbangan anda!"
                             )
                             forward_batch_report_to_admins(batch_id, rep_data)
                             answer_callback(cb_id, "Laporan pukal berjaya dihantar ke Admin!", alert=False)
@@ -4667,7 +4667,7 @@ def run_bot():
                         "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                         "📲 <b>Kekal dilindungi & sebarkan benteng ini:</b>\n"
                         "• Telegram Bot: @crowdcallerbot\n"
-                        "• Saluran Rasmi: https://t.me/crowdcaller\n"
+                        "• Saluran Rasmi: https://t.me/kantoiradar\n"
                         "• Kod Sumber GitHub: https://github.com/kand4/kantoi\n\n"
                         "🛡️ <i>Bersama Komuniti KANTOI — Sekali Kena, Selamanya Kantoi!</i>"
                     )
@@ -5271,7 +5271,7 @@ def run_bot():
 
                     is_admin_sender = chat_id in get_admin_ids()
                     if is_admin_sender:
-                        preview_msg += "⭐ <b>Mod Admin:</b> Anda boleh meluluskan dan menyiarkan senarai ini terus ke @crowdcaller dengan satu klik:"
+                        preview_msg += "⭐ <b>Mod Admin:</b> Anda boleh meluluskan dan menyiarkan senarai ini terus ke @kantoiradar dengan satu klik:"
                         markup = {
                             "inline_keyboard": [
                                 [
@@ -5352,7 +5352,7 @@ def run_bot():
                                 f"🏦 Akaun Bank: {rep_data['bank_account']}\n"
                                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                                 f"✅ *Laporan anda telah berjaya dihantar ke Bilik Admin KANTOI!*\n"
-                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih!"
+                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @kantoiradar. Terima kasih!"
                             )
                             send_message(chat_id, summary)
                             continue
@@ -5397,7 +5397,7 @@ def run_bot():
                             f"🏦 Akaun Bank: {rep_data['bank_account']}\n"
                             f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                             f"✅ *Laporan anda telah berjaya dihantar ke Bilik Admin KANTOI!*\n"
-                            f"Laporan akan disemak dan disahkan oleh admin sebelum disiarkan ke saluran @crowdcaller. Terima kasih!"
+                            f"Laporan akan disemak dan disahkan oleh admin sebelum disiarkan ke saluran @kantoiradar. Terima kasih!"
                         )
                         send_message(chat_id, summary)
                         forward_report_to_admins(rep_id, rep_data)

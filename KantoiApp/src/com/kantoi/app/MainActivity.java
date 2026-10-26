@@ -1225,7 +1225,7 @@ public class MainActivity extends Activity {
         });
         root.addView(heroCard);
 
-        // 2. Telegram OTA Threat Sync Card (@crowdcaller)
+        // 2. Telegram OTA Threat Sync Card (@kantoiradar)
         LinearLayout syncCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
         syncCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(syncCard, 10);
@@ -1253,7 +1253,7 @@ public class MainActivity extends Activity {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        final KantoiThreatEngine.TelegramSyncResult res = mEngine.syncFromTelegram("crowdcaller");
+                        final KantoiThreatEngine.TelegramSyncResult res = mEngine.syncFromTelegram("kantoiradar");
                         mMainHandler.post(new Runnable() {
                             @Override
                             public void run() {
