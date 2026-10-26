@@ -2944,7 +2944,7 @@ public class KantoiThreatEngine {
             tvMsg.setText("Laporan anda telah selamat dihantar terus kepada Pentadbir Komuniti KANTOI.\n\n"
                     + "🔒 Nombor [" + formatPhoneNumber(phone) + "] telah disekat serta-merta pada telefon anda.\n\n"
                     + "🏷️ Kategori: " + category + "\n\n"
-                    + "Pentadbir kami akan mengesahkan laporan ini dan menyiarkannya ke saluran komuniti @crowdcaller untuk melindungi jutaan rakyat Malaysia.");
+                    + "Pentadbir kami akan mengesahkan laporan ini dan menyiarkannya ke saluran komuniti @kantoiradar untuk melindungi jutaan rakyat Malaysia.");
             tvMsg.setTextColor(0xFFE2E8F0);
             tvMsg.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
             tvMsg.setLineSpacing(dpToPx(context, 3), 1.0f);
@@ -6120,7 +6120,7 @@ public class KantoiThreatEngine {
     public TelegramSyncResult syncFromTelegram(String channelName) {
         TelegramSyncResult result = new TelegramSyncResult();
         if (channelName == null || channelName.trim().isEmpty()) {
-            channelName = "crowdcaller";
+            channelName = "kantoiradar";
         }
         channelName = channelName.replace("@", "").trim();
         String urlStr = "https://t.me/s/" + channelName;
@@ -6275,7 +6275,7 @@ public class KantoiThreatEngine {
             String title = "🛡️ Pangkalan Data KANTOI Dikemaskini!";
             String shortMsg = newRecordsCount + " rekod scammer baharu berjaya dilindungi secara automatik.";
             String bigMsg = "Sistem risikan KANTOI telah mengesan dan menyegerakkan " + newRecordsCount + 
-                            " nombor penipu baharu dari saluran komuniti @" + (channelName != null ? channelName : "crowdcaller") + 
+                            " nombor penipu baharu dari saluran komuniti @" + (channelName != null ? channelName : "kantoiradar") + 
                             " ke peranti anda.\n\n" +
                             "💡 Bantu lindungi komuniti: Laporkan sebarang nombor telefon atau akaun bank scammer (secara teks atau tangkap layar gambar) ke @crowdcallerbot di Telegram.";
 
@@ -6314,15 +6314,15 @@ public class KantoiThreatEngine {
                         return;
                     }
 
-                    Log.i(TAG, "Menjalankan auto-sync latar belakang dari @crowdcaller...");
-                    TelegramSyncResult res = syncFromTelegram("crowdcaller");
+                    Log.i(TAG, "Menjalankan auto-sync latar belakang dari @kantoiradar...");
+                    TelegramSyncResult res = syncFromTelegram("kantoiradar");
 
                     // Rekod masa semakan terkini
                     prefs.edit().putLong(PREF_KEY_LAST_SYNC, now).apply();
 
                     if (res != null && res.success && res.addedCount > 0) {
                         Log.i(TAG, "Auto-sync selesai: " + res.addedCount + " rekod baru dikesan. Memaparkan notifikasi...");
-                        showDatabaseUpdatedNotification(context, res.addedCount, "crowdcaller");
+                        showDatabaseUpdatedNotification(context, res.addedCount, "kantoiradar");
                     } else {
                         Log.i(TAG, "Auto-sync selesai: Tiada rekod baharu.");
                     }
