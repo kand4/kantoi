@@ -965,6 +965,405 @@ def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
 
     return None
 
+def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, user_id=None):
+    """
+    Menghantar beberapa imej (album/screenshot berbilang) ke Google Gemini Vision API
+    untuk dianalisis secara serentak sebagai SATU KES PENIPUAN / SCAMMER YANG SAMA.
+    """
+    global LAST_GEMINI_DIAGNOSTIC
+    if not api_key:
+        api_key, _, _ = get_effective_gemini_key(user_id)
+    api_key = (api_key or "").strip(" \t\r\n'\"")
+    if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
+        LAST_GEMINI_DIAGNOSTIC = {
+            "status": "NOT_CONFIGURED",
+            "error": "Kunci API Gemini belum ditetapkan",
+            "model": "",
+            "timestamp": time.time()
+        }
+        return None
+
+    if not image_paths:
+        return None
+
+    parts = []
+    
+    # Bina Prompt Siasatan Rentas Imej (Cross-Examination Intelligence Prompt)
+    prompt = (
+        "Anda adalah penganalisis forensik keselamatan siber risikan penipuan KANTOI (Malaysia).\n"
+        "TUGAS KRITIKAL: Pengguna telah memuat naik beberapa tangkapan layar (screenshots) yang merupakan BUKTI KEPADA SATU KES PENIPUAN / SCAMMER YANG SAMA.\n"
+        "Anda WAJIB menghubungkaitkan (cross-correlate) kesemua gambar ini secara serentak untuk membina SATU profil kes dan laporan komprehensif bersepadu.\n\n"
+        "PANDUAN MENGANALISIS BUKTI BERGAMBAR:\n"
+        "1. SILANG PERIKSA ENTITI (Cross-Entity Linkage):\n"
+        "   - Hubungkan nombor telefon di skrin chat/panggilan dengan nama penerima atau nombor akaun pada resit bank/DuitNow QR.\n"
+        "   - Ekstrak SEMUA nombor telefon suspek yang muncul dalam mana-mana gambar (WhatsApp, SMS, Telegram, bio profil).\n"
+        "   - Ekstrak SEMUA akaun bank keldai yang terlibat (nama bank, nombor akaun, nama pemilik akaun).\n"
+        "   - Kenalpasti nama/alias suspek yang digunakan dalam perbualan, profil WhatsApp, atau nama pada resit.\n"
+        "2. RUMUSAN KES BERSEPADU (Case Synthesis Narrative):\n"
+        "   - Bina satu ringkasan jalan cerita penipuan yang padat dan jelas (contoh: mangsa dihubungi melalui WhatsApp menawarkan kerja sambilan/barang murah, kemudian diarahkan memindahkan wang ke akaun bank X, dan nombor disekat selepas transaksi).\n"
+        "   - Kenalpasti modus operandi / taktik scammer utama.\n\n"
+        "Formatkan hasil analisis HANYA dalam JSON SAH dengan struktur berikut:\n"
+        "{\n"
+        '  "has_intel": true,\n'
+        '  "case_summary": "Ringkasan komprehensif jalan cerita kes penipuan menghubungkaitkan kesemua gambar bukti",\n'
+        '  "scam_tactic": "Kategori / Modus operandi penipuan (contoh: Penyamaran Polis / Khidmat Orang Tengah Palsu / Scam Pelaburan)",\n'
+        '  "suspect_names": ["Senarai nama atau alias suspek yang ditemui"],\n'
+        '  "primary_suspect_name": "Nama suspek atau nama servis utama",\n'
+        '  "phone_numbers": ["Senarai semua nombor telefon unik cth 011xxxxxxxx, 014xxxxxxxx"],\n'
+        '  "primary_phone": "Nombor telefon utama suspek",\n'
+        '  "bank_accounts": [\n'
+        '    {"bank": "Nama Bank", "account_number": "1234567890", "holder_name": "Nama Pemilik Akaun"}\n'
+        '  ],\n'
+        '  "emails": ["Alamat emel jika ada"],\n'
+        '  "evidence_details": "Poin-poin penting fakta kes daripada perbualan atau transaksi"\n'
+        "}\n"
+        "PENTING: Jangan sertakan teks di luar JSON. Berikan JSON SAHAJA."
+    )
+    
+    parts.append({"text": prompt})
+    
+    if captions:
+        cap_clean = [c.strip() for c in captions if c and c.strip()]
+        if cap_clean:
+            parts.append({"text": "Catatan / Keterangan Pengguna berkaitan bukti: " + " | ".join(cap_clean)})
+
+    valid_images_count = 0
+    for idx, img_p in enumerate(image_paths[:10]):
+        try:
+            m_type = get_image_mime_type(img_p)
+            with open(img_p, "rb") as f:
+                b64_d = base64.b64encode(f.read()).decode("utf-8")
+            parts.append({
+                "inline_data": {
+                    "mime_type": m_type,
+                    "data": b64_d
+                }
+            })
+            valid_images_count += 1
+        except Exception as read_err:
+            print(f"[MULTI-IMAGE READ ERR ({idx})] {read_err}")
+
+    if valid_images_count == 0:
+        return None
+
+    payload = {
+        "contents": [{"parts": parts}],
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+        ],
+        "generationConfig": {
+            "temperature": 0.1,
+            "response_mime_type": "application/json"
+        }
+    }
+
+    models_to_try = AVAILABLE_GEMINI_MODELS
+
+    for model_name in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        headers = {
+            "x-goog-api-key": api_key,
+            "Content-Type": "application/json"
+        }
+        resp = None
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=35)
+        except Exception as net_or_ssl_err:
+            print(f"[GEMINI MULTI-IMG SSL/NET WARN on {model_name}] {net_or_ssl_err}. Mencuba kebal SSL...")
+            try:
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                resp = requests.post(url, headers=headers, json=payload, timeout=35, verify=False)
+            except Exception as e_retry:
+                print(f"[GEMINI MULTI-IMG RETRY ERR] {e_retry}")
+                LAST_GEMINI_DIAGNOSTIC = {
+                    "status": "CONN_ERROR",
+                    "error": str(e_retry)[:120],
+                    "model": model_name,
+                    "timestamp": time.time()
+                }
+                continue
+
+        if not resp:
+            continue
+
+        if resp.status_code == 200:
+            try:
+                data = resp.json()
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    block_r = data.get("promptFeedback", {}).get("blockReason", "Unknown")
+                    LAST_GEMINI_DIAGNOSTIC = {
+                        "status": "BLOCKED",
+                        "error": f"Disekat oleh Google ({block_r})",
+                        "model": model_name,
+                        "timestamp": time.time()
+                    }
+                    continue
+
+                cand = candidates[0]
+                finish_r = cand.get("finishReason", "")
+                res_parts = cand.get("content", {}).get("parts", [])
+                if not res_parts:
+                    LAST_GEMINI_DIAGNOSTIC = {
+                        "status": "SAFETY_BLOCKED" if finish_r == "SAFETY" else "EMPTY_RESPONSE",
+                        "error": f"Tiada teks respons (finishReason: {finish_r})",
+                        "model": model_name,
+                        "timestamp": time.time()
+                    }
+                    continue
+
+                raw_text = res_parts[0].get("text", "").strip()
+                clean_json = re.sub(r'^```(?:json)?\s*', '', raw_text, flags=re.IGNORECASE)
+                clean_json = re.sub(r'\s*```$', '', clean_json.strip())
+
+                m = re.search(r'\{.*\}', clean_json, re.DOTALL)
+                parsed = json.loads(m.group(0)) if m else json.loads(clean_json)
+
+                LAST_GEMINI_DIAGNOSTIC = {
+                    "status": "OK",
+                    "error": "",
+                    "model": model_name,
+                    "timestamp": time.time()
+                }
+                return parsed
+            except Exception as parse_e:
+                print(f"[GEMINI MULTI-IMG JSON PARSE ERR] {parse_e}")
+                LAST_GEMINI_DIAGNOSTIC = {
+                    "status": "PARSE_ERROR",
+                    "error": str(parse_e)[:120],
+                    "model": model_name,
+                    "timestamp": time.time()
+                }
+                continue
+        else:
+            err_msg = resp.text[:220].replace('\n', ' ')
+            print(f"[GEMINI MULTI-IMG HTTP {resp.status_code} ({model_name})] {err_msg}")
+            LAST_GEMINI_DIAGNOSTIC = {
+                "status": f"HTTP_{resp.status_code}",
+                "error": err_msg,
+                "model": model_name,
+                "timestamp": time.time()
+            }
+            if resp.status_code in [404, 400]:
+                continue
+            else:
+                break
+
+    return None
+
+def synthesize_multi_images_offline(image_paths, captions=None):
+    """
+    Enjin sintesis tempatan (offline fallback) untuk menggabungkan intel daripada beberapa imej:
+    - Imbas kod QR DuitNow pada setiap gambar
+    - Imbas teks OCR tempatan (Windows 10/11 WinRT OCR / Tesseract / regex) pada setiap gambar
+    - Ekstrak dan cantumkan nombor telefon unik, akaun bank, dan petunjuk taktik
+    """
+    all_phones = []
+    all_accounts = []
+    qr_list = []
+    combined_texts = []
+    
+    if captions:
+        for c in captions:
+            if c and c.strip():
+                combined_texts.append(c.strip())
+
+    for idx, pth in enumerate(image_paths):
+        # 1. Semak DuitNow QR
+        qr_d = decode_duitnow_qr(pth)
+        if qr_d:
+            qr_list.append(qr_d)
+            if qr_d.get("proxy_phone"):
+                np = normalize_phone(qr_d["proxy_phone"])
+                if np and np not in all_phones:
+                    all_phones.append(np)
+            if qr_d.get("account_number"):
+                c_acc = re.sub(r'[^\d]', '', str(qr_d["account_number"]))
+                if len(c_acc) >= 8 and c_acc not in all_accounts:
+                    all_accounts.append(c_acc)
+
+        # 2. Imbas OCR tempatan
+        ocr_res = local_image_ocr(pth)
+        if ocr_res:
+            combined_texts.append(ocr_res)
+            # Ekstrak nombor telefon
+            for p in re.findall(r'(?:\+?60|0)[\s\-]?[1-9][0-9][\s\-]?[0-9]{3,4}[\s\-]?[0-9]{3,5}', ocr_res):
+                np = normalize_phone(p)
+                if np and np not in all_phones:
+                    all_phones.append(np)
+            # Ekstrak akaun bank
+            for a in re.findall(r'\b[0-9]{8,18}\b', ocr_res):
+                cd = re.sub(r'[^\d]', '', a)
+                if len(cd) >= 8 and cd not in all_accounts and cd not in all_phones:
+                    all_accounts.append(cd)
+
+    full_corpus = "\n".join(combined_texts)
+    
+    # Pengelasan taktik daripada teks terkumpul
+    tactic = "Semakan Kes Penipuan (Multi-Bukti)"
+    if re.search(r'\b(?:Manage storage|Media visibility|Voice\s+Video|Kept messages)\b', full_corpus, re.IGNORECASE):
+        tactic = "Profil / Kenalan WhatsApp Suspek"
+    elif re.search(r'\b(?:transfer|successful|duitnow|pindahan|resit|receipt|maybank2u|cimb clicks)\b', full_corpus, re.IGNORECASE):
+        tactic = "Bukti Pemindahan Wang (Resit Transaksi)"
+    elif re.search(r'\b(?:pelaburan|profit|dividen|keuntungan|deposit|broker)\b', full_corpus, re.IGNORECASE):
+        tactic = "Skim Pelaburan Palsu"
+    elif re.search(r'\b(?:midman|escrow|official|trusted)\b', full_corpus, re.IGNORECASE):
+        tactic = "Khidmat Orang Tengah Palsu (Fake Midman)"
+
+    return {
+        "has_intel": bool(all_phones or all_accounts or qr_list),
+        "case_summary": f"Gabungan risikan daripada {len(image_paths)} tangkapan layar bukti kes.",
+        "scam_tactic": tactic,
+        "suspect_names": [],
+        "primary_suspect_name": "Tidak Dinyatakan",
+        "phone_numbers": all_phones,
+        "primary_phone": all_phones[0] if all_phones else "",
+        "bank_accounts": [{"bank": "Akaun Bank", "account_number": a, "holder_name": "N/A"} for a in all_accounts],
+        "emails": re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', full_corpus),
+        "qr_list": qr_list,
+        "evidence_details": full_corpus[:600]
+    }
+
+def extract_multi_image_case_intel(image_paths, captions=None, user_id=None, progress_callback=None):
+    """
+    Enjin Bersepadu Analisis Multi-Bukti:
+    1. Imbas kod QR DuitNow pada setiap gambar terlebih dahulu (100% tepat EMVCo)
+    2. Hubungi Gemini Vision dengan semua imej untuk cross-examination
+    3. Jika Gemini gagal/tiada API key, jatuh semula ke sintesis OCR tempatan
+    4. Cantumkan semua hasil ke dalam format seragam untuk Dossier & Laporan
+    """
+    if not image_paths:
+        return {"has_intel": False, "image_count": 0}
+
+    # 1. Semak DuitNow QR pada setiap gambar
+    all_qr_data = []
+    for pth in image_paths:
+        q = decode_duitnow_qr(pth)
+        if q:
+            all_qr_data.append(q)
+
+    # 2. Dapatkan API Key Gemini
+    active_k, key_src_label, key_type = get_effective_gemini_key(user_id)
+    
+    gemini_data = None
+    if active_k and active_k != "YOUR_GEMINI_API_KEY_HERE":
+        if progress_callback:
+            progress_callback(40, f"🧠 Menyelaras {len(image_paths)} bukti serentak dengan AI Vision...", "Gemini Cross-Analysis")
+        gemini_data = analyze_multi_images_with_gemini(image_paths, api_key=active_k, captions=captions, user_id=user_id)
+
+    # 3. Jika Gemini tidak berjaya atau tiada key, gunakan sintesis tempatan
+    if not gemini_data:
+        if progress_callback:
+            progress_callback(50, f"🔍 Mengimbas {len(image_paths)} bukti secara tempatan (Local OCR & Matrix)...", "Local Synthesis")
+        offline_data = synthesize_multi_images_offline(image_paths, captions=captions)
+        source_type = "OFFLINE_MULTI_OCR"
+        source_badge = f"🔍 OCR Tempatan KANTOI ({len(image_paths)} Bukti)"
+        final_summary = offline_data.get("case_summary", "")
+        final_tactic = offline_data.get("scam_tactic", "Semakan Keselamatan Siber")
+        final_name = offline_data.get("primary_suspect_name", "Tidak Dinyatakan")
+        final_phones = list(offline_data.get("phone_numbers") or [])
+        final_accounts_raw = offline_data.get("bank_accounts") or []
+        final_emails = list(offline_data.get("emails") or [])
+        final_ev_text = offline_data.get("evidence_details", "")
+    else:
+        source_type = "AI_VISION_MULTI"
+        source_badge = f"🧠 AI Gemini Vision ({len(image_paths)} Bukti Bersilang)"
+        final_summary = gemini_data.get("case_summary", "")
+        final_tactic = gemini_data.get("scam_tactic", "Semakan Keselamatan Siber")
+        final_name = gemini_data.get("primary_suspect_name") or (gemini_data.get("suspect_names")[0] if gemini_data.get("suspect_names") else "Tidak Dinyatakan")
+        final_phones = []
+        for p in (gemini_data.get("phone_numbers") or []):
+            np = normalize_phone(p)
+            if np and np not in final_phones:
+                final_phones.append(np)
+        if gemini_data.get("primary_phone"):
+            np = normalize_phone(gemini_data["primary_phone"])
+            if np and np not in final_phones:
+                final_phones.insert(0, np)
+        final_accounts_raw = gemini_data.get("bank_accounts") or []
+        final_emails = list(gemini_data.get("emails") or [])
+        final_ev_text = gemini_data.get("evidence_details", "")
+
+    # 4. Integrasikan maklumat kod QR jika ada
+    cand_accounts = []
+    formatted_bank_entries = []
+    primary_bank = "N/A"
+    
+    for b_item in final_accounts_raw:
+        if isinstance(b_item, dict):
+            acc_no = re.sub(r'[^\d]', '', str(b_item.get("account_number") or ""))
+            b_name = b_item.get("bank") or "Bank"
+            h_name = b_item.get("holder_name") or ""
+            if len(acc_no) >= 8 and acc_no not in cand_accounts:
+                cand_accounts.append(acc_no)
+                desc = f"{b_name} : {acc_no}"
+                if h_name and h_name != "N/A":
+                    desc += f" ({h_name})"
+                formatted_bank_entries.append(desc)
+                if primary_bank == "N/A":
+                    primary_bank = b_name
+        elif isinstance(b_item, str):
+            acc_no = re.sub(r'[^\d]', '', b_item)
+            if len(acc_no) >= 8 and acc_no not in cand_accounts:
+                cand_accounts.append(acc_no)
+                formatted_bank_entries.append(f"Akaun: {acc_no}")
+
+    for qr in all_qr_data:
+        if qr.get("proxy_phone"):
+            np = normalize_phone(qr["proxy_phone"])
+            if np and np not in final_phones:
+                final_phones.insert(0, np)
+        if qr.get("account_number"):
+            acc_no = re.sub(r'[^\d]', '', str(qr["account_number"]))
+            if len(acc_no) >= 8 and acc_no not in cand_accounts:
+                cand_accounts.append(acc_no)
+                qr_bank = qr.get("bank") or "DuitNow"
+                qr_name = qr.get("name") or ""
+                desc = f"{qr_bank} : {acc_no}"
+                if qr_name:
+                    desc += f" ({qr_name})"
+                formatted_bank_entries.append(desc)
+                if primary_bank == "N/A":
+                    primary_bank = qr_bank
+        if qr.get("name") and final_name in ["Tidak Dinyatakan", "N/A", ""]:
+            final_name = qr["name"]
+
+    has_intel = bool(final_phones or cand_accounts or all_qr_data)
+    primary_phone = final_phones[0] if final_phones else (cand_accounts[0] if cand_accounts else "")
+    primary_acc = cand_accounts[0] if cand_accounts else "N/A"
+    bank_formatted_str = " | ".join(formatted_bank_entries) if formatted_bank_entries else "Tiada"
+
+    primary_qr = all_qr_data[0] if all_qr_data else None
+
+    return {
+        "has_intel": has_intel,
+        "image_count": len(image_paths),
+        "source_type": source_type,
+        "source_badge": source_badge,
+        "case_summary": final_summary,
+        "tactic": final_tactic,
+        "suspect_name": final_name,
+        "phone_norm": primary_phone,
+        "all_phones": final_phones,
+        "bank_name": primary_bank,
+        "account_number": primary_acc,
+        "all_accounts": cand_accounts,
+        "bank_accounts": bank_formatted_str,
+        "emails": final_emails,
+        "evidence_text": final_ev_text,
+        "qr_detected": bool(all_qr_data),
+        "qr_data": primary_qr,
+        "all_qr_data": all_qr_data,
+        "gemini_status": LAST_GEMINI_DIAGNOSTIC.get("status", "NOT_CONFIGURED"),
+        "gemini_error": LAST_GEMINI_DIAGNOSTIC.get("error", ""),
+        "key_source": key_src_label,
+        "is_byok": bool(user_id and get_user_gemini_key(user_id))
+    }
+
 def local_image_ocr(image_path):
     """
     Enjin OCR tempatan hibrid berbilang lapisan:
@@ -1275,7 +1674,7 @@ def query_threat(query_text):
     conn.close()
     return match, norm_phone
 
-def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, source):
+def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, source, all_phones=None):
     dbs = [DB_PATH, BACKUP_DB_PATH]
     for db in dbs:
         if not os.path.exists(db):
@@ -1291,7 +1690,7 @@ def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, so
                 phone_norm,
                 9999,
                 suspect_name,
-                phone_norm,
+                all_phones or phone_norm,
                 bank_accounts or "N/A",
                 "N/A",
                 "Laporan Disahkan Komuniti",
@@ -1927,7 +2326,9 @@ def build_unified_cyber_dossier(
     source_badge="🤖 AI Vision & Matrix OCR",
     tmp_id=None,
     is_admin=False,
-    raw_query=""
+    raw_query="",
+    evidence_summary=None,
+    image_count=1
 ):
     """
     Menjana Kad Risikan Siber Bersepadu (1-Paparan) merangkumi:
@@ -2062,8 +2463,14 @@ def build_unified_cyber_dossier(
         "✅ <b>STATUS: REKOD BERSIH (TIADA ADUAN RASMI)</b>"
     )
 
+    dossier_title = (
+        f"🛡️ <b>DOSSIER KES BERSEPADU KANTOI ({image_count} BUKTI BERGAMBAR)</b>"
+        if image_count > 1 else
+        "🛡️ <b>DOSSIER RISIKAN SIBER KANTOI (1-PAPARAN)</b>"
+    )
+
     lines = [
-        "🛡️ <b>DOSSIER RISIKAN SIBER KANTOI (1-PAPARAN)</b>",
+        dossier_title,
         "━━━━━━━━━━━━━━━━━━━━━━━━━━",
         f"📊 {status_header}",
         ""
@@ -2071,14 +2478,18 @@ def build_unified_cyber_dossier(
 
     # Seksyen 1: Profil & Identiti Suspek
     clean_sname = suspect_name if suspect_name not in ["N/A", "Tidak Dinyatakan", ""] else ""
-    if clean_sname or tactic != "Semakan Keselamatan Siber" or email:
-        lines.append("👤 <b>PROFIL / IDENTITI SUSPEK:</b>")
+    if clean_sname or tactic != "Semakan Keselamatan Siber" or email or evidence_summary or image_count > 1:
+        lines.append("👤 <b>PROFIL & SINTESIS BUKTI KES:</b>")
         if clean_sname:
             lines.append(f"• <b>Nama / Profil:</b> {html.escape(clean_sname)}")
         if tactic:
             lines.append(f"• <b>Taktik / Modus:</b> <i>{html.escape(tactic)}</i>")
         if email:
             lines.append(f"• <b>Emel Suspek:</b> <code>{html.escape(email)}</code>")
+        if image_count > 1:
+            lines.append(f"• <b>Bukti Dihubungkait:</b> <code>{image_count} Tangkapan Layar (Satu Kes)</code>")
+        if evidence_summary:
+            lines.append(f"• <b>Sintesis Kes:</b> <i>{html.escape(evidence_summary)}</i>")
         lines.append(f"• <b>Enjin Pengesanan:</b> {source_badge}")
         lines.append("")
 
@@ -2205,7 +2616,8 @@ def build_unified_cyber_dossier(
             ])
         else:
             inline_kb.append([
-                {"text": "📢 Lapor / Tambah Bukti Kes Saya", "callback_data": f"repqr_{tmp_id}"}
+                {"text": "🚀 Sahkan & Hantar Laporan ke Admin", "callback_data": f"cfrm_{tmp_id}"},
+                {"text": "📝 Tambah Cerita Kes", "callback_data": f"repqr_{tmp_id}"}
             ])
 
     # 2. Butang Kongsi Amaran 1-Ketikan
@@ -2753,14 +3165,17 @@ def forward_report_to_admins(rep_id, rep_data):
     safe_bank = html.escape(str(rep_data.get('bank_account') or 'Tiada'))
     safe_ev = html.escape(str(rep_data.get('evidence_text') or 'Tiada'))
 
+    photo_ids = rep_data.get("photo_file_ids") or ([rep_data["photo_file_id"]] if rep_data.get("photo_file_id") else [])
+    count_str = f" ({len(photo_ids)} Bukti Bergambar)" if len(photo_ids) > 1 else ""
+
     admin_card = (
-        f"🚨 <b>LAPORAN SCAMMER BAHARU DITERIMA (ID: <code>{rep_id}</code>)</b>\n"
+        f"🚨 <b>LAPORAN SCAMMER BAHARU DITERIMA (ID: <code>{rep_id}</code>){count_str}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"👤 <b>Pengirim:</b> @{safe_user} (ID: <code>{safe_uid}</code>)\n\n"
         f"📱 <b>Nombor Scammer:</b> <code>{safe_phone}</code>\n"
         f"🏷️ <b>Taktik / Suspek:</b> {safe_suspect}\n"
         f"🏦 <b>Akaun Bank:</b> {safe_bank}\n"
-        f"📝 <b>Keterangan Kes:</b> {safe_ev}\n"
+        f"📝 <b>Keterangan Kes:</b> {safe_ev[:900]}\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"Sila semak maklumat di atas sebelum meluluskan siaran ke @crowdcaller:"
     )
@@ -2774,12 +3189,28 @@ def forward_report_to_admins(rep_id, rep_data):
         ]
     }
 
-    photo_id = rep_data.get("photo_file_id")
     for adm_id in admin_ids:
-        if photo_id:
+        if len(photo_ids) > 1:
+            # Hantar album gambar bukti
+            media = []
+            for idx, pid in enumerate(photo_ids[:10]):
+                m_obj = {"type": "photo", "media": pid}
+                if idx == 0:
+                    m_obj["caption"] = admin_card[:1024]
+                    m_obj["parse_mode"] = "HTML"
+                media.append(m_obj)
+            res = api_call("sendMediaGroup", {"chat_id": adm_id, "media": media})
+            # Hantar kad kelulusan di bawah album
+            api_call("sendMessage", {
+                "chat_id": adm_id,
+                "text": f"Pengesahan Laporan <code>{rep_id}</code> oleh @{safe_user}:",
+                "parse_mode": "HTML",
+                "reply_markup": markup
+            })
+        elif len(photo_ids) == 1:
             api_call("sendPhoto", {
                 "chat_id": adm_id,
-                "photo": photo_id,
+                "photo": photo_ids[0],
                 "caption": admin_card,
                 "parse_mode": "HTML",
                 "reply_markup": markup
@@ -2856,13 +3287,16 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
                 "disable_web_page_preview": True
             })
 
-        # 2. Masukkan ke dalam SQLite KANTOI
+        # 2. Masukkan ke dalam SQLite KANTOI (simpan semua nombor telefon kes)
+        all_phones_list = rep.get("all_phones") or [phone_norm]
+        all_phones_str = ", ".join(all_phones_list)
         insert_approved_threat(
             phone_norm=phone_norm,
             suspect_name=suspect_name,
             category="LAPORAN_KOMUNITI_DISAHKAN",
             bank_accounts=bank_account,
-            source=f"Laporan Komuniti CrowdCaller (Ref: {rep_id})"
+            source=f"Risikan Komuniti CrowdCaller (Ref: {rep_id})",
+            all_phones=all_phones_str
         )
 
         # 3. Notifikasi kepada pengirim laporan
@@ -3036,6 +3470,273 @@ def handle_admin_batch_decision(action, batch_id, admin_chat_id, admin_username,
 
         edit_message(admin_chat_id, message_id, f"❌ *BATCH DITOLAK*\nRef ID: `{batch_id}`\nOleh Admin: @{admin_username}")
         return "Batch telah ditolak."
+
+# ==============================================================================
+# PENGURUS PENIMBAL KES MULTI-IMEJ (MULTI-SCREENSHOT DEBOUNCE AGGREGATOR)
+# ==============================================================================
+import threading
+
+PHOTO_CASE_BUFFERS = {}  # chat_id -> list of dicts
+PHOTO_CASE_TIMERS = {}   # chat_id -> threading.Timer
+PHOTO_CASE_LOCK = threading.Lock()
+
+def queue_image_for_case_aggregation(chat_id, username, file_id, caption, msg_id=None, is_doc=False, doc_filename=""):
+    """
+    Memasukkan imej ke dalam penimbal debounce (2.0 saat).
+    Jika pengguna menghantar beberapa screenshot serentak (album atau berturutan),
+    semua gambar dikumpulkan ke dalam satu batch kes dan dianalisis bersama!
+    """
+    with PHOTO_CASE_LOCK:
+        if chat_id not in PHOTO_CASE_BUFFERS:
+            PHOTO_CASE_BUFFERS[chat_id] = []
+        PHOTO_CASE_BUFFERS[chat_id].append({
+            "file_id": file_id,
+            "caption": caption or "",
+            "msg_id": msg_id,
+            "is_doc": is_doc,
+            "doc_filename": doc_filename,
+            "time": time.time()
+        })
+        
+        # Batalkan timer lama jika ada
+        old_timer = PHOTO_CASE_TIMERS.get(chat_id)
+        if old_timer:
+            try:
+                old_timer.cancel()
+            except Exception:
+                pass
+                
+        # Mulakan timer debounce baharu (2.0s)
+        new_timer = threading.Timer(2.0, execute_multi_photo_case, args=[chat_id, username])
+        PHOTO_CASE_TIMERS[chat_id] = new_timer
+        new_timer.daemon = True
+        new_timer.start()
+
+    # Beri maklum balas pantas 'typing' kepada pengguna di Telegram
+    api_call("sendChatAction", {"chat_id": chat_id, "action": "typing"})
+
+def execute_multi_photo_case(chat_id, username):
+    with PHOTO_CASE_LOCK:
+        items = PHOTO_CASE_BUFFERS.pop(chat_id, [])
+        PHOTO_CASE_TIMERS.pop(chat_id, None)
+
+    if not items:
+        return
+
+    first_msg_id = items[0].get("msg_id")
+
+    # 1. Semak jika pengguna dalam wizard /lapor bertingkat langkah 4 (STEP_EVIDENCE)
+    session = user_sessions.get(chat_id)
+    if session and session.get("step") == "STEP_EVIDENCE":
+        all_captions = [it["caption"] for it in items if it.get("caption") and it["caption"].lower() != "tiada"]
+        evidence_text = " | ".join(all_captions) if all_captions else f"Bukti bergambar ({len(items)} tangkapan layar) dilampirkan."
+        rep_id = f"REP-{int(time.time()) % 100000:05d}"
+        rep_data = {
+            "report_id": rep_id,
+            "user_id": chat_id,
+            "username": username,
+            "phone_norm": session["data"]["phone_norm"],
+            "suspect_name": session["data"]["suspect_name"],
+            "bank_account": session["data"]["bank_account"],
+            "evidence_text": evidence_text,
+            "photo_file_id": items[0]["file_id"],
+            "photo_file_ids": [it["file_id"] for it in items],
+            "status": "PENDING",
+            "created_at": int(time.time())
+        }
+        save_pending_report(rep_id, rep_data)
+        del user_sessions[chat_id]
+        summary = (
+            f"📋 *RINGKASAN LAPORAN ANDA (Ref: `{rep_id}`)*\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📱 Nombor: `{rep_data['phone_norm']}`\n"
+            f"👤 Suspek: {rep_data['suspect_name']}\n"
+            f"🏦 Akaun Bank: {rep_data['bank_account']}\n"
+            f"📸 Gambar Bukti: {len(items)} tangkapan layar dilampirkan\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"✅ *Laporan anda telah berjaya dihantar ke Bilik Admin KANTOI!*\n"
+            f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih!"
+        )
+        send_message(chat_id, summary)
+        forward_report_to_admins(rep_id, rep_data)
+        return
+
+    # 2. Semak jika pengguna melampirkan foto pada draf yang sedia ada
+    found_key = None
+    for k, v in reversed(list(unconfirmed_reports.items())):
+        if v.get("user_id") == chat_id and not v.get("photo_file_id"):
+            found_key = k
+            break
+    if not found_key:
+        for k, v in reversed(list(get_pending_reports().items())):
+            if v.get("user_id") == chat_id and not v.get("photo_file_id") and v.get("status") in ["DRAFT", "PENDING"]:
+                found_key = k
+                break
+    if found_key:
+        p_ids = [it["file_id"] for it in items]
+        if found_key in unconfirmed_reports:
+            unconfirmed_reports[found_key]["photo_file_id"] = p_ids[0]
+            unconfirmed_reports[found_key]["photo_file_ids"] = p_ids
+        reports = get_pending_reports()
+        if found_key in reports:
+            reports[found_key]["photo_file_id"] = p_ids[0]
+            reports[found_key]["photo_file_ids"] = p_ids
+            save_json_file(REPORTS_DATA_PATH, reports)
+        send_message(chat_id, f"📸 *{len(items)} keping gambar bukti berjaya dilampirkan pada draf laporan anda!*")
+        return
+
+    # 3. ENJIN MULTI-IMEJ: Analisis Kes Bersepadu
+    hud = ProgressHUD(chat_id, reply_to_msg_id=first_msg_id)
+    if len(items) > 1:
+        hud.start(10, f"📥 Menerima {len(items)} tangkapan layar kes scammer...", f"{len(items)} Bukti Kes")
+    else:
+        hud.start(10, "📥 Memuat turun imej dari pelayan Telegram...", "Telegram Bot CDN")
+
+    temp_paths = []
+    try:
+        for idx, it in enumerate(items):
+            p = download_telegram_photo(it["file_id"])
+            if p:
+                temp_paths.append(p)
+
+        if not temp_paths:
+            hud.complete_with_message("❌ Gagal memuat turun gambar dari pelayan Telegram. Sila cuba lagi.")
+            return
+
+        captions = [it["caption"] for it in items if it.get("caption")]
+
+        # Semak jika imej tunggal mengandungi pautan URL terus (Anti-Quishing)
+        if len(temp_paths) == 1:
+            single_qr = decode_duitnow_qr(temp_paths[0])
+            if single_qr and single_qr.get("url"):
+                res_url = inspect_url_phishing(single_qr["url"])
+                is_danger = res_url["severity"] in ["CRITICAL", "HIGH"]
+                badge = "🚨" if is_danger else ("⚠️" if res_url["severity"] == "MEDIUM" else "✅")
+                title_text = "PERISAI KANTOI: KOD QR PHISHING (QUISHING) DIKESAN!" if is_danger else "HASIL IMBASAN KOD QR: PAUTAN (URL)"
+                lines = [
+                    f"{badge} <b>{title_text}</b>",
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                    f"🔗 <b>Pautan Terkandung:</b> <code>{html.escape(res_url['url'])}</code>",
+                    f"🌐 <b>Domain Pendaratan:</b> <code>{html.escape(res_url['domain'])}</code>",
+                    f"🛡️ <b>Keputusan:</b> <b>{html.escape(res_url['verdict'])}</b>",
+                    ""
+                ]
+                if res_url["reasons"]:
+                    lines.append("⚠️ <b>Faktor Penilaian Risiko:</b>")
+                    for rsn in res_url["reasons"]:
+                        lines.append(f"   • {html.escape(rsn)}")
+                    lines.append("")
+                lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                if is_danger:
+                    lines.append("🚫 <b>AMARAN:</b> Ini adalah perangkap pancingan data (Quishing) untuk mencuri kata laluan atau TAC bank anda. Jangan buka pautan ini!")
+                else:
+                    lines.append("ℹ️ <i>Pautan ini tidak menunjukkan sebarang ciri phishing atau penyamaran bank rasmi yang diketahui.</i>")
+                hud.update(100, "✨ Analisis Pautan Selesai!", "Anti-Quishing")
+                hud.complete_with_message("\n".join(lines), parse_mode="HTML")
+                return
+
+        # Jalankan sintesis kes multi-imej
+        intel = extract_multi_image_case_intel(
+            temp_paths, 
+            captions=captions, 
+            user_id=chat_id, 
+            progress_callback=lambda pct, title, sub: hud.update(pct, title, sub)
+        )
+
+        if intel.get("has_intel"):
+            hud.update(75, "🏛️ Menyelaras risikan PDRM CCID & Pangkalan KANTOI...", "Korelasi Multi-Entiti")
+            cand_phones = list(intel.get("all_phones") or [])
+            cand_accounts = list(intel.get("all_accounts") or [])
+            target_name = intel.get("suspect_name", "Tidak Dinyatakan")
+            target_bank = intel.get("bank_name", "N/A")
+            primary_target = cand_phones[0] if cand_phones else (cand_accounts[0] if cand_accounts else "N/A")
+
+            # Draf Laporan Sementara
+            tmp_id = f"tmp_{int(time.time()*1000) % 1000000}"
+            combined_evidence = intel.get("evidence_text", "")
+            if intel.get("case_summary"):
+                combined_evidence = f"[Ringkasan Kes]: {intel['case_summary']}\n\n{combined_evidence}"
+            if captions:
+                combined_evidence = f"[Kapsyen Pengguna]: {' | '.join(captions)}\n\n{combined_evidence}"
+
+            p_ids = [it["file_id"] for it in items]
+            rep_data = {
+                "user_id": chat_id,
+                "username": username,
+                "phone_norm": primary_target,
+                "all_phones": cand_phones,
+                "suspect_name": f"{intel.get('tactic', 'Aduan')} ({target_name})" if target_name != "Tidak Dinyatakan" else intel.get('tactic', 'Aduan'),
+                "bank_account": intel.get("bank_accounts") or (cand_accounts[0] if cand_accounts else "N/A"),
+                "all_accounts": cand_accounts,
+                "evidence_text": combined_evidence,
+                "photo_file_id": p_ids[0] if p_ids else None,
+                "photo_file_ids": p_ids,
+                "status": "PENDING"
+            }
+            unconfirmed_reports[tmp_id] = rep_data
+            save_pending_report(tmp_id, rep_data)
+
+            is_admin_sender = chat_id in get_admin_ids()
+
+            hud.update(90, "🌐 Mengimbas forum Lowyat, CariGold & FB (Google CSE)...", "Enjin Komuniti KANTOI")
+
+            dossier_html, dossier_kb, is_threat = build_unified_cyber_dossier(
+                phones=cand_phones,
+                accounts=cand_accounts,
+                qr_data=intel.get("qr_data"),
+                suspect_name=target_name,
+                bank_name=target_bank,
+                email=(intel.get("emails") or [""])[0] if intel.get("emails") else "",
+                tactic=intel.get("tactic", "Semakan Keselamatan Siber"),
+                source_badge=intel.get("source_badge", "🧠 AI Vision (Multi-Bukti)"),
+                tmp_id=tmp_id,
+                is_admin=is_admin_sender,
+                evidence_summary=intel.get("case_summary"),
+                image_count=len(temp_paths)
+            )
+
+            hud.update(100, "✨ Analisis Selesai! Menyusun Dossier Bersepadu...", "Dossier 1-Paparan Sedia")
+            hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
+        else:
+            # Tiada entiti dikesan
+            active_k, src_label, k_type = get_effective_gemini_key(chat_id)
+            g_status = intel.get("gemini_status", "")
+            g_err = intel.get("gemini_error", "")
+
+            if not active_k:
+                ai_diag = (
+                    "⚠️ <b>AI Vision Belum Ditetapkan:</b>\n"
+                    "Kunci Gemini API belum didaftarkan untuk akaun anda atau pelayan.\n"
+                    "👉 <i>Daftar kunci percuma anda sendiri (BYOK) dengan arahan: <code>/mykey &lt;API_KEY&gt;</code>!</i>"
+                )
+            elif g_err:
+                ai_diag = (
+                    f"⚠️ <b>Status AI Gemini ({html.escape(g_status)}):</b>\n"
+                    f"<code>{html.escape(g_err[:180])}</code>\n"
+                    f"👉 <i>Kunci digunakan: {html.escape(src_label)}. Semak semula dengan <code>/mykey</code> atau <code>/gemini</code>.</i>"
+                )
+            else:
+                ai_diag = f"🔍 <b>Pengecaman Teks:</b> Tiada nombor telefon (+60 / 01x), akaun bank, atau nama suspek yang jelas ditemui dalam {len(temp_paths)} gambar tersebut."
+
+            fb_lines = [
+                f"📸 <b>{len(temp_paths)} Gambar Diterima, Namun Tiada Maklumat Ancaman Berjaya Dibaca.</b>",
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                ai_diag,
+                "",
+                "💡 <b>Tip Semakan Pantas KANTOI:</b>",
+                "• <b>Tangkapan Layar WhatsApp / Telegram:</b> Pastikan teks atau nombor telefon suspek tidak terlalu beresolusi rendah.",
+                "• <b>Semakan Manual Terus:</b> Anda boleh terus taip atau tampal (paste) nombor telefon atau akaun suspek ke dalam chat ini untuk semakan serta-merta tanpa perlu hantar gambar!",
+                "• <b>Kod QR:</b> Jika kod QR, pastikan petak tidak kabur dan bucu QR tidak terpotong."
+            ]
+            hud.update(100, "✨ Analisis Selesai! Menyusun laporan semakan...", "Tip & Panduan")
+            hud.complete_with_message("\n".join(fb_lines), parse_mode="HTML")
+    finally:
+        for tp in temp_paths:
+            if os.path.exists(tp):
+                try:
+                    os.unlink(tp)
+                except Exception:
+                    pass
 
 # ==============================================================================
 # GELUNG UTAMA BOT (LONG POLLING)
@@ -3564,277 +4265,11 @@ def run_bot():
                 # MOD CHAT PERIBADI: ENJIN IMBASAN IMEJ & KOD QR HIBRID
                 # ------------------------------------------------------------------
                 def process_image_intel_message(t_chat_id, t_username, t_file_id, t_caption, is_doc=False, doc_filename="", reply_to_msg_id=None):
-                    # 1. Semak jika pengguna dalam wizard /lapor bertingkat langkah 4
-                    session = user_sessions.get(t_chat_id)
-                    if session and session.get("step") == "STEP_EVIDENCE":
-                        evidence_text = t_caption if t_caption and t_caption.lower() != "tiada" else "Bukti bergambar dilampirkan."
-                        rep_id = f"REP-{int(time.time()) % 100000:05d}"
-                        rep_data = {
-                            "report_id": rep_id,
-                            "user_id": t_chat_id,
-                            "username": t_username,
-                            "phone_norm": session["data"]["phone_norm"],
-                            "suspect_name": session["data"]["suspect_name"],
-                            "bank_account": session["data"]["bank_account"],
-                            "evidence_text": evidence_text,
-                            "photo_file_id": t_file_id,
-                            "status": "PENDING",
-                            "created_at": int(time.time())
-                        }
-                        save_pending_report(rep_id, rep_data)
-                        del user_sessions[t_chat_id]
-                        summary = (
-                            f"📋 *RINGKASAN LAPORAN ANDA (Ref: `{rep_id}`)*\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                            f"📱 Nombor: `{rep_data['phone_norm']}`\n"
-                            f"👤 Suspek: {rep_data['suspect_name']}\n"
-                            f"🏦 Akaun Bank: {rep_data['bank_account']}\n"
-                            f"📸 Gambar Bukti: Dilampirkan\n"
-                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                            f"✅ *Laporan anda telah berjaya dihantar ke Bilik Admin KANTOI!*\n"
-                            f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih!"
-                        )
-                        send_message(t_chat_id, summary)
-                        forward_report_to_admins(rep_id, rep_data)
-                        return
+                    queue_image_for_case_aggregation(t_chat_id, t_username, t_file_id, t_caption, msg_id=reply_to_msg_id, is_doc=is_doc, doc_filename=doc_filename)
 
-                    # 2. Semak jika pengguna melampirkan foto pada draf yang sedia ada
-                    found_key = None
-                    for k, v in reversed(list(unconfirmed_reports.items())):
-                        if v.get("user_id") == t_chat_id and not v.get("photo_file_id"):
-                            found_key = k
-                            break
-                    if not found_key:
-                        for k, v in reversed(list(get_pending_reports().items())):
-                            if v.get("user_id") == t_chat_id and not v.get("photo_file_id") and v.get("status") in ["DRAFT", "PENDING"]:
-                                found_key = k
-                                break
-                    if found_key:
-                        if found_key in unconfirmed_reports:
-                            unconfirmed_reports[found_key]["photo_file_id"] = t_file_id
-                        reports = get_pending_reports()
-                        if found_key in reports:
-                            reports[found_key]["photo_file_id"] = t_file_id
-                            save_json_file(REPORTS_DATA_PATH, reports)
-                        send_message(t_chat_id, "📸 *Gambar bukti berjaya dilampirkan pada draf laporan anda!*")
-                        return
-
-                    # 3. ENJIN HIBRID: Analisis Imej Baharu (Robust QR Decoder + AI Vision / Native OCR)
-                    hud = ProgressHUD(t_chat_id, reply_to_msg_id=reply_to_msg_id)
-                    hud.start(10, "📥 Memuat turun imej dari pelayan Telegram...", "Telegram Bot CDN")
-                    api_call("sendChatAction", {"chat_id": t_chat_id, "action": "typing"})
-                    tmp_img = download_telegram_photo(t_file_id)
-                    if not tmp_img:
-                        hud.complete_with_message("❌ Gagal memuat turun gambar dari pelayan Telegram. Sila cuba lagi.")
-                        return
-
-                    try:
-                        hud.update(25, "🔍 Membaca matriks imej & mengesan Kod QR...", "OpenCV Matrix Decoder")
-                        intel = extract_hybrid_image_intel(tmp_img, user_id=t_chat_id, progress_callback=hud.update)
-                        if intel.get("has_intel"):
-                            qr_data = intel.get("qr_data")
-                            target_phone = intel.get("phone_norm") or ""
-                            target_acc = intel.get("account_number") or ""
-                            target_name = intel.get("suspect_name") or "Tidak Dinyatakan"
-                            target_bank = intel.get("bank_name") or "N/A"
-                            target_url = qr_data.get("url") if qr_data else ""
-
-                            # A. Jika kod QR mengandungi pautan URL / Pembayaran Digital / Malware Dropper
-                            if target_url:
-                                res_url = inspect_url_phishing(target_url)
-                                final_target = res_url.get("final_url", target_url)
-                                
-                                # Semak jika pautan mengarah kepada muat turun fail APK (Malware Dropper)
-                                is_apk_target = (
-                                    final_target.lower().endswith('.apk') or 
-                                    '.apk?' in final_target.lower() or 
-                                    '/apk/' in final_target.lower() or
-                                    'download' in final_target.lower()
-                                )
-
-                                tmp_apk = None
-                                apk_rep = None
-                                if is_apk_target:
-                                    hud.update(70, "📦 Memuat turun fail APK terkandung dalam kod QR...", "Sandbox Ingestion")
-                                    api_call("sendChatAction", {"chat_id": t_chat_id, "action": "upload_document"})
-                                    tmp_apk = download_url_to_temp_apk(final_target)
-                                    if tmp_apk:
-                                        try:
-                                            hud.update(85, "🔍 Menganalisis dex bytecode & token C2 fail APK...", "Static Sandbox")
-                                            fn = os.path.basename(urllib.parse.urlparse(final_target).path) or "aplikasi_kod_qr.apk"
-                                            apk_rep = inspect_apk_malware(tmp_apk, fn)
-                                        finally:
-                                            if os.path.exists(tmp_apk):
-                                                try:
-                                                    os.unlink(tmp_apk)
-                                                except Exception:
-                                                    pass
-
-                                if apk_rep and "error" not in apk_rep:
-                                    # Laporan Sandbox Quishing-to-Malware Lengkap
-                                    badge = "🚨" if apk_rep["severity"] == "CRITICAL" else ("⚠️" if apk_rep["severity"] in ["HIGH", "MEDIUM"] else "✅")
-                                    lines = [
-                                        f"{badge} <b>PERISAI KANTOI: ANCAMAN QUISHING & MALWARE APK DIKESAN DARI KOD QR!</b>",
-                                        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                        f"🔗 <b>Pautan QR Dikesan:</b> <code>{html.escape(target_url)}</code>",
-                                        f"🌐 <b>Pelayan Muat Turun:</b> <code>{html.escape(res_url['domain'])}</code>",
-                                        f"📁 <b>Fail APK:</b> <code>{html.escape(apk_rep['filename'])}</code> ({apk_rep['size_mb']} MB)",
-                                        f"🔑 <b>Hash SHA256:</b> <code>{apk_rep['sha256'][:24]}...</code>",
-                                        "",
-                                        f"🚨 <b>KEPUTUSAN SANDBOX KANTOI:</b>",
-                                        f"<b>{html.escape(apk_rep['verdict'])}</b>",
-                                        ""
-                                    ]
-                                    if apk_rep["danger_perms"]:
-                                        lines.append("⚠️ <b>Kebenaran Berbahaya Dikesan:</b>")
-                                        for dp, desc in apk_rep["danger_perms"]:
-                                            lines.append(f"   • <code>{html.escape(dp)}</code>: {html.escape(desc)}")
-                                        lines.append("")
-                                    if apk_rep["dex_tokens"]:
-                                        lines.append(f"🤖 <b>Bot C2 Exfiltration:</b> Dikesan <code>{len(apk_rep['dex_tokens'])}</code> token Bot Telegram scammer dalam kod!")
-                                    if apk_rep["has_banking_strings"]:
-                                        lines.append("🏦 <b>Sasaran Perbankan:</b> Rentetan nama bank tempatan (Maybank/CIMB/TNG) ditemui dalam kod!")
-                                    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                                    if apk_rep["severity"] == "CRITICAL":
-                                        lines.append("🚫 <b>AMARAN KRITIKAL:</b> JANGAN PASANG fail ini! Ia mengandungi kod trojan pencuri SMS TAC/OTP untuk menceroboh akaun bank anda.")
-                                    else:
-                                        lines.append("ℹ️ <i>Dianalisis secara automatik oleh KANTOI Static Android Sandbox tanpa menjalankan kod.</i>")
-
-                                    hud.update(100, "✨ Analisis Sandbox Selesai! Menyusun laporan...", "Sandbox Verdict")
-                                    hud.complete_with_message("\n".join(lines), parse_mode="HTML")
-                                    return
-
-                                # Laporan Phishing / Pautan Biasa (Quishing)
-                                is_danger = res_url["severity"] in ["CRITICAL", "HIGH"]
-                                badge = "🚨" if is_danger else ("⚠️" if res_url["severity"] == "MEDIUM" else "✅")
-                                
-                                title_text = "PERISAI KANTOI: KOD QR PHISHING (QUISHING) DIKESAN!" if is_danger else "HASIL IMBASAN KOD QR: PAUTAN (URL)"
-                                lines = [
-                                    f"{badge} <b>{title_text}</b>",
-                                    "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                    f"🔗 <b>Pautan Terkandung:</b> <code>{html.escape(res_url['url'])}</code>",
-                                    f"🌐 <b>Domain Pendaratan:</b> <code>{html.escape(res_url['domain'])}</code>",
-                                    f"🛡️ <b>Keputusan:</b> <b>{html.escape(res_url['verdict'])}</b>",
-                                    ""
-                                ]
-                                if res_url["reasons"]:
-                                    lines.append("⚠️ <b>Faktor Penilaian Risiko:</b>")
-                                    for rsn in res_url["reasons"]:
-                                        lines.append(f"   • {html.escape(rsn)}")
-                                    lines.append("")
-                                lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                                if is_danger:
-                                    lines.append("🚫 <b>AMARAN:</b> Ini adalah perangkap pancingan data (Quishing) untuk mencuri kata laluan atau TAC bank anda. Jangan buka pautan ini!")
-                                else:
-                                    lines.append("ℹ️ <i>Pautan ini tidak menunjukkan sebarang ciri phishing atau penyamaran bank rasmi yang diketahui.</i>")
-
-                                hud.update(100, "✨ Analisis Pautan Selesai! Menyusun keputusan...", "Anti-Quishing")
-                                hud.complete_with_message("\n".join(lines), parse_mode="HTML")
-                                return
-
-                            # B. Menjana Kad Dossier Risikan Siber Bersepadu (1-Paparan)
-                            hud.update(75, "🏛️ Menyelaras risikan PDRM CCID & Pangkalan KANTOI...", "Korelasi Multi-Entiti")
-                            
-                            # Kumpul semua sasaran nombor unik
-                            cand_phones = list(intel.get("all_phones") or [])
-                            if target_phone and target_phone not in cand_phones and target_phone != "N/A":
-                                cand_phones.insert(0, target_phone)
-
-                            # Kumpul semua sasaran akaun unik
-                            cand_accounts = []
-                            if target_acc and target_acc != "N/A":
-                                cand_accounts.append(target_acc)
-                            if intel.get("bank_accounts"):
-                                for a in re.findall(r'\b\d{8,18}\b', intel["bank_accounts"]):
-                                    if a not in cand_accounts and a not in cand_phones:
-                                        cand_accounts.append(a)
-
-                            source_badge = "📱 Kod QR DuitNow" if intel.get("qr_detected") else ("🤖 AI Vision" if intel.get("source_type") == "AI_VISION" else "🔍 OCR KANTOI")
-
-                            # Jana Draf Laporan Sementara jika pengguna ingin lapor
-                            tmp_id = f"tmp_{int(time.time()*1000) % 1000000}"
-                            combined_evidence = intel.get("evidence_text", "")
-                            if t_caption:
-                                combined_evidence = f"{t_caption}\n\n[Bukti Imej]: {combined_evidence}"
-                            if intel.get("email"):
-                                combined_evidence = f"{combined_evidence}\n[Emel]: {intel['email']}"
-                                
-                            primary_target = cand_phones[0] if cand_phones else (cand_accounts[0] if cand_accounts else "N/A")
-                            rep_data = {
-                                "user_id": t_chat_id,
-                                "username": t_username,
-                                "phone_norm": primary_target,
-                                "suspect_name": f"{intel.get('tactic', 'Aduan')} ({target_name})" if target_name != "Tidak Dinyatakan" else intel.get('tactic', 'Aduan'),
-                                "bank_account": intel.get("bank_accounts") or (cand_accounts[0] if cand_accounts else "N/A"),
-                                "evidence_text": combined_evidence,
-                                "photo_file_id": t_file_id,
-                                "status": "PENDING"
-                            }
-                            unconfirmed_reports[tmp_id] = rep_data
-                            save_pending_report(tmp_id, rep_data)
-
-                            is_admin_sender = t_chat_id in get_admin_ids()
-
-                            hud.update(90, "🌐 Mengimbas forum Lowyat, CariGold & FB (Google CSE)...", "Enjin Komuniti KANTOI")
-
-                            dossier_html, dossier_kb, is_threat = build_unified_cyber_dossier(
-                                phones=cand_phones,
-                                accounts=cand_accounts,
-                                qr_data=qr_data,
-                                suspect_name=target_name,
-                                bank_name=target_bank,
-                                email=intel.get("email", ""),
-                                tactic=intel.get("tactic", "Semakan Keselamatan Siber"),
-                                source_badge=source_badge,
-                                tmp_id=tmp_id,
-                                is_admin=is_admin_sender
-                            )
-
-                            hud.update(100, "✨ Analisis Selesai! Menyusun Dossier Bersepadu...", "Dossier 1-Paparan Sedia")
-                            hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
-                        else:
-                            # Tiada maklumat dapat dikesan daripada imej
-                            active_k, src_label, k_type = get_effective_gemini_key(t_chat_id)
-                            g_status = intel.get("gemini_status", "")
-                            g_err = intel.get("gemini_error", "")
-
-                            if not active_k:
-                                ai_diag = (
-                                    "⚠️ <b>AI Vision Belum Ditetapkan:</b>\n"
-                                    "Kunci Gemini API belum didaftarkan untuk akaun anda atau pelayan.\n"
-                                    "👉 <i>Daftar kunci percuma anda sendiri (BYOK) dengan arahan: <code>/mykey &lt;API_KEY&gt;</code>!</i>"
-                                )
-                            elif g_err:
-                                ai_diag = (
-                                    f"⚠️ <b>Status AI Gemini ({html.escape(g_status)}):</b>\n"
-                                    f"<code>{html.escape(g_err[:180])}</code>\n"
-                                    f"👉 <i>Kunci digunakan: {html.escape(src_label)}. Semak semula dengan <code>/mykey</code> atau <code>/gemini</code>.</i>"
-                                )
-                            else:
-                                ai_diag = "🔍 <b>Pengecaman Teks:</b> Tiada nombor telefon (+60 / 01x), akaun bank, atau nama suspek yang jelas ditemui dalam gambar."
-
-                            fb_lines = [
-                                "📸 <b>Gambar Diterima, Namun Tiada Maklumat Ancaman Berjaya Dibaca.</b>",
-                                "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                                ai_diag,
-                                "",
-                                "💡 <b>Tip Semakan Pantas KANTOI:</b>",
-                                "• <b>Tangkapan Layar WhatsApp / Telegram:</b> Pastikan teks atau nombor telefon suspek tidak terlalu beresolusi rendah.",
-                                "• <b>Semakan Manual Terus:</b> Anda boleh terus taip atau tampal (paste) nombor telefon atau akaun suspek ke dalam chat ini untuk semakan serta-merta tanpa perlu hantar gambar!",
-                                "• <b>Kod QR:</b> Jika kod QR, pastikan petak tidak kabur dan bucu QR tidak terpotong."
-                            ]
-                            hud.update(100, "✨ Analisis Selesai! Menyusun laporan semakan...", "Tip & Panduan")
-                            hud.complete_with_message("\n".join(fb_lines), parse_mode="HTML")
-                    finally:
-                        if os.path.exists(tmp_img):
-                            try:
-                                os.unlink(tmp_img)
-                            except Exception:
-                                pass
-
-                # Kendalikan Foto yang dihantar
+                # Kendalikan Foto yang dihantar (Multi-Image Buffer Aggregator)
                 if photos:
-                    process_image_intel_message(chat_id, username, photos[-1]["file_id"], text, reply_to_msg_id=msg_id)
+                    queue_image_for_case_aggregation(chat_id, username, photos[-1]["file_id"], text, msg_id=msg_id)
                     continue
 
                 # ------------------------------------------------------------------
@@ -3850,7 +4285,7 @@ def run_bot():
 
                     # Jika pengguna menghantar gambar sebagai dokumen / fail tanpa mampatan
                     if is_img_doc:
-                        process_image_intel_message(chat_id, username, doc["file_id"], text, is_doc=True, doc_filename=doc.get("file_name", ""), reply_to_msg_id=msg_id)
+                        queue_image_for_case_aggregation(chat_id, username, doc["file_id"], text, msg_id=msg_id, is_doc=True, doc_filename=doc.get("file_name", ""))
                         continue
 
                     if doc_name.endswith(".apk") or "package-archive" in doc_mime:
@@ -4546,6 +4981,31 @@ def run_bot():
                             "_(Jika tiada atau tidak pasti, taip 'Tiada')_"
                         )
                         continue
+
+                    elif step == "STEP_EVIDENCE_FOR_DRAFT":
+                        tmp_id = session.get("tmp_id")
+                        rep_data = unconfirmed_reports.get(tmp_id) or get_pending_reports().get(tmp_id)
+                        if rep_data:
+                            if text and text.lower() != "tiada":
+                                rep_data["evidence_text"] = f"[Cerita Mangsa]: {text}\n\n{rep_data.get('evidence_text', '')}"
+                            rep_id = f"REP-{int(time.time()) % 100000:05d}"
+                            rep_data["report_id"] = rep_id
+                            rep_data["created_at"] = int(time.time())
+                            save_pending_report(rep_id, rep_data)
+                            forward_report_to_admins(rep_id, rep_data)
+                            del user_sessions[chat_id]
+                            summary = (
+                                f"📋 *RINGKASAN LAPORAN ANDA (Ref: `{rep_id}`)*\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"📱 Nombor: `{rep_data['phone_norm']}`\n"
+                                f"👤 Suspek: {rep_data['suspect_name']}\n"
+                                f"🏦 Akaun Bank: {rep_data['bank_account']}\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                                f"✅ *Laporan anda telah berjaya dihantar ke Bilik Admin KANTOI!*\n"
+                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih!"
+                            )
+                            send_message(chat_id, summary)
+                            continue
 
                     elif step == "STEP_BANK":
                         session["data"]["bank_account"] = text if text.lower() != "tiada" else "Tiada"
