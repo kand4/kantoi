@@ -1231,25 +1231,25 @@ public class MainActivity extends Activity {
         setMarginTop(syncCard, 10);
 
         TextView tvSyncTitle = new TextView(this);
-        tvSyncTitle.setText("🔄 KEMASKINI PANGKALAN DATA (TELEGRAM SYNC)");
+        tvSyncTitle.setText("🔄 KEMASKINI PANGKALAN DATA KANTOI (OTA SYNC)");
         tvSyncTitle.setTextColor(0xFF38BDF8);
         tvSyncTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         tvSyncTitle.setTypeface(Typeface.DEFAULT_BOLD);
         syncCard.addView(tvSyncTitle);
 
         TextView tvSyncDesc = new TextView(this);
-        tvSyncDesc.setText("Segerakkan senarai scammer terkini terus daripada saluran Telegram rasmi @crowdcaller (Percuma seumur hidup).");
+        tvSyncDesc.setText("Segerakkan senarai scammer terkini terus daripada saluran Telegram rasmi KANTOI Radar (Percuma seumur hidup).");
         tvSyncDesc.setTextColor(0xFFE2E8F0);
         tvSyncDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         tvSyncDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
         syncCard.addView(tvSyncDesc);
 
-        final Button btnSync = createButton("🚀 KEMASKINI DARI @CROWDCALLER SEKARANG", 0xFF0284C7, Color.WHITE);
+        final Button btnSync = createButton("🚀 KEMASKINI DARI SALURAN KANTOI SEKARANG", 0xFF0284C7, Color.WHITE);
         btnSync.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 btnSync.setEnabled(false);
-                btnSync.setText("⏳ Menyambung ke @crowdcaller...");
+                btnSync.setText("⏳ Menyambung ke Saluran KANTOI...");
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -1258,7 +1258,7 @@ public class MainActivity extends Activity {
                             @Override
                             public void run() {
                                 btnSync.setEnabled(true);
-                                btnSync.setText("🚀 KEMASKINI DARI @CROWDCALLER SEKARANG");
+                                btnSync.setText("🚀 KEMASKINI DARI SALURAN KANTOI SEKARANG");
                                 if (res.success && mTvHeroCount != null) {
                                     mTvHeroCount.setText(String.format("%,d", res.totalCount) + " Rekod Scammer Disahkan");
                                 }
@@ -1282,20 +1282,20 @@ public class MainActivity extends Activity {
         setMarginTop(reportBotCard, 10);
 
         TextView tvBotTitle = new TextView(this);
-        tvBotTitle.setText("📢 LAPOR SCAMMER KE KOMUNITI (@crowdcallerbot)");
+        tvBotTitle.setText("🏛️ BILIK SIASATAN & LAPORAN KOMUNITI KANTOI");
         tvBotTitle.setTextColor(0xFF34D399);
         tvBotTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         tvBotTitle.setTypeface(Typeface.DEFAULT_BOLD);
         reportBotCard.addView(tvBotTitle);
 
         TextView tvBotDesc = new TextView(this);
-        tvBotDesc.setText("Dihubungi nombor mencurigakan atau menemui akaun bank keldai? Laporkan nombor scammer atau hantar tangkap layar (screenshot) resit/chat kepada @crowdcallerbot di Telegram secara teks atau bergambar untuk disahkan oleh pentadbir demi melindungi jutaan pengguna KANTOI.");
+        tvBotDesc.setText("Dihubungi nombor meragukan atau menemui akaun bank keldai? Hantar tangkap layar (screenshot) WhatsApp, kod QR DuitNow, atau resit bank kepada Bot Risikan KANTOI di Telegram. Sistem akan merumuskan kes dan menyediakan laporan rasmi ke NSRC 997, SKMM & PDRM dengan 1-klik!");
         tvBotDesc.setTextColor(0xFFE2E8F0);
         tvBotDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         tvBotDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
         reportBotCard.addView(tvBotDesc);
 
-        final Button btnLaunchBot = createButton("💬 HANTAR LAPORAN KE @CROWDCALLERBOT", 0xFF059669, Color.WHITE);
+        final Button btnLaunchBot = createButton("🚀 BUKA BILIK SIASATAN KANTOI DI TELEGRAM", 0xFF059669, Color.WHITE);
         btnLaunchBot.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -1303,7 +1303,7 @@ public class MainActivity extends Activity {
                     Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/crowdcallerbot"));
                     startActivity(i);
                 } catch (Throwable t) {
-                    Toast.makeText(MainActivity.this, "Sila buka Telegram dan cari @crowdcallerbot", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Sila buka Telegram dan cari Bot Risikan KANTOI (@crowdcallerbot)", Toast.LENGTH_SHORT).show();
                 }
             }
         });
