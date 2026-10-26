@@ -2639,6 +2639,9 @@ def build_unified_cyber_dossier(
                 {"text": "🚀 Sahkan & Hantar Laporan ke Admin", "callback_data": f"cfrm_{tmp_id}"},
                 {"text": "📝 Tambah Cerita Kes", "callback_data": f"repqr_{tmp_id}"}
             ])
+            inline_kb.append([
+                {"text": "🏛️ Salur Tindakan ke Agensi Penguatkuasa", "callback_data": f"enf_{tmp_id}"}
+            ])
 
     # 2. Butang Kongsi Amaran 1-Ketikan
     inline_kb.append([
@@ -2647,6 +2650,162 @@ def build_unified_cyber_dossier(
     ])
 
     return "\n".join(lines), {"inline_keyboard": inline_kb}, is_threat
+
+# ==============================================================================
+# MODUL PUSAT TINDAKAN AGENSI PENGUATKUASAAN MALAYSIA (NSRC, SKMM, PDRM, CYBER999, BNM)
+# ==============================================================================
+def build_enforcement_email_draft(rep_data):
+    phones_str = ", ".join(rep_data.get("all_phones") or [rep_data.get("phone_norm") or "Tidak Dinyatakan"])
+    suspect = rep_data.get("suspect_name") or "Tidak Dinyatakan"
+    bank = rep_data.get("bank_account") or "Tidak Dinyatakan"
+    loss = rep_data.get("victim_loss") or "Tidak Dinyatakan"
+    ev = rep_data.get("evidence_text") or "Bukti perbualan dan transaksi dilampirkan."
+
+    draft = (
+        "Kepada: Pegawai Bertugas SKMM, Cyber999 & BNM TELELINK\n\n"
+        "PER: ADUAN RASMI KES PENIPUAN SIBER (MODUS OPERANDI SCAMMER)\n\n"
+        "Tuan/Puan,\n\n"
+        "Saya ingin membuat aduan rasmi mengenai aktiviti penipuan jenayah siber yang telah berlaku ke atas saya. Berikut adalah butiran lengkap kes untuk siasatan dan tindakan pihak tuan:\n\n"
+        f"1. BUTIRAN SUSPEK / SCAMMER:\n"
+        f"   • Nombor Telefon: {phones_str}\n"
+        f"   • Nama / Profil Suspek: {suspect}\n"
+        f"   • Saluran Digunakan: WhatsApp / Media Sosial\n\n"
+        f"2. BUTIRAN AKAUN BANK KELDAI (TRANSAKSI):\n"
+        f"   • Maklumat Akaun: {bank}\n"
+        f"   • Jumlah Kerugian Terlibat: {loss}\n\n"
+        f"3. KRONOLOGI & RINGKASAN KEJADIAN:\n"
+        f"   {ev[:600]}\n\n"
+        "4. TINDAKAN DIMOHON:\n"
+        "   • SKMM: Menyekat nombor telefon suspek dan pautan/akaun yang digunakan.\n"
+        "   • Cyber999: Merekodkan insiden dan menyiasat sebarang laman phishing/malware.\n"
+        "   • BNM: Menyenaraihitam dan membekukan akaun keldai terbabit.\n\n"
+        "Bukti tangkapan layar perbualan, kod QR DuitNow, dan resit pemindahan telah disimpan dan sedia dilampirkan.\n\n"
+        "Sekian, terima kasih.\n\n"
+        "Pengadu,\n"
+        "[Nama Penuh Anda]\n"
+        "[No. Kad Pengenalan / IC]\n"
+        "[No. Telefon Anda]"
+    )
+    return draft
+
+def build_police_report_draft(rep_data):
+    phones_str = ", ".join(rep_data.get("all_phones") or [rep_data.get("phone_norm") or "Tidak Dinyatakan"])
+    suspect = rep_data.get("suspect_name") or "Tidak Dinyatakan"
+    bank = rep_data.get("bank_account") or "Tidak Dinyatakan"
+    loss = rep_data.get("victim_loss") or "RM..."
+    ev = rep_data.get("evidence_text") or "Butiran kejadian dilampirkan."
+
+    draft = (
+        "REPOT POLIS: MAKLUMAT PERTAMA (SEKSYEN 107 KANUN TATACARA JENAYAH)\n\n"
+        "Pada [Tarikh Kejadian], lebih kurang jam [Masa], semasa saya berada di [Lokasi Anda], saya telah berurusan dengan satu individu tidak dikenali melalui aplikasi WhatsApp/media sosial.\n\n"
+        f"Individu tersebut menggunakan nombor telefon {phones_str} dan memperkenalkan diri sebagai '{suspect}'.\n\n"
+        f"Suspek telah memperdayakan saya berkaitan tawaran/urusan yang dijalankan, dan mengarahkan saya membuat bayaran ke akaun bank {bank}.\n\n"
+        f"Saya telah membuat pemindahan wang berjumlah {loss} melalui transaksi perbankan dalam talian/DuitNow ke akaun tersebut.\n\n"
+        f"Ringkasan kejadian: {ev[:600]}\n\n"
+        "Sejurus bayaran dibuat, suspek telah menyekat nombor telefon saya dan gagal dihubungi sehingga kini. Saya berasa tertipu dan mengalami kerugian wang ringgit.\n\n"
+        "Tujuan saya membuat laporan polis ini adalah untuk rujukan pihak polis menjalankan siasatan di bawah Seksyen 420 Kanun Keseksaan serta untuk tindakan pihak Bank dan pihak berwajib membekukan akaun keldai tersebut."
+    )
+    return draft
+
+def build_enforcement_menu(rep_id_or_tmp_id, rep_data):
+    safe_phone = html.escape(str(rep_data.get("phone_norm") or "N/A"))
+    safe_suspect = html.escape(str(rep_data.get("suspect_name") or "N/A"))
+    safe_bank = html.escape(str(rep_data.get("bank_account") or "N/A"))
+    safe_loss = html.escape(str(rep_data.get("victim_loss") or "Tidak dinyatakan"))
+
+    wa_text = urllib.parse.quote(
+        f"Salam Pegawai CCID PDRM. Saya ingin salurkan aduan penipuan scammer: No Suspek: {rep_data.get('phone_norm')}, Bank: {rep_data.get('bank_account')}, Kerugian: {rep_data.get('victim_loss', 'N/A')}. Mohon semakan."
+    )
+    wa_ccid_url = f"https://api.whatsapp.com/send?phone=60132111222&text={wa_text}"
+
+    text = (
+        "🏛️ <b>PUSAT TINDAKAN AGENSI PENGUATKUASAAN MALAYSIA</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📱 <b>Nombor Suspek:</b> <code>{safe_phone}</code>\n"
+        f"👤 <b>Nama / Profil:</b> {safe_suspect}\n"
+        f"🏦 <b>Akaun Bank:</b> {safe_bank}\n"
+        f"💰 <b>Kerugian Dilaporkan:</b> <code>{safe_loss}</code>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "🚨 <b>1. TINDAKAN KECEMASAN (KURANG 24 JAM):</b>\n"
+        "Jika anda baru sahaja memindahkan wang dalam tempoh 24 jam lalu, SEGERA hubungi:\n"
+        "📞 <b>Talian NSRC: 997</b> <i>(Waktu operasi: 8:00 AM – 8:00 PM)</i>\n"
+        "<i>Pihak NSRC bersama bank anda akan cuba memintas & membekukan akaun keldai sebelum wang dikeluarkan scammer!</i>\n\n"
+        "📧 <b>2. ADUAN RASMI SKMM & CYBER999:</b>\n"
+        "Salurkan laporan untuk menyekat nombor telefon, pautan phishing, dan akaun WhatsApp scammer.\n\n"
+        "👮 <b>3. LAPORAN BALAI POLIS PDRM (SEKSYEN 107 CPC):</b>\n"
+        "Wajib untuk pembukaan Kertas Siasatan Jenayah (Seksyen 420 Kanun Keseksaan) & tuntutan bayaran balik bank.\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "<i>Pilih saluran tindakan yang anda perlukan di bawah:</i>"
+    )
+
+    markup = {
+        "inline_keyboard": [
+            [
+                {"text": "📧 Deraf Emel Rasmi (SKMM/Cyber999)", "callback_data": f"enf_em_{rep_id_or_tmp_id}"},
+                {"text": "👮 Deraf Laporan Polis (Balai)", "callback_data": f"enf_pol_{rep_id_or_tmp_id}"}
+            ],
+            [
+                {"text": "💬 WhatsApp Hotline CCID (PDRM)", "url": wa_ccid_url},
+                {"text": "🌐 Portal e-Aduan SKMM", "url": "https://aduan.mcmc.gov.my"}
+            ],
+            [
+                {"text": "« Kembali ke Menu Utama", "callback_data": "help_menu"}
+            ]
+        ]
+    }
+    return text, markup
+
+def build_enforcement_email_view(rep_id_or_tmp_id, rep_data):
+    draft_raw = build_enforcement_email_draft(rep_data)
+    safe_draft = html.escape(draft_raw)
+    safe_phone = html.escape(str(rep_data.get("phone_norm") or "N/A"))
+    safe_bank = html.escape(str(rep_data.get("bank_account") or "N/A"))
+
+    text = (
+        "📧 <b>DERAF EMEL ADUAN RASMI KE SKMM, CYBER999 & BNM</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Salin teks deraf aduan di bawah dan hantarkan ke emel rasmi agensi penguatkuasaan:\n\n"
+        "📮 <b>Penerima Emel:</b>\n"
+        "<code>aduanskmm@mcmc.gov.my, cyber999@cybersecurity.my, bnmtelelink@bnm.gov.my</code>\n\n"
+        f"📌 <b>Subjek Emel:</b>\n"
+        f"<code>[ADUAN RASMI PENIPUAN SIBER] - Kes No: {safe_phone} / Akaun: {safe_bank}</code>\n\n"
+        "📋 <b>Teks Aduan Lengkap (Ketik Kotak untuk Salin):</b>\n"
+        f"<pre><code>{safe_draft}</code></pre>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "💡 <i>Tip: Lampirkan bersama fail tangkapan layar (screenshot chat & resit) di dalam emel anda sebagai bukti sokongan.</i>"
+    )
+    markup = {
+        "inline_keyboard": [
+            [{"text": "🌐 Buka Portal e-Aduan SKMM", "url": "https://aduan.mcmc.gov.my"}],
+            [{"text": "« Kembali ke Pusat Agensi", "callback_data": f"enf_{rep_id_or_tmp_id}"}]
+        ]
+    }
+    return text, markup
+
+def build_enforcement_police_view(rep_id_or_tmp_id, rep_data):
+    draft_raw = build_police_report_draft(rep_data)
+    safe_draft = html.escape(draft_raw)
+
+    text = (
+        "👮 <b>DERAF FORMAT LAPORAN POLIS (BALAI POLIS PDRM)</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Gunakan format teks ini sebagai rujukan kenyataan pengadu semasa hadir di kaunter Balai Polis atau serahkan terus kepada Pegawai Penyiasat (IO):\n\n"
+        "📋 <b>Kenyataan Laporan Seksyen 107 CPC (Ketik Kotak untuk Salin):</b>\n"
+        f"<pre><code>{safe_draft}</code></pre>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "💡 <b>Dokumen Penting yang Wajib Dibawa ke Balai Polis:</b>\n"
+        "1. Salinan Kad Pengenalan (MyKad) anda.\n"
+        "2. Salinan Penyata Bank rasmi atau Resit Transaksi Pemindahan Wang.\n"
+        "3. Salinan Cetakan (Printout) Tangkap Layar Perbualan WhatsApp / Media Sosial.\n"
+        "4. No rujukan aduan NSRC (jika anda telah hubungi 997 sebelum ini)."
+    )
+    markup = {
+        "inline_keyboard": [
+            [{"text": "💬 WhatsApp Hotline CCID PDRM", "url": "https://api.whatsapp.com/send?phone=60132111222"}],
+            [{"text": "« Kembali ke Pusat Agensi", "callback_data": f"enf_{rep_id_or_tmp_id}"}]
+        ]
+    }
+    return text, markup
 
 def format_threat_response(record, query_input):
     phone_norm, suspect_name, risk_tag, bank_accounts, address, source, evidence_links, all_phones = record
@@ -3056,6 +3215,7 @@ def register_bot_commands():
         {"command": "start", "description": "Mula & buka Menu Utama"},
         {"command": "help", "description": "Pusat Bantuan & Panduan Interaktif"},
         {"command": "mykey", "description": "Daftar / Semak kunci AI Gemini (BYOK)"},
+        {"command": "agensi", "description": "Salur aduan rasmi NSRC 997, SKMM, PDRM"},
         {"command": "semak", "description": "Semak no telefon atau akaun bank"},
         {"command": "pdrm", "description": "Semakan terus portal rasmi PDRM CCID"},
         {"command": "cse", "description": "Carian media sosial & forum (Google CSE)"},
@@ -3933,17 +4093,50 @@ def run_bot():
                             rep_data["created_at"] = int(time.time())
                             save_pending_report(rep_id, rep_data)
 
-                            edit_message(
-                                cb_chat_id, 
-                                cb_msg_id, 
+                            confirm_post_text = (
                                 f"✅ *LAPORAN ANDA TELAH DIHANTAR KE BILIK ADMIN KANTOI!*\n"
                                 f"Ref ID: `{rep_id}`\n\n"
-                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih atas sumbangan anda!"
+                                f"Laporan akan disemak dan disahkan sebelum disiarkan ke saluran @crowdcaller. Terima kasih atas sumbangan anda!\n\n"
+                                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🏛️ *TINDAKAN SUSULAN AGENSI PENGUATKUASAAN*\n"
+                                f"Adakah anda ingin kami sediakan dokumen aduan rasmi untuk dilaporkan terus kepada agensi penguatkuasaan Malaysia (NSRC 997, SKMM, Cyber999, BNM & PDRM CCID)?"
                             )
+                            confirm_markup = {
+                                "inline_keyboard": [
+                                    [{"text": "🏛️ Salur Laporan ke Agensi Penguatkuasa", "callback_data": f"enf_{rep_id}"}],
+                                    [{"text": "« Kembali ke Menu Utama", "callback_data": "help_menu"}]
+                                ]
+                            }
+                            edit_message(cb_chat_id, cb_msg_id, confirm_post_text, reply_markup=confirm_markup)
                             forward_report_to_admins(rep_id, rep_data)
                             answer_callback(cb_id, "Laporan berjaya dihantar ke Admin!", alert=False)
                         else:
                             answer_callback(cb_id, "Sesi laporan telah tamat tempoh.", alert=True)
+                        continue
+
+                    # Pengendali Pusat Tindakan Agensi Penguatkuasaan
+                    if cb_data.startswith("enf_em_"):
+                        t_id = cb_data.replace("enf_em_", "")
+                        rep = unconfirmed_reports.get(t_id) or get_pending_reports().get(t_id) or {}
+                        view_text, view_kb = build_enforcement_email_view(t_id, rep)
+                        edit_message(cb_chat_id, cb_msg_id, view_text, reply_markup=view_kb, parse_mode="HTML")
+                        answer_callback(cb_id, "Deraf Emel SKMM & Cyber999", alert=False)
+                        continue
+
+                    if cb_data.startswith("enf_pol_"):
+                        t_id = cb_data.replace("enf_pol_", "")
+                        rep = unconfirmed_reports.get(t_id) or get_pending_reports().get(t_id) or {}
+                        view_text, view_kb = build_enforcement_police_view(t_id, rep)
+                        edit_message(cb_chat_id, cb_msg_id, view_text, reply_markup=view_kb, parse_mode="HTML")
+                        answer_callback(cb_id, "Deraf Laporan Balai Polis", alert=False)
+                        continue
+
+                    if cb_data.startswith("enf_"):
+                        t_id = cb_data.replace("enf_", "")
+                        rep = unconfirmed_reports.get(t_id) or get_pending_reports().get(t_id) or {}
+                        menu_text, menu_kb = build_enforcement_menu(t_id, rep)
+                        edit_message(cb_chat_id, cb_msg_id, menu_text, reply_markup=menu_kb, parse_mode="HTML")
+                        answer_callback(cb_id, "Pusat Agensi Penguatkuasaan", alert=False)
                         continue
 
                     elif cb_data.startswith("cncl_"):
@@ -4880,6 +5073,20 @@ def run_bot():
                 if text in ["/batal", "batal", "/cancel"]:
                     user_sessions.pop(chat_id, None)
                     send_message(chat_id, "❌ Proses dibatalkan.")
+                    continue
+
+                # Arahan Panduan Agensi Penguatkuasaan
+                if text.startswith(("/agensi", "/nsrc", "/skmm", "/penguatkuasa", "/polis")):
+                    user_sessions.pop(chat_id, None)
+                    sample_rep = {
+                        "phone_norm": "01xxxxxxxx",
+                        "suspect_name": "Scammer / Suspek",
+                        "bank_account": "Akaun Bank Terbabit",
+                        "victim_loss": "RM...",
+                        "evidence_text": "Sila masukkan butiran kes atau gunakan semakan imej KANTOI."
+                    }
+                    menu_text, menu_kb = build_enforcement_menu("general", sample_rep)
+                    send_message(chat_id, menu_text, reply_markup=menu_kb, parse_mode="HTML")
                     continue
 
                 # Start / Bantuan / Menu Interaktif
