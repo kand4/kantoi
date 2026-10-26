@@ -988,34 +988,44 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
 
     parts = []
     
-    # Bina Prompt Siasatan Rentas Imej (Cross-Examination Intelligence Prompt)
+    # Bina Prompt Siasatan Rentas Imej & Dispute Forensik (Cross-Examination & Chronology Intelligence)
     prompt = (
         "Anda adalah penganalisis forensik keselamatan siber risikan penipuan KANTOI (Malaysia).\n"
         "TUGAS KRITIKAL: Pengguna telah memuat naik beberapa tangkapan layar (screenshots) yang merupakan BUKTI KEPADA SATU KES PENIPUAN / SCAMMER YANG SAMA.\n"
+        "Bukti ini mungkin mengandungi gabungan: paparan kronologi/dispute mangsa, skrin perbualan WhatsApp/Telegram dengan scammer, resit bayaran, profil suspek, dan Kod QR DuitNow.\n"
         "Anda WAJIB menghubungkaitkan (cross-correlate) kesemua gambar ini secara serentak untuk membina SATU profil kes dan laporan komprehensif bersepadu.\n\n"
         "PANDUAN MENGANALISIS BUKTI BERGAMBAR:\n"
-        "1. SILANG PERIKSA ENTITI (Cross-Entity Linkage):\n"
-        "   - Hubungkan nombor telefon di skrin chat/panggilan dengan nama penerima atau nombor akaun pada resit bank/DuitNow QR.\n"
+        "1. PEMISAHAN ENTITI MANGSA VS SUSPEK (AMAT KRITIKAL):\n"
+        "   - Dalam paparan kronologi, nota aduan, atau dispute bertulis mangsa:\n"
+        "     * BEZAKAN DENGAN JELAS antara PENGADU/MANGSA (pihak yang ditipu/rugi wang) dan SUSPEK/SCAMMER (penipu).\n"
+        "     * JANGAN SESEKALI memasukkan nama atau nombor telefon mangsa ke dalam 'phone_numbers' atau 'suspect_names'!\n"
+        "     * Hanya ekstrak identiti SUSPEK, nombor telefon suspek, dan akaun bank keldai suspek.\n"
+        "   - Dalam tangkapan layar perbualan (WhatsApp/Telegram/SMS):\n"
+        "     * Mesej di sebelah kiri (diterima) atau nama/nombor pada header tajuk chat adalah SUSPEK.\n"
+        "     * Mesej di sebelah kanan (bubble hijau/keluar) adalah MANGSA.\n\n"
+        "2. SILANG PERIKSA KRONOLOGI, CHAT & KOD QR (Cross-Entity Linkage):\n"
+        "   - Hubungkan kronologi dispute mangsa (tarikh, tawaran barangan/perkhidmatan, janji palsu) dengan teks perbualan scammer.\n"
+        "   - Jika terdapat Kod QR DuitNow atau resit transaksi, padankan nama penerima/pemegang akaun pada QR/resit dengan perbualan scammer.\n"
         "   - Ekstrak SEMUA nombor telefon suspek yang muncul dalam mana-mana gambar (WhatsApp, SMS, Telegram, bio profil).\n"
-        "   - Ekstrak SEMUA akaun bank keldai yang terlibat (nama bank, nombor akaun, nama pemilik akaun).\n"
-        "   - Kenalpasti nama/alias suspek yang digunakan dalam perbualan, profil WhatsApp, atau nama pada resit.\n"
-        "2. RUMUSAN KES BERSEPADU (Case Synthesis Narrative):\n"
-        "   - Bina satu ringkasan jalan cerita penipuan yang padat dan jelas (contoh: mangsa dihubungi melalui WhatsApp menawarkan kerja sambilan/barang murah, kemudian diarahkan memindahkan wang ke akaun bank X, dan nombor disekat selepas transaksi).\n"
+        "   - Ekstrak SEMUA akaun bank keldai yang terlibat (nama bank, nombor akaun, nama pemilik akaun).\n\n"
+        "3. RUMUSAN KES & ANGGARAN KERUGIAN (Case Synthesis Narrative):\n"
+        "   - Bina satu ringkasan jalan cerita penipuan yang padat dan jelas menghubungkan kronologi kejadian: Bagaimana mangsa mula berhubung, taktik penipuan yang digunakan, arahan pembayaran, jumlah kerugian wang (jika dinyatakan cth: RM300), dan tindakan suspek selepas wang dipindahkan (cth: menyekat nombor mangsa).\n"
         "   - Kenalpasti modus operandi / taktik scammer utama.\n\n"
         "Formatkan hasil analisis HANYA dalam JSON SAH dengan struktur berikut:\n"
         "{\n"
         '  "has_intel": true,\n'
-        '  "case_summary": "Ringkasan komprehensif jalan cerita kes penipuan menghubungkaitkan kesemua gambar bukti",\n'
-        '  "scam_tactic": "Kategori / Modus operandi penipuan (contoh: Penyamaran Polis / Khidmat Orang Tengah Palsu / Scam Pelaburan)",\n'
+        '  "case_summary": "Ringkasan komprehensif jalan cerita kes penipuan menghubungkaitkan kronologi dan kesemua gambar bukti",\n'
+        '  "scam_tactic": "Kategori / Modus operandi penipuan (contoh: Penipuan Jual Beli / Khidmat Orang Tengah Palsu / Scam Pelaburan)",\n'
         '  "suspect_names": ["Senarai nama atau alias suspek yang ditemui"],\n'
         '  "primary_suspect_name": "Nama suspek atau nama servis utama",\n'
-        '  "phone_numbers": ["Senarai semua nombor telefon unik cth 011xxxxxxxx, 014xxxxxxxx"],\n'
+        '  "phone_numbers": ["Senarai semua nombor telefon unik suspek cth 011xxxxxxxx, 014xxxxxxxx"],\n'
         '  "primary_phone": "Nombor telefon utama suspek",\n'
         '  "bank_accounts": [\n'
         '    {"bank": "Nama Bank", "account_number": "1234567890", "holder_name": "Nama Pemilik Akaun"}\n'
         '  ],\n'
+        '  "victim_loss": "Jumlah kerugian mangsa jika dinyatakan (contoh: RM 350.00) atau null",\n'
         '  "emails": ["Alamat emel jika ada"],\n'
-        '  "evidence_details": "Poin-poin penting fakta kes daripada perbualan atau transaksi"\n'
+        '  "evidence_details": "Poin-poin penting fakta kes daripada perbualan, kronologi atau transaksi"\n'
         "}\n"
         "PENTING: Jangan sertakan teks di luar JSON. Berikan JSON SAHAJA."
     )
@@ -1269,12 +1279,18 @@ def extract_multi_image_case_intel(image_paths, captions=None, user_id=None, pro
         final_accounts_raw = offline_data.get("bank_accounts") or []
         final_emails = list(offline_data.get("emails") or [])
         final_ev_text = offline_data.get("evidence_details", "")
+        final_victim_loss = None
+        loss_m = re.search(r'\b(?:RM|MYR)\s*(\d+(?:[,.]\d{2})?)\b', final_ev_text, re.IGNORECASE)
+        if loss_m:
+            final_victim_loss = f"RM {loss_m.group(1)}"
+
     else:
         source_type = "AI_VISION_MULTI"
         source_badge = f"🧠 AI Gemini Vision ({len(image_paths)} Bukti Bersilang)"
         final_summary = gemini_data.get("case_summary", "")
         final_tactic = gemini_data.get("scam_tactic", "Semakan Keselamatan Siber")
         final_name = gemini_data.get("primary_suspect_name") or (gemini_data.get("suspect_names")[0] if gemini_data.get("suspect_names") else "Tidak Dinyatakan")
+        final_victim_loss = gemini_data.get("victim_loss")
         final_phones = []
         for p in (gemini_data.get("phone_numbers") or []):
             np = normalize_phone(p)
@@ -1345,6 +1361,7 @@ def extract_multi_image_case_intel(image_paths, captions=None, user_id=None, pro
         "source_type": source_type,
         "source_badge": source_badge,
         "case_summary": final_summary,
+        "victim_loss": final_victim_loss,
         "tactic": final_tactic,
         "suspect_name": final_name,
         "phone_norm": primary_phone,
@@ -2328,7 +2345,8 @@ def build_unified_cyber_dossier(
     is_admin=False,
     raw_query="",
     evidence_summary=None,
-    image_count=1
+    image_count=1,
+    victim_loss=None
 ):
     """
     Menjana Kad Risikan Siber Bersepadu (1-Paparan) merangkumi:
@@ -2484,6 +2502,8 @@ def build_unified_cyber_dossier(
             lines.append(f"• <b>Nama / Profil:</b> {html.escape(clean_sname)}")
         if tactic:
             lines.append(f"• <b>Taktik / Modus:</b> <i>{html.escape(tactic)}</i>")
+        if victim_loss:
+            lines.append(f"• <b>Kerugian Dilaporkan:</b> <code>{html.escape(str(victim_loss))}</code>")
         if email:
             lines.append(f"• <b>Emel Suspek:</b> <code>{html.escape(email)}</code>")
         if image_count > 1:
@@ -3175,7 +3195,8 @@ def forward_report_to_admins(rep_id, rep_data):
         f"📱 <b>Nombor Scammer:</b> <code>{safe_phone}</code>\n"
         f"🏷️ <b>Taktik / Suspek:</b> {safe_suspect}\n"
         f"🏦 <b>Akaun Bank:</b> {safe_bank}\n"
-        f"📝 <b>Keterangan Kes:</b> {safe_ev[:900]}\n"
+        + (f"💰 <b>Kerugian Mangsa:</b> <code>{html.escape(str(rep_data.get('victim_loss')))}</code>\n" if rep_data.get('victim_loss') else "")
+        + f"📝 <b>Keterangan Kes:</b> {safe_ev[:900]}\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"Sila semak maklumat di atas sebelum meluluskan siaran ke @crowdcaller:"
     )
@@ -3669,6 +3690,7 @@ def execute_multi_photo_case(chat_id, username):
                 "bank_account": intel.get("bank_accounts") or (cand_accounts[0] if cand_accounts else "N/A"),
                 "all_accounts": cand_accounts,
                 "evidence_text": combined_evidence,
+                "victim_loss": intel.get("victim_loss"),
                 "photo_file_id": p_ids[0] if p_ids else None,
                 "photo_file_ids": p_ids,
                 "status": "PENDING"
@@ -3692,7 +3714,8 @@ def execute_multi_photo_case(chat_id, username):
                 tmp_id=tmp_id,
                 is_admin=is_admin_sender,
                 evidence_summary=intel.get("case_summary"),
-                image_count=len(temp_paths)
+                image_count=len(temp_paths),
+                victim_loss=intel.get("victim_loss")
             )
 
             hud.update(100, "✨ Analisis Selesai! Menyusun Dossier Bersepadu...", "Dossier 1-Paparan Sedia")
