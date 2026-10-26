@@ -1713,7 +1713,7 @@ def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, so
                 "Laporan Disahkan Komuniti",
                 "Telegram @crowdcaller",
                 category or "COMMUNITY_VERIFIED_SCAMMER",
-                source or "Sumbangan Komuniti CrowdCaller (Disahkan Admin)"
+                source or "Sumbangan Komuniti KANTOI (Disahkan Admin)"
             ))
             con.commit()
             con.close()
@@ -3505,11 +3505,11 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
             channel_post += f"🏦 <b>AKAUN BANK</b>     : {safe_bank}\n"
             
         channel_post += (
-            f"📚 <b>SUMBER SITASI</b>  : Sumbangan Disahkan Admin (Ref: <code>{safe_rep_id}</code>)\n"
+            f"📚 <b>SUMBER SITASI</b>  : Risikan Komuniti KANTOI (Ref: <code>{safe_rep_id}</code>)\n"
             "--------------------------------------------------\n"
-            "ℹ️ <i>Laporan disahkan oleh admin komuniti @crowdcaller.</i>\n"
-            "📲 <i>Buka Tab Pertahanan KANTOI untuk perlindungan masa nyata.</i>\n"
-            "💬 <i>Bantu komuniti: Lapor sebarang nombor/akaun bank scammer (teks/gambar) ke @crowdcallerbot.</i>\n"
+            "ℹ️ <i>Laporan disahkan oleh pentadbir Saluran Rasmi KANTOI Radar (@crowdcaller).</i>\n"
+            "📲 <i>Buka Tab Pertahanan Aplikasi KANTOI untuk perlindungan masa nyata.</i>\n"
+            "💬 <i>Bantu komuniti: Hantar bukti scammer terus ke Bot Risikan KANTOI (@crowdcallerbot).</i>\n"
             "🔗 <i>Semak kod sumber projek di: https://github.com/kand4/kantoi</i>\n\n"
             "#KANTOI_UPDATE\n"
             f"{phone_norm} | {safe_suspect} | LAPORAN_KOMUNITI_DISAHKAN | {safe_bank or 'Tiada'}"
@@ -3539,7 +3539,7 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
             suspect_name=suspect_name,
             category="LAPORAN_KOMUNITI_DISAHKAN",
             bank_accounts=bank_account,
-            source=f"Risikan Komuniti CrowdCaller (Ref: {rep_id})",
+            source=f"Risikan Komuniti KANTOI (Ref: {rep_id})",
             all_phones=all_phones_str
         )
 
@@ -5089,11 +5089,56 @@ def run_bot():
                     send_message(chat_id, menu_text, reply_markup=menu_kb, parse_mode="HTML")
                     continue
 
-                # Start / Bantuan / Menu Interaktif
-                if text in ["/start", "/help", "start", "help", "bantuan", "/menu", "menu", "panduan", "/panduan"]:
+                # Start / Bantuan / Menu Interaktif & Deep Link KANTOI
+                if text.startswith(("/start", "start", "/help", "help", "/menu", "menu", "/panduan", "panduan", "bantuan")):
+                    parts = text.split(maxsplit=1)
+                    start_arg = parts[1].strip() if len(parts) > 1 else ""
                     user_sessions.pop(chat_id, None)
+
+                    # a. Deep-Link Semakan daripada Aplikasi KANTOI (?start=semak_01xxxxxxxx)
+                    if start_arg.startswith("semak_"):
+                        target_num = start_arg.replace("semak_", "").strip()
+                        if target_num:
+                            api_call("sendChatAction", {"chat_id": chat_id, "action": "typing"})
+                            norm_t = normalize_phone(target_num) or target_num
+                            is_adm = chat_id in get_admin_ids()
+                            dossier_html, dossier_kb, _ = build_unified_cyber_dossier(
+                                phones=[norm_t],
+                                suspect_name="Sasaran Aplikasi KANTOI",
+                                tactic="Semakan Terus Aplikasi KANTOI",
+                                source_badge="📲 Aplikasi KANTOI Android (Deep Link)",
+                                is_admin=is_adm,
+                                raw_query=target_num
+                            )
+                            send_message(chat_id, dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
+                            continue
+
+                    # b. Deep-Link Laporan daripada Aplikasi KANTOI (?start=lapor_01xxxxxxxx)
+                    if start_arg.startswith("lapor_"):
+                        target_num = start_arg.replace("lapor_", "").strip()
+                        norm_t = normalize_phone(target_num) or target_num
+                        user_sessions[chat_id] = {
+                            "step": "STEP_SUSPECT",
+                            "user_id": chat_id,
+                            "username": username,
+                            "data": {
+                                "phone_norm": norm_t,
+                                "suspect_name": "",
+                                "bank_account": ""
+                            }
+                        }
+                        send_message(
+                            chat_id,
+                            f"✅ Nombor diterima dari Aplikasi KANTOI: `{norm_t}`\n\n"
+                            "👤 *NAMA SUSPEK / TAKTIK PENIPUAN (Langkah 2/4)*\n"
+                            "Sila nyatakan *Nama Suspek* atau *Taktik Scammer*:\n"
+                            "_(Contoh: Menyamar Pegawai JPJ / Penipuan Kerja Sambilan / Pelaburan Palsu)_",
+                            reply_markup=MAIN_REPLY_KEYBOARD
+                        )
+                        continue
+
+                    # c. Paparan Menu Utama / Alu-aluan Standard KANTOI
                     is_admin = chat_id in get_admin_ids()
-                    # Hantar menu pantas papan kekunci (Reply Keyboard) dan menu inline interaktif
                     send_message(chat_id, format_welcome_message(is_admin, user_id=chat_id), reply_markup=get_help_menu_keyboard())
                     continue
 

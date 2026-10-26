@@ -4592,6 +4592,33 @@ public class KantoiThreatEngine {
             });
             actionLayout.addView(btnClose);
 
+            Button btnReportBot = new Button(context);
+            btnReportBot.setText("🏛️ SIASAT & LAPOR KE AGENSI (BOT KANTOI)");
+            btnReportBot.setTextColor(Color.WHITE);
+            btnReportBot.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            btnReportBot.setTypeface(Typeface.DEFAULT_BOLD);
+            GradientDrawable repBg = new GradientDrawable();
+            repBg.setColor(0xFF059669);
+            repBg.setCornerRadius(dpToPx(context, 8));
+            btnReportBot.setBackground(repBg);
+            LinearLayout.LayoutParams repParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(context, 44));
+            repParams.setMargins(0, dpToPx(context, 10), 0, dpToPx(context, 6));
+            btnReportBot.setLayoutParams(repParams);
+
+            btnReportBot.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        String p = (threat != null && threat.phoneNorm != null) ? threat.phoneNorm : "";
+                        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/crowdcallerbot?start=semak_" + p));
+                        context.startActivity(i);
+                    } catch (Throwable t) {
+                        Toast.makeText(context, "Sila buka Telegram dan cari Bot Risikan KANTOI (@crowdcallerbot)", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            rootLayout.addView(btnReportBot);
+
             rootLayout.addView(actionLayout);
             scrollView.addView(rootLayout);
 
