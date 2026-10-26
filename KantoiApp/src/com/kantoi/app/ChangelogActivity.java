@@ -94,11 +94,41 @@ public class ChangelogActivity extends Activity {
         });
         root.addView(btnGithub);
 
+        // ==================== VERSION 1.14.0 ====================
+        LinearLayout cardV1140 = createCard(0xFF1E293B, 0xFF10B981, 12);
+        cardV1140.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1140Header = createVersionHeader("VERSI 1.14.0 (TERKINI)", "26 OKTOBER 2026", 0xFF10B981);
+        cardV1140.addView(v1140Header);
+
+        TextView tvV1140Content = new TextView(this);
+        tvV1140Content.setText(
+            "🏛️ Penyelarasan Ekosistem KANTOI, Pusat Tindakan Agensi Penguatkuasa & Pautan Pintar Deep-Link:\n\n" +
+            "🏛️ 1. Pusat Tindakan Agensi Penguatkuasaan Malaysia (Incident Response Dispatcher):\n" +
+            "   • Integrasi draf aduan rasmi ke agensi penguatkuasa (NSRC 997, SKMM MCMC, Cyber999, BNM TELELINK & PDRM CCID).\n" +
+            "   • Format laporan polis rasmi Seksyen 107 Kanun Tatacara Jenayah (Seksyen 420 Kanun Keseksaan) sedia untuk diserahkan ke balai polis.\n" +
+            "   • Talian kecemasan NSRC 997 pantas untuk pembekuan akaun keldai dalam tempoh 24 jam.\n\n" +
+            "🔗 2. Pautan Terus Pintar (Deep-Linking Architecture):\n" +
+            "   • Butang '🏛️ SIASAT & LAPOR KE AGENSI' pada amaran ancaman kini membuka Bot Risikan KANTOI secara terus dengan nombor sasaran sedia diisi.\n" +
+            "   • Reka bentuk Lean UI: Antaramuka telefon kekal ringan, pantas, dan bebas sesak dengan memindahkan analisis kompleks ke bot komuniti.\n\n" +
+            "📡 3. Migrasi Saluran Rasmi KANTOI Radar (@kantoiradar):\n" +
+            "   • Penyelarasan pangkalan data OTA KANTOI secara langsung dari saluran rasmi Telegram @kantoiradar.\n" +
+            "   • Menyelaraskan seluruh sitasi dan penjenamaan ekosistem di bawah identiti tunggal: KANTOI."
+        );
+        tvV1140Content.setTextColor(0xFFE2E8F0);
+        tvV1140Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tvV1140Content.setLineSpacing(dpToPx(4), 1.15f);
+        setMarginTop(tvV1140Content, 10);
+        cardV1140.addView(tvV1140Content);
+
+        setMarginTop(cardV1140, 14);
+        root.addView(cardV1140);
+
         // ==================== VERSION 1.13.9 ====================
-        LinearLayout cardV1139 = createCard(0xFF1E293B, 0xFF10B981, 12);
+        LinearLayout cardV1139 = createCard(0xFF1E293B, 0xFF64748B, 12);
         cardV1139.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        LinearLayout v1139Header = createVersionHeader("VERSI 1.13.9 (TERKINI)", "20 OKTOBER 2026", 0xFF10B981);
+        LinearLayout v1139Header = createVersionHeader("VERSI 1.13.9", "20 OKTOBER 2026", 0xFF94A3B8);
         cardV1139.addView(v1139Header);
 
         TextView tvV1139Content = new TextView(this);
