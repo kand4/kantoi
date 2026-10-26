@@ -2762,25 +2762,48 @@ def format_safe_response(query_input, norm_phone):
     lines.append("ℹ️ _Pangkalan Data KANTOI merangkumi rekod PDRM SemakMule CCID & Komuniti (6,100+ Rekod)._")
     return "\n".join(lines)
 
-def format_welcome_message(is_admin=False):
+def format_welcome_message(is_admin=False, user_id=None):
     admin_tag = "\n⭐ *Status Anda:* Pentadbir (Admin KANTOI)" if is_admin else ""
+    
+    # Status Kunci AI Pengguna (BYOK vs Percubaan Pelayan)
+    user_k = get_user_gemini_key(user_id) if user_id else None
+    if user_k:
+        key_badge = "🟢 *Status AI Vision Anda:* Kunci Peribadi Aktif (VIP / Kuota Penuh)"
+        key_note = "⚡ _Anda menikmati analisis AI Vision pantas tanpa sebarang kekangan kuota._"
+    else:
+        key_badge = "🟡 *Status AI Vision Anda:* Mod Percubaan Komuniti (Kuota Pelayan KANTOI)"
+        key_note = (
+            "👉 _Untuk kelajuan maksimum & tiada had perkongsian, daftarkan Kunci API Google percuma anda sendiri dengan arahan: `/mykey`._"
+        )
+
     return (
         "🤖 *SELAMAT DATANG KE BOT KANTOI ANTI-SCAM!* 🇲🇾\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "Pertahanan siber komuniti anda terhadap sindiket scammer, keldai akaun, dan pancingan data.\n\n"
-        "💡 *PILIHAN PANTAS:* Tekan mana-mana butang di bawah untuk membuka panduan terperinci bagi setiap fungsi bot:\n\n"
-        "• 🔍 *Semakan No/Bank:* Semak nombor & kesan sindiket\n"
-        "• 🏛️ *PDRM CCID:* Semakan aduan polis rasmi secara live\n"
-        "• 🌐 *Media Sosial (CSE):* Carian aduan di Lowyat, CariGold & FB\n"
-        "• 📸 *QR DuitNow & Resit:* Ekstrak data terus dari gambar\n"
-        "• 🔗 *Phishing URL:* Kesan laman bank & STR palsu\n"
-        "• 📦 *Malware APK:* Sandbox trojan pencuri SMS TAC\n"
-        "• 📢 *Lapor Scammer:* Hantar aduan teks atau gambar\n"
-        "• 📰 *Buletin Berita:* Laporan kes jenayah siber terkini\n"
-        "• 🛡️ *Penjaga Group:* Lindungi group Telegram anda\n"
+        "*Pertahanan Siber Komuniti Malaysia Menentang Sindiket Scammer & Keldai Akaun.*\n\n"
+        "👋 *Hai! Jika anda pertama kali di sini, bot ini adalah pelindung siber peribadi anda. Anda boleh terus buat semakan pantas:*\n\n"
+        "⚡ *3 CARA PANTAS MENGGUNAKAN BOT INI:*\n"
+        "1️⃣ *Taip Terus Nombor / Akaun Bank:*\n"
+        "   Tampal sebarang nombor telefon (cth: `0179597645`) atau akaun bank keldai (cth: `112028138548`). Bot akan semak serentak dalam pangkalan KANTOI & portal rasmi PDRM SemakMule!\n\n"
+        "2️⃣ *Hantar Gambar / Screenshot (Multi-Bukti):*\n"
+        "   Hantar tangkapan layar WhatsApp, resit transaksi, kod QR DuitNow, atau profil suspek. Hantar 1 hingga 5 keping sekaligus — AI Vision KANTOI akan menyatukan kesemuanya menjadi satu laporan kes lengkap!\n\n"
+        "3️⃣ *Imbas Pautan Phishing & Fail APK:*\n"
+        "   Hantar link web mencurigakan (`/url <pautan>`) atau fail dokumen `.apk` untuk dianalisis keselamatan trojan pencuri TAC dalam Sandbox.\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "🔑 *PENTING: PENGALAMAN PENGGUNA TERBAIK (BYOK)*\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"{key_badge}\n"
+        f"{key_note}\n\n"
+        "🎁 *Mod Percubaan Percuma (Sedia Ada):*\n"
+        "Pihak KANTOI menyediakan kunci pelayan percuma secara terus (hardcoded) supaya anda boleh mencuba dan menguji bot ini serta-merta tanpa sebarang bayaran atau pendaftaran awal!\n\n"
+        "🚀 *Ingin Kelajuan Maksimum & Pengalaman VIP?*\n"
+        "Kuota percubaan pelayan dikongsi oleh ribuan pengguna awam. Untuk menikmati *respon AI Vision sepantas kilat*, kuota peribadi tanpa had, dan mengelakkan sebarang kesesakan kuota, *anda sangat digalakkan menggunakan Kunci API Google Gemini anda sendiri (100% Percuma!)*:\n\n"
+        "👉 *Daftar kunci peribadi anda (1 minit sahaja):*\n"
+        "1. Layari: https://aistudio.google.com/app/apikey (log masuk Google & klik _Create API Key_)\n"
+        "2. Taip arahan berikut ke dalam bot ini:\n"
+        "   `/mykey <KUNCI_API_ANDA>`\n"
         f"{admin_tag}\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "ℹ️ _Ketik butang menu di bawah untuk panduan cara guna:_"
+        "ℹ️ _Ketik mana-mana butang menu di bawah untuk panduan terperinci setiap fungsi:_"
     )
 
 # ==============================================================================
@@ -2789,8 +2812,9 @@ def format_welcome_message(is_admin=False):
 MAIN_REPLY_KEYBOARD = {
     "keyboard": [
         [{"text": "🔍 Semak No / Akaun"}, {"text": "🏛️ Semakan PDRM"}],
-        [{"text": "🌐 Carian Media Sosial"}, {"text": "📰 Buletin Berita Scam"}],
-        [{"text": "📢 Lapor Scammer"}, {"text": "ℹ️ Menu Bantuan & Panduan"}]
+        [{"text": "🌐 Carian Media Sosial"}, {"text": "📸 Imbas Foto / QR"}],
+        [{"text": "🔑 Kunci API (BYOK)"}, {"text": "📢 Lapor Scammer"}],
+        [{"text": "📰 Buletin Berita Scam"}, {"text": "ℹ️ Menu Bantuan & Panduan"}]
     ],
     "resize_keyboard": True,
     "is_persistent": True
@@ -2800,22 +2824,23 @@ def get_help_menu_keyboard():
     return {
         "inline_keyboard": [
             [
-                {"text": "🔍 Semakan No / Bank", "callback_data": "help_check"},
-                {"text": "🏛️ Semakan PDRM CCID", "callback_data": "help_pdrm"}
+                {"text": "🔑 Kunci API Sendiri (BYOK)", "callback_data": "help_mykey"},
+                {"text": "🔍 Semakan No / Bank", "callback_data": "help_check"}
+            ],
+            [
+                {"text": "🏛️ Semakan PDRM CCID", "callback_data": "help_pdrm"},
+                {"text": "📸 Imbas Foto & QR", "callback_data": "help_vision"}
             ],
             [
                 {"text": "🌐 Carian Medsos (Google CSE)", "callback_data": "help_cse"},
-                {"text": "📸 Imbas QR & Resit", "callback_data": "help_vision"}
+                {"text": "🔗 Semak Pautan (URL)", "callback_data": "help_url"}
             ],
             [
-                {"text": "🔗 Semak Pautan (URL)", "callback_data": "help_url"},
-                {"text": "📦 Sandbox APK Malware", "callback_data": "help_apk"}
+                {"text": "📦 Sandbox APK Malware", "callback_data": "help_apk"},
+                {"text": "📢 Cara Lapor Scammer", "callback_data": "help_report"}
             ],
             [
-                {"text": "📢 Cara Lapor Scammer", "callback_data": "help_report"},
-                {"text": "📰 Buletin Berita Scam", "callback_data": "help_bulletin"}
-            ],
-            [
+                {"text": "📰 Buletin Berita Scam", "callback_data": "help_bulletin"},
                 {"text": "🛡️ Penjaga Group", "callback_data": "help_group"}
             ]
         ]
@@ -2828,7 +2853,41 @@ def get_help_detail(topic):
         ]
     }
     
-    if topic == "help_check":
+    if topic == "help_mykey":
+        text = (
+            "🔑 *PANDUAN KUNCI API PERIBADI (BYOK - BRING YOUR OWN KEY)*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "*Mengapa Anda Perlu Menggunakan Kunci API Sendiri?*\n\n"
+            "⚡ *1. Kelajuan Sepantas Kilat & Kuota VIP:*\n"
+            "Google AI Studio memberikan Kunci API Gemini *100% PERCUMA seumur hidup* dengan had ribuan semakan sehari bagi setiap akaun. Menggunakan kunci sendiri memastikan anda sentiasa mendapat analisis AI Vision segera tanpa berkongsi had kuota dengan orang ramai.\n\n"
+            "🎁 *2. Mod Percubaan Percuma Sedia Ada:*\n"
+            "Pihak KANTOI tetap menyediakan kunci pelayan percuma secara terus (hardcoded) supaya pengguna baharu boleh mencuba bot bila-bila masa tanpa sebarang pendaftaran awal. Anda tidak diwajibkan mendaftar kunci jika hanya ingin mencuba beberapa kali.\n\n"
+            "🔒 *3. Privasi Dijamin:*\n"
+            "Kunci API anda disimpan secara disulitkan dan hanya digunakan khusus untuk menjawab pertanyaan akaun Telegram anda sahaja.\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "📋 *LANGKAH DAPATKAN KUNCI PERCUMA (1 MINIT):*\n"
+            "1️⃣ Buka pelayar web telefon/komputer anda dan pergi ke:\n"
+            "   https://aistudio.google.com/app/apikey\n"
+            "2️⃣ Log masuk dengan Akaun Google (Gmail) anda.\n"
+            "3️⃣ Klik butang biru *'Create API key'*.\n"
+            "4️⃣ Salin kunci yang dihasilkan (bermula `AIzaSy...` atau `AQ...`).\n"
+            "5️⃣ Kembali ke chat ini dan hantar:\n"
+            "   `/mykey <KUNCI_API_ANDA>`\n"
+            "   _(Contoh: `/mykey AIzaSyC...`)_\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "ℹ️ *Arahan Tambahan:*\n"
+            "• Taip `/mykey` untuk menyemak status kunci semasa anda.\n"
+            "• Taip `/mykey padam` jika ingin memadam kunci dan kembali ke kuota awam."
+        )
+        mykey_kb = {
+            "inline_keyboard": [
+                [{"text": "🌐 Dapatkan Kunci Percuma (Google AI Studio)", "url": "https://aistudio.google.com/app/apikey"}],
+                [{"text": "\xab Kembali ke Menu Utama", "callback_data": "help_menu"}]
+            ]
+        }
+        return text, mykey_kb
+
+    elif topic == "help_check":
         text = (
             "🔍 *PANDUAN SEMAKAN NO TELEFON & AKAUN BANK*\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -2893,18 +2952,20 @@ def get_help_detail(topic):
 
     elif topic == "help_vision":
         text = (
-            "📸 *PANDUAN IMBASAN FOTO & KOD QR DUITNOW*\n"
+            "📸 *PANDUAN IMBASAN FOTO & MULTI-BUKTI KANTOI*\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "Malas menaip? Anda boleh hantar gambar terus kepada bot ini!\n\n"
-            "💡 *Apa Yang Boleh Dihantar:*\n"
-            "1. *Kod QR DuitNow:*\n"
-            "   Bot membaca matrik QR binary secara matematik (0.001 saat) untuk membongkar Nama Pemegang Akaun, Bank, dan No Akaun sebenar di sebalik QR tersebut!\n\n"
-            "2. *Tangkap Layar (Screenshot) WhatsApp / Telegram:*\n"
-            "   Enjin OCR mengekstrak nombor telefon suspek, akaun bank, dan cerita scammer secara automatik.\n\n"
-            "3. *Slip / Resit Transaksi Bank:*\n"
-            "   Mengekstrak maklumat akaun keldai untuk semakan segera.\n\n"
+            "🧠 *Sokongan Berbilang Tangkap Layar (Multi-Screenshot Kes):*\n"
+            "Anda boleh memilih dan menghantar *1 hingga 5 keping gambar sekali gus* (sebagai album atau berturutan):\n"
+            "• Tangkap layar perbualan WhatsApp / Telegram\n"
+            "• Nota kronologi aduan & kerugian wang (dispute)\n"
+            "• Resit transaksi perbankan / DuitNow\n"
+            "• Kod QR DuitNow pembayaran\n\n"
+            "Enjin AI Vision KANTOI akan menghubungkaitkan kesemua gambar tersebut dan merumuskannya dalam *1 Dossier Kes Bersepadu*!\n\n"
+            "🔍 *Kod QR DuitNow (Binary EMVCo Decoder):*\n"
+            "Bot membaca matrik QR binary secara matematik (0.001 saat) untuk membongkar Nama Pemegang Akaun, Bank, dan No Akaun sebenar di sebalik QR tersebut!\n\n"
             "🔑 *Gunakan Kuota AI Sendiri (BYOK):*\n"
-            "   Dapatkan kunci percuma di https://aistudio.google.com/ dan taip `/mykey <API_KEY>` untuk kelajuan maksimum tanpa had!"
+            "Dapatkan kunci percuma di https://aistudio.google.com/app/apikey dan taip `/mykey <API_KEY>` untuk kelajuan maksimum tanpa had!"
         )
         return text, back_button
 
@@ -2994,12 +3055,14 @@ def register_bot_commands():
     commands = [
         {"command": "start", "description": "Mula & buka Menu Utama"},
         {"command": "help", "description": "Pusat Bantuan & Panduan Interaktif"},
+        {"command": "mykey", "description": "Daftar / Semak kunci AI Gemini (BYOK)"},
         {"command": "semak", "description": "Semak no telefon atau akaun bank"},
         {"command": "pdrm", "description": "Semakan terus portal rasmi PDRM CCID"},
         {"command": "cse", "description": "Carian media sosial & forum (Google CSE)"},
         {"command": "url", "description": "Semak pautan phishing & bank palsu"},
         {"command": "buletin", "description": "Berita kes penipuan terkini di Malaysia"},
         {"command": "lapor", "description": "Borang aduan scammer langkah demi langkah"},
+        {"command": "panduan", "description": "Panduan langkah demi langkah"},
         {"command": "batal", "description": "Batal proses semasa"}
     ]
     try:
@@ -3916,7 +3979,7 @@ def run_bot():
                     # 1d. Pusat Bantuan & Panduan Interaktif Pengguna
                     if cb_data == "help_menu":
                         is_admin = cb_chat_id in get_admin_ids()
-                        edit_message(cb_chat_id, cb_msg_id, format_welcome_message(is_admin), get_help_menu_keyboard())
+                        edit_message(cb_chat_id, cb_msg_id, format_welcome_message(is_admin, user_id=cb_chat_id), get_help_menu_keyboard())
                         answer_callback(cb_id, "Menu Utama", alert=False)
                         continue
 
@@ -4820,11 +4883,11 @@ def run_bot():
                     continue
 
                 # Start / Bantuan / Menu Interaktif
-                if text in ["/start", "/help", "start", "help", "bantuan", "/menu", "menu", "panduan"]:
+                if text in ["/start", "/help", "start", "help", "bantuan", "/menu", "menu", "panduan", "/panduan"]:
                     user_sessions.pop(chat_id, None)
                     is_admin = chat_id in get_admin_ids()
                     # Hantar menu pantas papan kekunci (Reply Keyboard) dan menu inline interaktif
-                    send_message(chat_id, format_welcome_message(is_admin), reply_markup=get_help_menu_keyboard())
+                    send_message(chat_id, format_welcome_message(is_admin, user_id=chat_id), reply_markup=get_help_menu_keyboard())
                     continue
 
                 # Butang Pantas Papan Kekunci Bawah (Quick Keyboard Buttons)
@@ -4887,7 +4950,19 @@ def run_bot():
                 if text == "ℹ️ Menu Bantuan & Panduan":
                     user_sessions.pop(chat_id, None)
                     is_admin = chat_id in get_admin_ids()
-                    send_message(chat_id, format_welcome_message(is_admin), reply_markup=get_help_menu_keyboard())
+                    send_message(chat_id, format_welcome_message(is_admin, user_id=chat_id), reply_markup=get_help_menu_keyboard())
+                    continue
+
+                if text == "🔑 Kunci API (BYOK)":
+                    user_sessions.pop(chat_id, None)
+                    text_guide, markup = get_help_detail("help_mykey")
+                    send_message(chat_id, text_guide, reply_markup=markup)
+                    continue
+
+                if text == "📸 Imbas Foto / QR":
+                    user_sessions.pop(chat_id, None)
+                    text_guide, markup = get_help_detail("help_vision")
+                    send_message(chat_id, text_guide, reply_markup=markup)
                     continue
 
                 # Mula Wizard /lapor berstruktur (jika pengguna mahu langkah demi langkah)
