@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- KANTOI Cyber Defense Palette (Variasi 1 - Cyber Aegis) -->
-    <color name="bg_dark">#090D16</color>
-    <color name="bg_card">#111827</color>
-    <color name="card_surface">#131B2E</color>
-    <color name="primary_cyan">#22D3EE</color>
-    <color name="primary_sky">#0284C7</color>
-    <color name="electric_blue">#38BDF8</color>
-    <color name="danger_red">#DC2626</color>
-    <color name="warning_amber">#F59E0B</color>
-    <color name="success_emerald">#10B981</color>
-    <color name="text_white">#FFFFFF</color>
+    <!-- KANTOI Cyberpunk HUD Tactical Palette (/ui-ux-pro-max) -->
+    <color name="bg_dark">#0A0A0F</color>
+    <color name="bg_card">#12121A</color>
+    <color name="card_surface">#141422</color>
+    <color name="neon_cyan">#00D4FF</color>
+    <color name="acid_green">#00FF88</color>
+    <color name="coral_red">#FF3366</color>
+    <color name="border_dark">#2A2A3A</color>
+    <color name="neon_magenta">#FF00FF</color>
+    <color name="primary_cyan">#00D4FF</color>
+    <color name="primary_sky">#00B4D8</color>
+    <color name="electric_blue">#00D4FF</color>
+    <color name="danger_red">#FF3366</color>
+    <color name="warning_amber">#FFB000</color>
+    <color name="success_emerald">#00FF88</color>
+    <color name="text_white">#F8FAFC</color>
     <color name="text_muted">#94A3B8</color>
-    <color name="border_subtle">#1E293B</color>
+    <color name="border_subtle">#2A2A3A</color>
 </resources>

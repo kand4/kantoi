@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KANTOI App - 4-Theme Design Showcase & 4-Button Architecture</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@600;800&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+        .font-cyber { font-family: 'Orbitron', sans-serif; }
+        .font-sans-ui { font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Space Grotesk', sans-serif; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0a0a0f; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+        /* Scanline effect for Cyberpunk & Terminal */
+        .scanlines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 4px 100%;
+            pointer-events: none;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(19, 27, 46, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-8 font-sans-ui">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+
+        <!-- Top Header & Architecture Decision Banner -->
+        <header class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl backdrop-blur flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono-code bg-cyan-950 text-cyan-400 border border-cyan-800">
+                        UI/UX PRO MAX v2.15 + CRAFT
+                    </span>
+                    <span class="px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono-code bg-emerald-950 text-emerald-400 border border-emerald-800">
+                        ARCHITECTURE: 4-TAB DOCK + HUD DEFENSE
+                    </span>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                    <span>🛡️</span> KANTOI Design System Selector
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">
+                    Cadangan 4 Tema Rasmi dari enjin <code class="text-cyan-300 font-mono-code">/ui-ux-pro-max</code> dengan seni bina baharu: <strong>4 Butang Navigasi Bawah</strong> + <strong>Pusat Pertahanan dalam HUD Terapung</strong>.
+                </p>
+            </div>
+
+            <!-- Quick Theme Switcher Pills -->
+            <div class="flex flex-wrap gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                <button onclick="switchTheme('cyberpunk')" id="btn-theme-cyberpunk" class="theme-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-cyan-600 text-white shadow-lg shadow-cyan-900/40">
+                    <span>⚡</span> 1. Cyberpunk HUD
+                </button>
+                <button onclick="switchTheme('obsidian')" id="btn-theme-obsidian" class="theme-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800">
+                    <span>💎</span> 2. Obsidian Boutique
+                </button>
+                <button onclick="switchTheme('material3')" id="btn-theme-material3" class="theme-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800">
+                    <span>📱</span> 3. Material 3 Cyber
+                </button>
+                <button onclick="switchTheme('terminal')" id="btn-theme-terminal" class="theme-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800">
+                    <span>📟</span> 4. Terminal Matrix
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Grid: Preview on Left, Theme Specs & Rationale on Right -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            <!-- MOBILE PHONE MOCKUP (412px x 870px scale) -->
+            <div class="lg:col-span-5 flex justify-center sticky top-6">
+                <div class="relative w-[380px] sm:w-[400px] h-[780px] rounded-[44px] p-3 shadow-2xl border-4 transition-all duration-300" id="phone-chassis">
+                    
+                    <!-- Screen Container -->
+                    <div class="w-full h-full rounded-[34px] overflow-hidden flex flex-col relative transition-all duration-300" id="phone-screen">
+                        
+                        <!-- Scanline Overlay (dynamic) -->
+                        <div id="scanline-layer" class="scanlines absolute inset-0 z-10 pointer-events-none opacity-40"></div>
+
+                        <!-- 1. Mobile Status Bar -->
+                        <div class="px-6 pt-3 pb-2 flex justify-between items-center text-xs tracking-wider font-mono-code z-20" id="status-bar">
+                            <span class="font-bold" id="status-time">09:41</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded font-bold" id="status-badge">SECURE 4G</span>
+                                <span class="text-xs">📶 100% 🔋</span>
+                            </div>
+                        </div>
+
+                        <!-- 2. Mobile App Header with Floating HUD trigger -->
+                        <div class="px-5 py-3 border-b flex justify-between items-center z-20 transition-all" id="app-header">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-md" id="header-logo">
+                                    <svg viewBox="0 0 100 100" class="w-6 h-6 fill-none stroke-current" stroke-width="8" stroke-linecap="round">
+                                        <path d="M50 10 L85 24 V52 C85 74 50 90 50 90 C50 90 15 74 15 52 V24 Z" />
+                                        <line x1="50" y1="20" x2="50" y2="80" stroke-width="6" />
+                                        <circle cx="50" cy="50" r="10" stroke-width="4" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 class="text-base font-extrabold tracking-wide" id="header-title">KANTOI</h2>
+                                    <p class="text-[10px] font-mono-code flex items-center gap-1" id="header-sub">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> 3,500,000 THREAT DB ACTIVE
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Tactical HUD Toggle Button -->
+                            <button onclick="toggleHud()" class="px-3 py-1.5 rounded-xl text-xs font-bold font-mono-code border flex items-center gap-1.5 transition active:scale-95 shadow-md" id="hud-toggle-btn">
+                                <span class="animate-pulse">⚡</span>
+                                <span>HUD</span>
+                                <span class="text-[9px] px-1 rounded bg-black/40" id="hud-counter">4</span>
+                            </button>
+                        </div>
+
+                        <!-- 3. Dynamic App View Area (Scrollable) -->
+                        <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4 z-20" id="main-content-view">
+                            
+                            <!-- TAB: PAD DAIL (Active Default) -->
+                            <div id="view-dialer" class="space-y-4">
+                                
+                                <!-- Threat Telemetry Mini Banner -->
+                                <div class="p-3.5 rounded-2xl border transition-all" id="telemetry-banner">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-[10px] uppercase tracking-wider font-bold font-mono-code" id="telemetry-label">REAL-TIME RADAR</span>
+                                        <span class="text-[10px] font-mono-code font-bold px-2 py-0.5 rounded-full" id="telemetry-status">SIAP SIAGA</span>
+                                    </div>
+                                    <div class="mt-2 flex items-center justify-between">
+                                        <div class="text-xs font-mono-code text-slate-300">
+                                            Pengimbas Luar Talian: <strong class="text-white">AKTIF</strong>
+                                        </div>
+                                        <div class="text-[10px] font-mono-code text-slate-400">
+                                            Kependaman: <strong>12ms</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Number Input Display -->
+                                <div class="p-3 rounded-2xl border flex flex-col items-center justify-center min-h-[70px] relative transition-all" id="dialer-display">
+                                    <div class="text-2xl font-mono-code font-bold tracking-widest text-white text-center" id="dialer-number">
+                                        018-987 6543
+                                    </div>
+                                    <div class="text-[10px] font-mono-code text-emerald-400 flex items-center gap-1 mt-0.5" id="dialer-match">
+                                        <span>✓</span> TIADA REKOD SCAM (BERSIH)
+                                    </div>
+                                    <button onclick="clearNumber()" class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white">
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <!-- 3x4 Compact Dial Pad with TIGHT letter-digit spacing -->
+                                <div class="grid grid-cols-3 gap-3 max-w-[280px] mx-auto py-1" id="keypad-grid">
+                                    <!-- Key 1 -->
+                                    <button onclick="pressKey('1')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">1</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">⚡</span>
+                                    </button>
+                                    <!-- Key 2 -->
+                                    <button onclick="pressKey('2')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">2</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">ABC</span>
+                                    </button>
+                                    <!-- Key 3 -->
+                                    <button onclick="pressKey('3')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">3</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">DEF</span>
+                                    </button>
+                                    <!-- Key 4 -->
+                                    <button onclick="pressKey('4')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">4</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">GHI</span>
+                                    </button>
+                                    <!-- Key 5 -->
+                                    <button onclick="pressKey('5')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">5</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">JKL</span>
+                                    </button>
+                                    <!-- Key 6 -->
+                                    <button onclick="pressKey('6')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">6</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">MNO</span>
+                                    </button>
+                                    <!-- Key 7 -->
+                                    <button onclick="pressKey('7')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">7</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">PQRS</span>
+                                    </button>
+                                    <!-- Key 8 -->
+                                    <button onclick="pressKey('8')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">8</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">TUV</span>
+                                    </button>
+                                    <!-- Key 9 -->
+                                    <button onclick="pressKey('9')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">9</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">WXYZ</span>
+                                    </button>
+                                    <!-- Key * -->
+                                    <button onclick="pressKey('*')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">*</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">SEC</span>
+                                    </button>
+                                    <!-- Key 0 -->
+                                    <button onclick="pressKey('0')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">0</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">+</span>
+                                    </button>
+                                    <!-- Key # -->
+                                    <button onclick="pressKey('#')" class="dial-key flex flex-col items-center justify-center h-14 rounded-full border transition active:scale-90">
+                                        <span class="text-xl font-bold leading-none text-white">#</span>
+                                        <span class="text-[9px] font-bold leading-none text-slate-400 -mt-0.5">HEX</span>
+                                    </button>
+                                </div>
+
+                                <!-- Action Buttons: Single Dial Button & Backspace -->
+                                <div class="flex items-center justify-center gap-6 pt-1">
+                                    <div class="w-12"></div>
+                                    <button class="w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition active:scale-90" id="call-btn">
+                                        <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                                            <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                                        </svg>
+                                    </button>
+                                    <button onclick="backspace()" class="w-12 h-12 rounded-full border flex items-center justify-center text-slate-300 hover:text-white transition active:scale-90" id="backspace-btn">
+                                        ⌫
+                                    </button>
+                                </div>
+
+                            </div>
+
+                            <!-- TAB: PANGGILAN (Recents) -->
+                            <div id="view-calls" class="space-y-3 hidden">
+                                <h3 class="text-xs font-mono-code font-bold tracking-wider text-slate-400 uppercase">Log Panggilan Terkini</h3>
+                                <div class="space-y-2">
+                                    <div class="p-3 rounded-xl border flex items-center justify-between" id="item-call-1">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full bg-red-950/80 border border-red-500/50 flex items-center justify-center text-red-400 text-sm font-bold">🚫</div>
+                                            <div>
+                                                <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                                    03-8890 1200
+                                                    <span class="text-[9px] px-1 rounded font-mono-code bg-red-900/60 text-red-300 border border-red-700">SCAMMER</span>
+                                                </div>
+                                                <div class="text-[10px] text-slate-400">Panggilan palsu LHDN • Disekat KANTOI</div>
+                                            </div>
+                                        </div>
+                                        <span class="text-[10px] font-mono-code text-slate-500">10:24 AM</span>
+                                    </div>
+                                    <div class="p-3 rounded-xl border flex items-center justify-between" id="item-call-2">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full bg-emerald-950/80 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-sm font-bold">✓</div>
+                                            <div>
+                                                <div class="text-xs font-bold text-white">Ibu</div>
+                                                <div class="text-[10px] text-slate-400">012-345 6789 • Masuk (2m 14s)</div>
+                                            </div>
+                                        </div>
+                                        <span class="text-[10px] font-mono-code text-slate-500">Semalam</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: KENALAN (Contacts) -->
+                            <div id="view-contacts" class="space-y-3 hidden">
+                                <h3 class="text-xs font-mono-code font-bold tracking-wider text-slate-400 uppercase">Senarai Kenalan Selamat</h3>
+                                <div class="space-y-2">
+                                    <div class="p-3 rounded-xl border flex items-center justify-between" id="item-contact-1">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full font-bold flex items-center justify-center text-xs text-white" id="contact-avatar-1">AH</div>
+                                            <div>
+                                                <div class="text-xs font-bold text-white">Ahmad Hafiz</div>
+                                                <div class="text-[10px] text-slate-400">019-223 3445</div>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs text-slate-400">📞</span>
+                                    </div>
+                                    <div class="p-3 rounded-xl border flex items-center justify-between" id="item-contact-2">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full font-bold flex items-center justify-center text-xs text-white" id="contact-avatar-2">SB</div>
+                                            <div>
+                                                <div class="text-xs font-bold text-white">Siti Sarah</div>
+                                                <div class="text-[10px] text-slate-400">017-889 9001</div>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs text-slate-400">📞</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: MESEJ (SMS Inbox) -->
+                            <div id="view-messages" class="space-y-3 hidden">
+                                <h3 class="text-xs font-mono-code font-bold tracking-wider text-slate-400 uppercase">Peti Masuk SMS</h3>
+                                <div class="space-y-2">
+                                    <div class="p-3 rounded-xl border flex items-center justify-between" id="item-msg-1">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full bg-amber-950/80 border border-amber-500/50 flex items-center justify-center text-amber-400 text-sm font-bold">⚠️</div>
+                                            <div>
+                                                <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                                    TAC Bank Alert
+                                                    <span class="text-[9px] px-1 rounded font-mono-code bg-amber-900/60 text-amber-300 border border-amber-700">SUSPICIOUS</span>
+                                                </div>
+                                                <div class="text-[10px] text-slate-400 truncate max-w-[190px]">Pautan pancingan dikesan: bit.ly/bank-auth</div>
+                                            </div>
+                                        </div>
+                                        <span class="text-[10px] font-mono-code text-slate-500">08:15</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- 4. FLOATING HUD PANEL (SLIDE-UP OVERLAY FOR PERTAHANAN & FORENSICS) -->
+                        <div id="floating-hud-overlay" class="absolute inset-x-0 bottom-0 top-14 z-30 transform translate-y-full transition-transform duration-300 ease-out flex flex-col p-4">
+                            <div class="w-full h-full rounded-3xl border p-4 flex flex-col shadow-2xl backdrop-blur-xl" id="hud-inner-card">
+                                
+                                <!-- HUD Header -->
+                                <div class="flex justify-between items-center pb-3 border-b" id="hud-header">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-lg">🛡️</span>
+                                        <div>
+                                            <h3 class="text-sm font-black font-cyber tracking-wider" id="hud-title">PUSAT PERTAHANAN KANTOI</h3>
+                                            <p class="text-[9px] font-mono-code text-slate-400">FORENSIK SIBER & REKOD ANCAMAN</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="toggleHud()" class="p-1 rounded-lg text-slate-400 hover:text-white text-xs font-bold font-mono-code">
+                                        ✕ TUTUP
+                                    </button>
+                                </div>
+
+                                <!-- HUD Body: Defense Stats, Heuristics, Quarantine -->
+                                <div class="flex-1 overflow-y-auto py-3 space-y-3 font-mono-code text-xs">
+                                    
+                                    <!-- Defense Metric 1: Threat Database -->
+                                    <div class="p-3 rounded-xl border flex items-center justify-between" id="hud-metric-1">
+                                        <div>
+                                            <div class="text-[10px] text-slate-400">PANGKALAN DATA OFFLINE</div>
+                                            <div class="text-base font-extrabold text-white">3,500,000</div>
+                                            <div class="text-[9px] text-emerald-400">✓ SQLite Terpaut (v1.14.0)</div>
+                                        </div>
+                                        <div class="text-2xl">📦</div>
+                                    </div>
+
+                                    <!-- Defense Metric 2: Live Scam Blocker -->
+                                    <div class="p-3 rounded-xl border flex items-center justify-between" id="hud-metric-2">
+                                        <div>
+                                            <div class="text-[10px] text-slate-400">STATUS ENJIN SEKATAN</div>
+                                            <div class="text-base font-extrabold text-cyan-300">AUTO-BLOCK AKTIF</div>
+                                            <div class="text-[9px] text-slate-300">Penolakan Senyap & Alert</div>
+                                        </div>
+                                        <div class="text-2xl">⚡</div>
+                                    </div>
+
+                                    <!-- Defense Tools: Quick Action Grid -->
+                                    <div>
+                                        <div class="text-[10px] text-slate-400 font-bold uppercase mb-1.5">Alat Pertahanan Pantas</div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button class="p-2.5 rounded-xl border text-left transition hover:scale-[1.02]" id="hud-tool-1">
+                                                <div class="text-sm mb-1">🔍</div>
+                                                <div class="text-[10px] font-bold text-white">Cari Nombor</div>
+                                                <div class="text-[8px] text-slate-400">Semak CCID & Telco</div>
+                                            </button>
+                                            <button class="p-2.5 rounded-xl border text-left transition hover:scale-[1.02]" id="hud-tool-2">
+                                                <div class="text-sm mb-1">🗄️</div>
+                                                <div class="text-[10px] font-bold text-white">Kuarantin SMS</div>
+                                                <div class="text-[8px] text-slate-400">14 mesej diasingkan</div>
+                                            </button>
+                                            <button class="p-2.5 rounded-xl border text-left transition hover:scale-[1.02]" id="hud-tool-3">
+                                                <div class="text-sm mb-1">🧪</div>
+                                                <div class="text-[10px] font-bold text-white">Sandbox Analisis</div>
+                                                <div class="text-[8px] text-slate-400">Uji pautan meragukan</div>
+                                            </button>
+                                            <button class="p-2.5 rounded-xl border text-left transition hover:scale-[1.02]" id="hud-tool-4">
+                                                <div class="text-sm mb-1">📢</div>
+                                                <div class="text-[10px] font-bold text-white">Lapor Scammer</div>
+                                                <div class="text-[8px] text-slate-400">Sumbang ke pangkalan data</div>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- HUD Footer Status -->
+                                <div class="pt-2 border-t flex justify-between items-center text-[9px] font-mono-code text-slate-400" id="hud-footer">
+                                    <span>KANTOI DEFENSE v1.14.0</span>
+                                    <span class="text-emerald-400">● HEURISTICS ONLINE</span>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- 5. 4-BUTTON BOTTOM NAVIGATION DOCK (ERGONOMIC 4-TAB ARCHITECTURE) -->
+                        <div class="border-t px-2 py-2.5 flex items-center justify-around z-20 transition-all" id="bottom-dock">
+                            
+                            <!-- Tab 1: Panggilan (Calls) -->
+                            <button onclick="switchTab('calls')" class="bottom-tab-btn flex-1 py-1.5 px-1 rounded-xl flex flex-col items-center justify-center transition" id="tab-calls">
+                                <span class="text-base leading-none mb-1">📞</span>
+                                <span class="text-[10px] font-bold tracking-tight leading-none text-slate-400" id="label-calls">Panggilan</span>
+                            </button>
+
+                            <!-- Tab 2: Kenalan (Contacts) -->
+                            <button onclick="switchTab('contacts')" class="bottom-tab-btn flex-1 py-1.5 px-1 rounded-xl flex flex-col items-center justify-center transition" id="tab-contacts">
+                                <span class="text-base leading-none mb-1">📖</span>
+                                <span class="text-[10px] font-bold tracking-tight leading-none text-slate-400" id="label-contacts">Kenalan</span>
+                            </button>
+
+                            <!-- Tab 3: Pad Dail (Dialer) - Active by default -->
+                            <button onclick="switchTab('dialer')" class="bottom-tab-btn flex-1 py-1.5 px-1 rounded-xl flex flex-col items-center justify-center transition active-dock-tab" id="tab-dialer">
+                                <span class="text-base leading-none mb-1">🔢</span>
+                                <span class="text-[10px] font-bold tracking-tight leading-none" id="label-dialer">Pad Dail</span>
+                            </button>
+
+                            <!-- Tab 4: Mesej (Messages) -->
+                            <button onclick="switchTab('messages')" class="bottom-tab-btn flex-1 py-1.5 px-1 rounded-xl flex flex-col items-center justify-center transition" id="tab-messages">
+                                <span class="text-base leading-none mb-1">💬</span>
+                                <span class="text-[10px] font-bold tracking-tight leading-none text-slate-400" id="label-messages">Mesej</span>
+                            </button>
+
+                        </div>
+
+                        <!-- 6. Mobile Android Home Indicator bar -->
+                        <div class="h-4 flex items-center justify-center pb-1 z-20">
+                            <div class="w-32 h-1 rounded-full bg-slate-600/50"></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: DETAILED THEME SPECS, RATIONALE & COMPARISON -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- 1. The 4-Button Architecture Justification Card -->
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="px-3 py-1 rounded-full text-xs font-mono-code font-bold bg-cyan-950 text-cyan-400 border border-cyan-800">
+                            UX ARCHITECTURE VERDICT
+                        </span>
+                        <span class="text-xs font-mono-code text-slate-400">Fitts's Law + Hick's Law</span>
+                    </div>
+
+                    <h2 class="text-xl font-bold text-white">
+                        Mengapa Cadangan Anda (4 Butang + HUD Pertahanan) Adalah 100% Tepat?
+                    </h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+                        <div class="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-1.5">
+                            <div class="font-bold text-cyan-400 flex items-center gap-1.5 text-sm">
+                                <span>📐</span> Ergonomik 4 Butang (Fitts's Law)
+                            </div>
+                            <p class="leading-relaxed">
+                                5 butang pada skrin telefon (360–412dp) membuatkan setiap butang sempit (~70dp). Dengan <strong>4 butang</strong>, setiap tab mendapat saiz zon sentuh <strong>~95dp</strong> (mematuhi standard Android &gt;48dp) — bebas risiko salah tekan.
+                            </p>
+                        </div>
+
+                        <div class="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-1.5">
+                            <div class="font-bold text-emerald-400 flex items-center gap-1.5 text-sm">
+                                <span>🛡️</span> Pertahanan di Floating HUD
+                            </div>
+                            <p class="leading-relaxed">
+                                "Pertahanan" bukan aktiviti komunikasi harian (seperti dail atau SMS), sebaliknya ia adalah <strong>enjin forensik taktikal</strong>. Menempatkannya dalam HUD terapung memberikannya ruang penuh untuk metrik DB 3.5M, sandbox, dan pengimbas scam tanpa menyesakkan navigasi asas.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Interactive Theme Breakdown Card (Changes with active theme) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5" id="theme-detail-panel">
+                    
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                        <div>
+                            <span class="text-xs font-mono-code font-bold uppercase tracking-wider text-cyan-400" id="detail-tag">SKILL: UI-UX-PRO-MAX</span>
+                            <h3 class="text-2xl font-black text-white mt-0.5" id="detail-title">1. Cyberpunk HUD Tactical</h3>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-mono-code px-2.5 py-1 rounded-full border" id="detail-category-badge">Mobile HUD / Sci-Fi</span>
+                        </div>
+                    </div>
+
+                    <p class="text-sm text-slate-300 leading-relaxed" id="detail-desc">
+                        Gaya taktikal pertahanan siber tentera dengan latar belakang Void Black, aksen Neon Cyan, dan Acid Green. Menggunakan fon tajam teknikal, garisan scanline halus, dan sudut terpotong (chamfered) yang memberi rasa alat forensik perisikan profesional.
+                    </p>
+
+                    <!-- Color Swatches & Tokens -->
+                    <div>
+                        <h4 class="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-400 mb-2.5">Palet Token & Kod Warna</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="detail-swatches">
+                            <!-- Swatches injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Typography & Components -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono-code">
+                        <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                            <div class="text-slate-400 uppercase text-[10px]">Tipografi & Fon</div>
+                            <div class="font-bold text-white text-sm" id="detail-typo">Orbitron + JetBrains Mono</div>
+                            <div class="text-[11px] text-slate-400" id="detail-typo-sub">Monospace data-dense, nombor rapat.</div>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                            <div class="text-slate-400 uppercase text-[10px]">Ciri Permukaan & Aksen</div>
+                            <div class="font-bold text-white text-sm" id="detail-surface">Chamfered 45° + Subtle Glow</div>
+                            <div class="text-[11px] text-slate-400" id="detail-surface-sub">Kontras WCAG 7:1, tiada kelabu atas kelabu.</div>
+                        </div>
+                    </div>
+
+                    <!-- Why choose this theme? -->
+                    <div class="p-4 rounded-2xl border space-y-1.5" id="detail-fit-box">
+                        <div class="font-bold text-xs flex items-center gap-2" id="detail-fit-title">
+                            <span>🎯</span> Sesuai Untuk Siapa?
+                        </div>
+                        <p class="text-xs leading-relaxed text-slate-300" id="detail-fit-desc">
+                            Pengguna yang mahukan KANTOI kelihatan seperti terminal anti-scam berkuasa tinggi ("Cyber Ops"), memberi keyakinan visual maksimum bahawa setiap panggilan sedang diimbas oleh AI secara agresif.
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- 3. Comparison Matrix of All 4 Themes -->
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span>📊</span> Perbandingan 4 Tema Secara Pantas
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs font-mono-code">
+                            <thead class="border-b border-slate-800 text-slate-400">
+                                <tr>
+                                    <th class="pb-2">Tema</th>
+                                    <th class="pb-2">Dominan Warna</th>
+                                    <th class="pb-2">Bentuk Butang</th>
+                                    <th class="pb-2">Watak Aplikasi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 text-slate-300">
+                                <tr class="hover:bg-slate-800/30 cursor-pointer" onclick="switchTheme('cyberpunk')">
+                                    <td class="py-2.5 font-bold text-cyan-400">1. Cyberpunk HUD</td>
+                                    <td>Void Black + Neon Cyan + Matrix Green</td>
+                                    <td>Chamfered / Hexagon</td>
+                                    <td>Operatif Siber / Taktikal</td>
+                                </tr>
+                                <tr class="hover:bg-slate-800/30 cursor-pointer" onclick="switchTheme('obsidian')">
+                                    <td class="py-2.5 font-bold text-sky-400">2. Obsidian Boutique</td>
+                                    <td>Deep Obsidian + Electric Blue + Slate</td>
+                                    <td>Pill Rounded (16–24px)</td>
+                                    <td>Fintech Premium / Sleek Linear</td>
+                                </tr>
+                                <tr class="hover:bg-slate-800/30 cursor-pointer" onclick="switchTheme('material3')">
+                                    <td class="py-2.5 font-bold text-violet-400">3. Material 3 Cyber</td>
+                                    <td>Surface Container + Deep Violet + Cyan Pill</td>
+                                    <td>MD3 Organic Pills (999px)</td>
+                                    <td>Google Pixel Native / Ergonomik</td>
+                                </tr>
+                                <tr class="hover:bg-slate-800/30 cursor-pointer" onclick="switchTheme('terminal')">
+                                    <td class="py-2.5 font-bold text-emerald-400">4. Terminal Matrix</td>
+                                    <td>OLED Black + Phosphor Green + Amber</td>
+                                    <td>0px Sharp Grid / ASCII</td>
+                                    <td>Penggodam Forensik / Raw CLI</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Interactive Script -->
+    <script>
+        const themes = {
+            cyberpunk: {
+                id: 'cyberpunk',
+                title: '1. Cyberpunk HUD Tactical',
+                category: 'Mobile HUD / Sci-Fi',
+                desc: 'Gaya taktikal pertahanan siber tentera dengan latar belakang Void Black, aksen Neon Cyan, dan Acid Green. Menggunakan fon tajam teknikal, garisan scanline halus, dan sudut terpotong (chamfered) yang memberi rasa alat forensik perisikan profesional.',
+                typo: 'Orbitron + JetBrains Mono',
+                typoSub: 'Monospace data-dense, nombor pad dail rapat.',
+                surface: 'Chamfered 45° + Subtle Glow',
+                surfaceSub: 'Kontras WCAG 7:1, tiada kelabu kabur.',
+                fitTitle: '🎯 Sesuai Untuk Siapa?',
+                fitDesc: 'Pengguna yang mahukan KANTOI kelihatan seperti senjata anti-scam berteknologi tinggi ("Cyber Ops"), memberi keyakinan visual maksimum bahawa setiap panggilan sedang dipantau oleh radar perisikan.',
+                swatches: [
+                    { name: 'Void Bg', hex: '#0A0A0F', border: '#2A2A3A' },
+                    { name: 'Card Surface', hex: '#12121A', border: '#334155' },
+                    { name: 'Neon Cyan', hex: '#00D4FF', textDark: true },
+                    { name: 'Acid Green', hex: '#00FF88', textDark: true }
+                ],
+                phoneChassis: 'border-cyan-500/50 bg-[#060609] shadow-cyan-950/50',
+                phoneScreen: 'bg-[#0A0A0F] text-slate-100',
+                scanlines: true,
+                statusBar: 'text-cyan-400 border-b border-cyan-950/80 bg-[#0A0A0F]',
+                statusBadge: 'bg-cyan-950 text-cyan-400 border border-cyan-800',
+                appHeader: 'bg-[#0E0E17] border-cyan-900/60 text-white',
+                headerLogo: 'bg-gradient-to-br from-cyan-500 to-blue-700 text-black',
+                headerTitle: 'font-cyber text-cyan-400',
+                headerSub: 'text-slate-400',
+                hudToggleBtn: 'bg-cyan-950 text-cyan-300 border-cyan-600/60 shadow-cyan-900/40',
+                telemetryBanner: 'bg-[#12121E] border-cyan-900/60',
+                telemetryLabel: 'text-cyan-400 font-cyber',
+                telemetryStatus: 'bg-cyan-950 text-cyan-300 border border-cyan-800',
+                dialerDisplay: 'bg-[#12121E] border-cyan-900/60',
+                dialKey: 'bg-[#141422] border-cyan-900/50 hover:border-cyan-400 hover:bg-[#1C1C30]',
+                callBtn: 'bg-gradient-to-tr from-cyan-500 to-emerald-400 shadow-cyan-500/40 text-black font-black',
+                backspaceBtn: 'bg-[#141422] border-cyan-900/50 text-cyan-300',
+                bottomDock: 'bg-[#0E0E17] border-cyan-900/60',
+                activeTabStyle: 'bg-cyan-950/80 text-cyan-300 border border-cyan-600/50 shadow-lg shadow-cyan-950',
+                inactiveTabStyle: 'text-slate-400 hover:text-slate-200',
+                hudInner: 'bg-[#0D0D17]/95 border-cyan-500/60 shadow-2xl shadow-cyan-950',
+                hudHeader: 'border-cyan-900/60 text-cyan-400',
+                hudTitle: 'text-cyan-400',
+                hudMetric: 'bg-[#131322] border-cyan-900/60',
+                hudTool: 'bg-[#131322] border-cyan-900/60 hover:border-cyan-400',
+                hudFooter: 'border-cyan-900/60',
+                fitBox: 'bg-cyan-950/40 border-cyan-800/80 text-cyan-300',
+                fitBoxTitle: 'text-cyan-400'
+            },
+            obsidian: {
+                id: 'obsidian',
+                title: '2. Obsidian High-Tech Boutique',
+                category: 'Fintech / Sleek Boutique',
+                desc: 'Diinspirasikan daripada estetika Linear & Stripe. Menggunakan warna Deep Obsidian, sudut melengkung kemas (16px), kad kaca separa lutsinar (glassmorphism), dan aksen Electric Blue gradien. Sangat bersih, moden, dan elegan.',
+                typo: 'Space Grotesk + Inter',
+                typoSub: 'Kemas, anggun, tipografi saiz standard industri.',
+                surface: 'Frosted Glass + 16px Rounded Cards',
+                surfaceSub: 'Bayang-bayang lembut, sentuhan mewah.',
+                fitTitle: '🎯 Sesuai Untuk Siapa?',
+                fitDesc: 'Pengguna yang menggemari aplikasi premium seperti Revolut, Linear, atau Apple yang bersih, tenang, tidak terlalu agresif, tetapi tetap memancarkan aura keselamatan bertaraf tinggi.',
+                swatches: [
+                    { name: 'Obsidian Canvas', hex: '#090D16', border: '#1E293B' },
+                    { name: 'Card Surface', hex: '#131B2E', border: '#334155' },
+                    { name: 'Electric Blue', hex: '#0052FF', textDark: false },
+                    { name: 'Sky Cyan', hex: '#38BDF8', textDark: true }
+                ],
+                phoneChassis: 'border-blue-500/40 bg-[#05080E] shadow-blue-950/50',
+                phoneScreen: 'bg-[#090D16] text-slate-100',
+                scanlines: false,
+                statusBar: 'text-slate-300 border-b border-slate-800/80 bg-[#090D16]',
+                statusBadge: 'bg-blue-950 text-blue-400 border border-blue-800',
+                appHeader: 'bg-[#0E1524] border-slate-800 text-white',
+                headerLogo: 'bg-gradient-to-tr from-blue-600 to-sky-400 text-white',
+                headerTitle: 'font-display text-white',
+                headerSub: 'text-slate-400',
+                hudToggleBtn: 'bg-blue-950 text-sky-300 border-blue-700/60 shadow-blue-900/40',
+                telemetryBanner: 'bg-[#131B2E] border-slate-800',
+                telemetryLabel: 'text-sky-400 font-display',
+                telemetryStatus: 'bg-emerald-950 text-emerald-300 border border-emerald-800',
+                dialerDisplay: 'bg-[#131B2E] border-slate-800',
+                dialKey: 'bg-[#131B2E] border-slate-800 hover:border-sky-400 hover:bg-[#1A253F]',
+                callBtn: 'bg-gradient-to-r from-blue-600 to-sky-400 shadow-blue-600/40 text-white font-bold',
+                backspaceBtn: 'bg-[#131B2E] border-slate-800 text-slate-300',
+                bottomDock: 'bg-[#0E1524] border-slate-800',
+                activeTabStyle: 'bg-blue-950/80 text-sky-300 border border-blue-600/50 shadow-lg shadow-blue-950',
+                inactiveTabStyle: 'text-slate-400 hover:text-slate-200',
+                hudInner: 'bg-[#0E1524]/95 border-blue-500/50 shadow-2xl shadow-blue-950',
+                hudHeader: 'border-slate-800 text-sky-400',
+                hudTitle: 'text-white font-display',
+                hudMetric: 'bg-[#131B2E] border-slate-800',
+                hudTool: 'bg-[#131B2E] border-slate-800 hover:border-sky-400',
+                hudFooter: 'border-slate-800',
+                fitBox: 'bg-blue-950/40 border-blue-800/80 text-blue-300',
+                fitBoxTitle: 'text-sky-400'
+            },
+            material3: {
+                id: 'material3',
+                title: '3. Material 3 Cyber Expressive',
+                category: 'Google MD3 / Pixel Native',
+                desc: 'Mengikut reka bentuk rasmi Google Material 3 Expressive dengan warna tonal gelap, butang kapsul bulat (pill 999px), dan kontras dinamik. Berintegrasi secara organik dengan sistem operasi Android.',
+                typo: 'Inter (Google Sans Aligned)',
+                typoSub: 'Standard rasmi Android, mesra pengguna awam.',
+                surface: 'Pill Containers + Dynamic Surface Elevation',
+                surfaceSub: 'Reka bentuk butang bulat ergonomik.',
+                fitTitle: '🎯 Sesuai Untuk Siapa?',
+                fitDesc: 'Pengguna yang sukakan keserasian 100% dengan ekosistem Android tulen (seperti telefon Google Pixel / Samsung OneUI), mesra pengguna daripada semua peringkat umur.',
+                swatches: [
+                    { name: 'Surface High', hex: '#1C1B1F', border: '#49454F' },
+                    { name: 'Container Surface', hex: '#2B2930', border: '#49454F' },
+                    { name: 'MD3 Violet', hex: '#D0BCFF', textDark: true },
+                    { name: 'Cyber Teal', hex: '#4FD8EB', textDark: true }
+                ],
+                phoneChassis: 'border-violet-500/40 bg-[#121115] shadow-violet-950/40',
+                phoneScreen: 'bg-[#141218] text-[#E6E1E5]',
+                scanlines: false,
+                statusBar: 'text-slate-300 border-b border-slate-800/60 bg-[#141218]',
+                statusBadge: 'bg-violet-950 text-violet-300 border border-violet-800',
+                appHeader: 'bg-[#1D1B20] border-slate-800/60 text-[#E6E1E5]',
+                headerLogo: 'bg-[#D0BCFF] text-[#381E72]',
+                headerTitle: 'font-sans-ui text-[#E6E1E5]',
+                headerSub: 'text-[#CAC4D0]',
+                hudToggleBtn: 'bg-[#381E72] text-[#EADDFF] border-violet-500/40',
+                telemetryBanner: 'bg-[#211F26] border-slate-800/60 rounded-3xl',
+                telemetryLabel: 'text-[#D0BCFF]',
+                telemetryStatus: 'bg-[#005047] text-[#70F7DF]',
+                dialerDisplay: 'bg-[#211F26] border-slate-800/60 rounded-3xl',
+                dialKey: 'bg-[#2B2930] border-slate-700/50 hover:bg-[#36343B] rounded-full',
+                callBtn: 'bg-[#4FD8EB] shadow-cyan-900/40 text-[#00363D] font-bold rounded-full',
+                backspaceBtn: 'bg-[#2B2930] border-slate-700/50 text-[#E6E1E5] rounded-full',
+                bottomDock: 'bg-[#1D1B20] border-slate-800/60 rounded-t-3xl',
+                activeTabStyle: 'bg-[#4A4458] text-[#E8DEF8] rounded-full shadow-md',
+                inactiveTabStyle: 'text-[#CAC4D0] hover:text-white',
+                hudInner: 'bg-[#1D1B20]/95 border-violet-500/40 shadow-2xl',
+                hudHeader: 'border-slate-800 text-[#D0BCFF]',
+                hudTitle: 'text-[#E6E1E5]',
+                hudMetric: 'bg-[#2B2930] border-slate-700/50 rounded-2xl',
+                hudTool: 'bg-[#2B2930] border-slate-700/50 hover:bg-[#36343B] rounded-2xl',
+                hudFooter: 'border-slate-800 text-[#CAC4D0]',
+                fitBox: 'bg-violet-950/40 border-violet-800/80 text-violet-300',
+                fitBoxTitle: 'text-violet-400'
+            },
+            terminal: {
+                id: 'terminal',
+                title: '4. Terminal Matrix Hacker',
+                category: 'Retro CLI / Field Operative',
+                desc: 'Gaya terminal jurutera forensik siber. Latar belakang hitam pekat (OLED Black #050505), aksen Phosphor Matrix Green (#33FF00), border ASCII tajam 0px, dan fon monospace padat.',
+                typo: 'JetBrains Mono + Space Mono',
+                typoSub: '100% Monospace, garisan ASCII, data mentah.',
+                surface: '0px Sharp Borders + Matrix Phosphor',
+                surfaceSub: 'Tiada radius, tiada kompromi, laju & padat.',
+                fitTitle: '🎯 Sesuai Untuk Siapa?',
+                fitDesc: 'Peminat tegar keselamatan IT, jurutera siber, dan pengguna yang mahukan kelainan total — aplikasi terasa seperti peralatan penggodam tentera yang membaca setiap bait talian telefon.',
+                swatches: [
+                    { name: 'OLED Black', hex: '#050505', border: '#1A3D1A' },
+                    { name: 'Phosphor Green', hex: '#33FF00', textDark: true },
+                    { name: 'Amber Alert', hex: '#FFB000', textDark: true },
+                    { name: 'Muted Green', hex: '#142914', border: '#1A3D1A' }
+                ],
+                phoneChassis: 'border-green-500/50 bg-[#000000] shadow-green-950/50',
+                phoneScreen: 'bg-[#050505] text-[#33FF00] font-mono-code',
+                scanlines: true,
+                statusBar: 'text-[#33FF00] border-b border-[#1A3D1A] bg-[#050505]',
+                statusBadge: 'bg-[#142914] text-[#33FF00] border border-[#33FF00]',
+                appHeader: 'bg-[#080808] border-[#1A3D1A] text-[#33FF00]',
+                headerLogo: 'bg-[#33FF00] text-black font-black',
+                headerTitle: 'font-mono-code text-[#33FF00] tracking-widest',
+                headerSub: 'text-[#1E7E1E]',
+                hudToggleBtn: 'bg-[#142914] text-[#33FF00] border-[#33FF00]',
+                telemetryBanner: 'bg-[#080808] border-[#1A3D1A] rounded-none',
+                telemetryLabel: 'text-[#33FF00]',
+                telemetryStatus: 'bg-[#142914] text-[#33FF00] border border-[#33FF00]',
+                dialerDisplay: 'bg-[#080808] border-[#1A3D1A] rounded-none',
+                dialKey: 'bg-[#0A0A0A] border-[#1A3D1A] hover:bg-[#33FF00] hover:text-black rounded-none',
+                callBtn: 'bg-[#33FF00] shadow-green-500/50 text-black font-black rounded-none',
+                backspaceBtn: 'bg-[#0A0A0A] border-[#1A3D1A] text-[#33FF00] rounded-none',
+                bottomDock: 'bg-[#080808] border-[#1A3D1A] rounded-none',
+                activeTabStyle: 'bg-[#142914] text-[#33FF00] border border-[#33FF00] rounded-none shadow-md',
+                inactiveTabStyle: 'text-[#1E7E1E] hover:text-[#33FF00]',
+                hudInner: 'bg-[#050505]/98 border-[#33FF00] shadow-2xl rounded-none',
+                hudHeader: 'border-[#1A3D1A] text-[#33FF00]',
+                hudTitle: 'text-[#33FF00] font-mono-code',
+                hudMetric: 'bg-[#080808] border-[#1A3D1A] rounded-none',
+                hudTool: 'bg-[#080808] border-[#1A3D1A] hover:border-[#33FF00] rounded-none',
+                hudFooter: 'border-[#1A3D1A]',
+                fitBox: 'bg-[#142914]/40 border-[#1A3D1A] text-[#33FF00]',
+                fitBoxTitle: 'text-[#33FF00]'
+            }
+        };
+
+        let currentTheme = 'cyberpunk';
+        let currentTab = 'dialer';
+        let isHudOpen = false;
+
+        function switchTheme(themeKey) {
+            currentTheme = themeKey;
+            const t = themes[themeKey];
+
+            // 1. Update Buttons
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.className = 'theme-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800';
+            });
+            const activeBtn = document.getElementById(`btn-theme-${themeKey}`);
+            if (activeBtn) {
+                if (themeKey === 'cyberpunk') activeBtn.className = 'theme-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-cyan-600 text-white shadow-lg shadow-cyan-900/40';
+                if (themeKey === 'obsidian') activeBtn.className = 'theme-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-blue-600 text-white shadow-lg shadow-blue-900/40';
+                if (themeKey === 'material3') activeBtn.className = 'theme-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-violet-600 text-white shadow-lg shadow-violet-900/40';
+                if (themeKey === 'terminal') activeBtn.className = 'theme-btn px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-emerald-600 text-white shadow-lg shadow-emerald-900/40';
+            }
+
+            // 2. Update Phone Chassis & Screen
+            document.getElementById('phone-chassis').className = `relative w-[380px] sm:w-[400px] h-[780px] rounded-[44px] p-3 shadow-2xl border-4 transition-all duration-300 ${t.phoneChassis}`;
+            document.getElementById('phone-screen').className = `w-full h-full rounded-[34px] overflow-hidden flex flex-col relative transition-all duration-300 ${t.phoneScreen}`;
+
+            // 3. Scanline layer
+            const scanLayer = document.getElementById('scanline-layer');
+            if (t.scanlines) {
+                scanLayer.classList.remove('hidden');
+            } else {
+                scanLayer.classList.add('hidden');
+            }
+
+            // 4. Status Bar & App Header
+            document.getElementById('status-bar').className = `px-6 pt-3 pb-2 flex justify-between items-center text-xs tracking-wider z-20 ${t.statusBar}`;
+            document.getElementById('status-badge').className = `text-[10px] px-1.5 py-0.5 rounded font-bold ${t.statusBadge}`;
+            document.getElementById('app-header').className = `px-5 py-3 border-b flex justify-between items-center z-20 transition-all ${t.appHeader}`;
+            document.getElementById('header-logo').className = `w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-md ${t.headerLogo}`;
+            document.getElementById('header-title').className = `text-base font-extrabold tracking-wide ${t.headerTitle}`;
+            document.getElementById('header-sub').className = `text-[10px] flex items-center gap-1 ${t.headerSub}`;
+            document.getElementById('hud-toggle-btn').className = `px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition active:scale-95 shadow-md ${t.hudToggleBtn}`;
+
+            // 5. Telemetry & Display
+            document.getElementById('telemetry-banner').className = `p-3.5 rounded-2xl border transition-all ${t.telemetryBanner}`;
+            document.getElementById('telemetry-label').className = `text-[10px] uppercase tracking-wider font-bold ${t.telemetryLabel}`;
+            document.getElementById('telemetry-status').className = `text-[10px] font-bold px-2 py-0.5 rounded-full ${t.telemetryStatus}`;
+            document.getElementById('dialer-display').className = `p-3 rounded-2xl border flex flex-col items-center justify-center min-h-[70px] relative transition-all ${t.dialerDisplay}`;
+
+            // 6. Keypad Keys
+            document.querySelectorAll('.dial-key').forEach(k => {
+                k.className = `dial-key flex flex-col items-center justify-center h-14 border transition active:scale-90 ${t.dialKey}`;
+            });
+            document.getElementById('call-btn').className = `w-16 h-16 flex items-center justify-center shadow-xl transition active:scale-90 ${t.callBtn}`;
+            document.getElementById('backspace-btn').className = `w-12 h-12 border flex items-center justify-center transition active:scale-90 ${t.backspaceBtn}`;
+
+            // 7. Bottom Dock & Active Tab
+            document.getElementById('bottom-dock').className = `border-t px-2 py-2.5 flex items-center justify-around z-20 transition-all ${t.bottomDock}`;
+            applyTabStyles(t);
+
+            // 8. HUD Card & Components
+            document.getElementById('hud-inner-card').className = `w-full h-full rounded-3xl border p-4 flex flex-col shadow-2xl backdrop-blur-xl ${t.hudInner}`;
+            document.getElementById('hud-header').className = `flex justify-between items-center pb-3 border-b ${t.hudHeader}`;
+            document.getElementById('hud-title').className = `text-sm font-black tracking-wider ${t.hudTitle}`;
+            document.getElementById('hud-metric-1').className = `p-3 rounded-xl border flex items-center justify-between ${t.hudMetric}`;
+            document.getElementById('hud-metric-2').className = `p-3 rounded-xl border flex items-center justify-between ${t.hudMetric}`;
+            ['hud-tool-1', 'hud-tool-2', 'hud-tool-3', 'hud-tool-4'].forEach(id => {
+                document.getElementById(id).className = `p-2.5 rounded-xl border text-left transition hover:scale-[1.02] ${t.hudTool}`;
+            });
+            document.getElementById('hud-footer').className = `pt-2 border-t flex justify-between items-center text-[9px] font-mono-code ${t.hudFooter}`;
+
+            // 9. Update Detail Panel (Right Column)
+            document.getElementById('detail-title').innerText = t.title;
+            document.getElementById('detail-category-badge').innerText = t.category;
+            document.getElementById('detail-desc').innerText = t.desc;
+            document.getElementById('detail-typo').innerText = t.typo;
+            document.getElementById('detail-typo-sub').innerText = t.typoSub;
+            document.getElementById('detail-surface').innerText = t.surface;
+            document.getElementById('detail-surface-sub').innerText = t.surfaceSub;
+            document.getElementById('detail-fit-title').innerHTML = `<span>🎯</span> ${t.fitTitle}`;
+            document.getElementById('detail-fit-desc').innerText = t.fitDesc;
+            document.getElementById('detail-fit-box').className = `p-4 rounded-2xl border space-y-1.5 ${t.fitBox}`;
+
+            // Swatches
+            const swatchContainer = document.getElementById('detail-swatches');
+            swatchContainer.innerHTML = '';
+            t.swatches.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'p-2.5 rounded-xl border flex flex-col gap-1';
+                div.style.borderColor = s.border || '#334155';
+                div.innerHTML = `
+                    <div class="h-8 rounded-lg flex items-center justify-center font-bold text-[10px] ${s.textDark ? 'text-black' : 'text-white'}" style="background-color: ${s.hex}">
+                        ${s.hex}
+                    </div>
+                    <div class="text-[10px] font-mono-code text-slate-400 truncate">${s.name}</div>
+                `;
+                swatchContainer.appendChild(div);
+            });
+        }
+
+        function switchTab(tabId) {
+            currentTab = tabId;
+            ['dialer', 'calls', 'contacts', 'messages'].forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                if (view) {
+                    if (t === tabId) view.classList.remove('hidden');
+                    else view.classList.add('hidden');
+                }
+            });
+            applyTabStyles(themes[currentTheme]);
+        }
+
+        function applyTabStyles(t) {
+            ['dialer', 'calls', 'contacts', 'messages'].forEach(tabName => {
+                const btn = document.getElementById(`tab-${tabName}`);
+                const label = document.getElementById(`label-${tabName}`);
+                if (tabName === currentTab) {
+                    btn.className = `bottom-tab-btn flex-1 py-1.5 px-1 rounded-xl flex flex-col items-center justify-center transition ${t.activeTabStyle}`;
+                    label.className = 'text-[10px] font-bold tracking-tight leading-none text-white';
+                } else {
+                    btn.className = `bottom-tab-btn flex-1 py-1.5 px-1 rounded-xl flex flex-col items-center justify-center transition ${t.inactiveTabStyle}`;
+                    label.className = 'text-[10px] font-bold tracking-tight leading-none text-slate-400';
+                }
+            });
+        }
+
+        function toggleHud() {
+            isHudOpen = !isHudOpen;
+            const hud = document.getElementById('floating-hud-overlay');
+            if (isHudOpen) {
+                hud.classList.remove('translate-y-full');
+            } else {
+                hud.classList.add('translate-y-full');
+            }
+        }
+
+        function pressKey(val) {
+            const numEl = document.getElementById('dialer-number');
+            if (numEl.innerText === '018-987 6543') {
+                numEl.innerText = val;
+            } else {
+                numEl.innerText += val;
+            }
+        }
+
+        function backspace() {
+            const numEl = document.getElementById('dialer-number');
+            if (numEl.innerText.length > 0) {
+                numEl.innerText = numEl.innerText.slice(0, -1);
+            }
+            if (numEl.innerText.length === 0) {
+                numEl.innerText = '';
+            }
+        }
+
+        function clearNumber() {
+            document.getElementById('dialer-number').innerText = '';
+        }
+
+        // Initialize Cyberpunk theme on load
+        switchTheme('cyberpunk');
+    </script>
+</body>
+</html>

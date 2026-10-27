@@ -69,6 +69,7 @@ public class MainActivity extends Activity {
     private Button mNavBtnKeypad;
     private Button mNavBtnSms;
     private Button mNavBtnShield;
+    private Button mBtnHudHeader;
 
     // Call Logs container
     private LinearLayout mCallLogsListContainer;
@@ -136,7 +137,7 @@ public class MainActivity extends Activity {
         topHeaderRow.setOrientation(LinearLayout.HORIZONTAL);
         topHeaderRow.setGravity(Gravity.CENTER_VERTICAL);
         topHeaderRow.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(10));
-        topHeaderRow.setBackgroundColor(0xFF0B0F19);
+        topHeaderRow.setBackgroundColor(0xFF0A0A0F);
 
         LinearLayout brandBar = new LinearLayout(this);
         brandBar.setOrientation(LinearLayout.VERTICAL);
@@ -145,18 +146,44 @@ public class MainActivity extends Activity {
 
         TextView tvLogo = new TextView(this);
         tvLogo.setText("🛡️ KANTOI");
-        tvLogo.setTextColor(0xFFF8FAFC);
+        tvLogo.setTextColor(0xFF00D4FF);
         tvLogo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
         tvLogo.setTypeface(Typeface.DEFAULT_BOLD);
         brandBar.addView(tvLogo);
 
         TextView tvTagline = new TextView(this);
         tvTagline.setText("Scammer Call, Terus Kantoi");
-        tvTagline.setTextColor(0xFF38BDF8); // Sky blue
+        tvTagline.setTextColor(0xFF00FF88); // Sky blue
         tvTagline.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         tvTagline.setTypeface(Typeface.DEFAULT_BOLD);
         brandBar.addView(tvTagline);
         topHeaderRow.addView(brandBar);
+
+        mBtnHudHeader = new Button(this);
+        mBtnHudHeader.setText("⚡ HUD");
+        mBtnHudHeader.setTextColor(0xFF00D4FF);
+        mBtnHudHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        mBtnHudHeader.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable hudBg = new GradientDrawable();
+        hudBg.setColor(0xFF141422);
+        hudBg.setCornerRadius(dpToPx(6));
+        hudBg.setStroke(dpToPx(1), 0xFF00D4FF);
+        mBtnHudHeader.setBackground(hudBg);
+        mBtnHudHeader.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
+        LinearLayout.LayoutParams hudLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hudLp.rightMargin = dpToPx(6);
+        mBtnHudHeader.setLayoutParams(hudLp);
+        mBtnHudHeader.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mCurrentTab == 1) {
+                    selectTab(0);
+                } else {
+                    selectTab(1);
+                }
+            }
+        });
+        topHeaderRow.addView(mBtnHudHeader);
 
         Button btnChangelog = new Button(this);
         btnChangelog.setText("📜 CHANGELOG v" + getAppVersionName());
@@ -261,6 +288,7 @@ public class MainActivity extends Activity {
             mShieldScrollView.setVisibility(View.GONE);
             updateNavButtonState(mNavBtnCalls, true);
             updateNavButtonState(mNavBtnShield, false);
+            updateHudHeaderButtonState(false);
             KantoiBadgeManager.updateBadge(this);
             loadCallLogsAsync();
         } else if (tabIndex == 1) {
@@ -269,6 +297,7 @@ public class MainActivity extends Activity {
             mShieldScrollView.setVisibility(View.VISIBLE);
             updateNavButtonState(mNavBtnCalls, false);
             updateNavButtonState(mNavBtnShield, true);
+            updateHudHeaderButtonState(true);
             updateCallSystemStatusUI();
         }
     }
@@ -1190,6 +1219,26 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(75)); // 75dp bottom padding for dock!
 
+        // Back navigation to Calls
+        Button btnBackToCalls = new Button(this);
+        btnBackToCalls.setText("← KEMBALI KE LOG PANGGILAN");
+        btnBackToCalls.setTextColor(0xFF00D4FF);
+        btnBackToCalls.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btnBackToCalls.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable bckBg = new GradientDrawable();
+        bckBg.setColor(0xFF141422);
+        bckBg.setCornerRadius(dpToPx(8));
+        bckBg.setStroke(dpToPx(1), 0xFF00D4FF);
+        btnBackToCalls.setBackground(bckBg);
+        btnBackToCalls.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
+        btnBackToCalls.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectTab(0);
+            }
+        });
+        root.addView(btnBackToCalls);
+
         // 1. Hero Protection Status Card (Clickable to view DB stats)
         LinearLayout heroCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
         heroCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
@@ -1859,7 +1908,7 @@ public class MainActivity extends Activity {
         LinearLayout navBar = new LinearLayout(this);
         navBar.setOrientation(LinearLayout.HORIZONTAL);
         navBar.setGravity(Gravity.CENTER_VERTICAL);
-        navBar.setBackgroundColor(0xFF0B0F19); // Stealth Dark
+        navBar.setBackgroundColor(0xFF0A0A0F); // Stealth Dark
         navBar.setPadding(dpToPx(8), dpToPx(6), dpToPx(8), dpToPx(8));
 
         // 1. Calls Tab Button
@@ -1910,7 +1959,7 @@ public class MainActivity extends Activity {
                 selectTab(1);
             }
         });
-        navBar.addView(mNavBtnShield);
+        // Pertahanan dipindahkan ke Floating Tactical HUD
 
         return navBar;
     }
@@ -1918,24 +1967,42 @@ public class MainActivity extends Activity {
     private Button createNavButton(String icon, String label) {
         Button btn = new Button(this);
         btn.setText(icon + "\n" + label);
-        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         btn.setTextColor(0xFF94A3B8);
         btn.setTypeface(Typeface.DEFAULT_BOLD);
         btn.setBackgroundColor(Color.TRANSPARENT);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dpToPx(52), 1.0f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dpToPx(48), 1.0f);
         btn.setLayoutParams(lp);
         return btn;
+    }
+
+    private void updateHudHeaderButtonState(boolean active) {
+        if (mBtnHudHeader == null) return;
+        GradientDrawable hudBg = new GradientDrawable();
+        hudBg.setColor(0xFF141422);
+        hudBg.setCornerRadius(dpToPx(6));
+        if (active) {
+            hudBg.setStroke(dpToPx(1), 0xFF00FF88);
+            mBtnHudHeader.setBackground(hudBg);
+            mBtnHudHeader.setTextColor(0xFF00FF88);
+            mBtnHudHeader.setText("⚡ HUD [AKTIF]");
+        } else {
+            hudBg.setStroke(dpToPx(1), 0xFF00D4FF);
+            mBtnHudHeader.setBackground(hudBg);
+            mBtnHudHeader.setTextColor(0xFF00D4FF);
+            mBtnHudHeader.setText("⚡ HUD");
+        }
     }
 
     private void updateNavButtonState(Button btn, boolean selected) {
         if (btn == null) return;
         GradientDrawable bg = new GradientDrawable();
         if (selected) {
-            bg.setColor(0xFF1E293B);
+            bg.setColor(0xFF141422);
             bg.setCornerRadius(dpToPx(8));
-            bg.setStroke(dpToPx(1), 0xFF0284C7);
+            bg.setStroke(dpToPx(1), 0xFF00D4FF);
             btn.setBackground(bg);
-            btn.setTextColor(0xFF38BDF8); // Sky blue
+            btn.setTextColor(0xFF00D4FF); // Sky blue
         } else {
             btn.setBackground(null);
             btn.setTextColor(0xFF94A3B8);

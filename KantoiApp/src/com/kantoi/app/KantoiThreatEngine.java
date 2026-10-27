@@ -1131,10 +1131,10 @@ public class KantoiThreatEngine {
 
             // Bentuk Kapsul Berlabuh Tepi (Curved on Left, Flat on Right)
             final GradientDrawable dockBg = new GradientDrawable();
-            dockBg.setColor(0xFF0F172A); // Slate 900
+            dockBg.setColor(0xFF141422); // Cyber Card Void
             float r = dpToPx(activity, 20);
             dockBg.setCornerRadii(new float[]{r, r, 0, 0, 0, 0, r, r});
-            dockBg.setStroke(dpToPx(activity, 1), 0xFF0284C7); // Radiant Sky Blue
+            dockBg.setStroke(dpToPx(activity, 1), 0xFF00D4FF); // Neon Cyan
             pillBar.setBackground(dockBg);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 pillBar.setElevation(dpToPx(activity, 8));
@@ -1142,14 +1142,14 @@ public class KantoiThreatEngine {
 
             // 1. Ikon PDRM Shield
             final TextView tvIcon = new TextView(activity);
-            tvIcon.setText("🏛️");
+            tvIcon.setText("⚡");
             tvIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
             pillBar.addView(tvIcon);
 
             // 2. Label Ringkas (Dipaparkan dalam Mod Collapsed)
             final TextView tvShortLabel = new TextView(activity);
-            tvShortLabel.setText("PDRM");
-            tvShortLabel.setTextColor(0xFF38BDF8);
+            tvShortLabel.setText("HUD");
+            tvShortLabel.setTextColor(0xFF00D4FF);
             tvShortLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             tvShortLabel.setTypeface(Typeface.DEFAULT_BOLD);
             tvShortLabel.setPadding(dpToPx(activity, 4), 0, dpToPx(activity, 2), 0);
@@ -1162,7 +1162,7 @@ public class KantoiThreatEngine {
             expandedLayout.setVisibility(View.GONE);
 
             final TextView tvFullText = new TextView(activity);
-            tvFullText.setText(" SEMAKMULE PDRM ");
+            tvFullText.setText(" ⚡ TACTICAL HUD ");
             tvFullText.setTextColor(Color.WHITE);
             tvFullText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             tvFullText.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1279,8 +1279,8 @@ public class KantoiThreatEngine {
     private static void animateCollapse(final View expandedLayout, final View shortLabel, final GradientDrawable dockBg, final Context context) {
         expandedLayout.setVisibility(View.GONE);
         shortLabel.setVisibility(View.VISIBLE);
-        dockBg.setColor(0xFF0F172A); // Kembali ke Slate 900 gelap
-        dockBg.setStroke(dpToPx(context, 1), 0xFF0284C7);
+        dockBg.setColor(0xFF141422); // Cyber Card Void
+        dockBg.setStroke(dpToPx(context, 1), 0xFF00D4FF);
     }
 
     private static void openSemakMuleAction(final Activity activity, final KantoiThreatEngine engine, final String targetPhone) {
@@ -1290,6 +1290,7 @@ public class KantoiThreatEngine {
         final String phoneTarget = (targetPhone != null && !targetPhone.isEmpty()) ? targetPhone : ((sCurrentViewingPhone != null) ? sCurrentViewingPhone : "");
 
         String[] options = new String[] {
+            "🛡️ Buka Pusat Pertahanan KANTOI (Pangkalan Data & Enjin)",
             "🏛️ Buka Portal Rasmi SemakMule CCID PDRM",
             "🔍 Semak / Lapor Nombor dalam KANTOI",
             "🔗 Imbas Pautan / URL Suspek (VirusTotal)",
@@ -1301,6 +1302,16 @@ public class KantoiThreatEngine {
             public void onClick(DialogInterface dialog, int which) {
                 switch (which) {
                     case 0:
+                        if (activity instanceof MainActivity) {
+                            ((MainActivity) activity).selectTab(1);
+                        } else {
+                            Intent it = new Intent(activity, MainActivity.class);
+                            it.putExtra("select_tab", 1);
+                            it.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                            activity.startActivity(it);
+                        }
+                        break;
+                    case 1:
                         try {
                             Intent bIt = new Intent(Intent.ACTION_VIEW, Uri.parse("https://semakmule.rmp.gov.my/"));
                             activity.startActivity(bIt);
@@ -1308,13 +1319,13 @@ public class KantoiThreatEngine {
                             Toast.makeText(activity, "Gagal membuka pelayar: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                         break;
-                    case 1:
+                    case 2:
                         engine.showRegisterScammerDialog(activity, phoneTarget);
                         break;
-                    case 2:
+                    case 3:
                         KantoiVirusTotalEngine.showUrlScanDialog(activity);
                         break;
-                    case 3:
+                    case 4:
                         if (activity instanceof MainActivity) {
                             ((MainActivity) activity).launchApkPicker();
                         } else {
