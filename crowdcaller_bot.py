@@ -103,11 +103,13 @@ USER_KEYS_PATH = os.path.join(BASE_DIR, "user_api_keys.json")
 
 # Senarai Model Google Gemini yang disokong secara automatik (Fallback Terpantas)
 AVAILABLE_GEMINI_MODELS = [
-    "gemini-2.0-flash",                   # Generasi Terkini Pantas (Workhorse Vision/OCR)
-    "gemini-1.5-flash",                   # Standard Kestabilan Tinggi & Kuota Paling Luas (15 RPM Percuma)
-    "gemini-1.5-flash-8b",                # Model Super Ringan & Rendah Kependaman
-    "gemini-1.5-pro",                     # Model Penalaran Siber Mendalam
-    "gemini-2.0-flash-lite-preview-02-05" # Generasi 2.0 Lite
+    "gemini-3.8-flash",                   # Generasi Terkini 2026 (Pilihan Utama: Ultra-Pantas, Vision & OCR)
+    "gemini-4-argon",                     # Model Flagship 2026 (Penalaran Siasatan Kompleks & Multi-Dispute)
+    "gemini-3.6-flash",                   # Generasi 3 Kestabilan Tinggi & Kependaman Rendah
+    "gemini-2.5-flash",                   # Generasi 2.5 Pantas
+    "gemini-2.5-pro",                     # Generasi 2.5 Penalaran Mendalam
+    "gemini-2.0-flash",                   # Sandaran Serasi ke Belakang
+    "gemini-1.5-flash"                    # Sandaran Warisan (Legacy Fallback)
 ]
 
 user_sessions = {}
