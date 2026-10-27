@@ -2713,10 +2713,7 @@ def build_enforcement_menu(rep_id_or_tmp_id, rep_data):
     safe_bank = html.escape(str(rep_data.get("bank_account") or "N/A"))
     safe_loss = html.escape(str(rep_data.get("victim_loss") or "Tidak dinyatakan"))
 
-    wa_text = urllib.parse.quote(
-        f"Salam Pegawai CCID PDRM. Saya ingin salurkan aduan penipuan scammer: No Suspek: {rep_data.get('phone_norm')}, Bank: {rep_data.get('bank_account')}, Kerugian: {rep_data.get('victim_loss', 'N/A')}. Mohon semakan."
-    )
-    wa_ccid_url = f"https://api.whatsapp.com/send?phone=60132111222&text={wa_text}"
+
 
     text = (
         "🏛️ <b>PUSAT TINDAKAN AGENSI PENGUATKUASAAN MALAYSIA</b>\n"
@@ -2728,8 +2725,9 @@ def build_enforcement_menu(rep_id_or_tmp_id, rep_data):
         "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "🚨 <b>1. TINDAKAN KECEMASAN (KURANG 24 JAM):</b>\n"
         "Jika anda baru sahaja memindahkan wang dalam tempoh 24 jam lalu, SEGERA hubungi:\n"
-        "📞 <b>Talian NSRC: 997</b> <i>(Waktu operasi: 8:00 AM – 8:00 PM)</i>\n"
-        "<i>Pihak NSRC bersama bank anda akan cuba memintas & membekukan akaun keldai sebelum wang dikeluarkan scammer!</i>\n\n"
+        "📞 <b>Talian Kecemasan NSRC: 997</b> <i>(Waktu operasi: 8:00 AM – 8:00 PM)</i>\n"
+        "📞 <b>CCID Scam Response Centre: 03-2610 1559 / 03-2610 1599</b>\n"
+        "<i>Pihak NSRC & pegawai CCID bersama bank akan memintas & membekukan akaun keldai sebelum wang dikeluarkan scammer!</i>\n\n"
         "📧 <b>2. ADUAN RASMI SKMM & CYBER999:</b>\n"
         "Salurkan laporan untuk menyekat nombor telefon, pautan phishing, dan akaun WhatsApp scammer.\n\n"
         "👮 <b>3. LAPORAN BALAI POLIS PDRM (SEKSYEN 107 CPC):</b>\n"
@@ -2745,11 +2743,12 @@ def build_enforcement_menu(rep_id_or_tmp_id, rep_data):
                 {"text": "👮 Deraf Laporan Polis (Balai)", "callback_data": f"enf_pol_{rep_id_or_tmp_id}"}
             ],
             [
-                {"text": "💬 WhatsApp Hotline CCID (PDRM)", "url": wa_ccid_url},
+                {"text": "🌐 Semak Portal SemakMule PDRM", "url": "https://semakmule.rmp.gov.my"},
                 {"text": "🌐 Portal e-Aduan SKMM", "url": "https://aduan.mcmc.gov.my"}
             ],
             [
-                {"text": "« Kembali ke Menu Utama", "callback_data": "help_menu"}
+                {"text": "📢 Facebook Cyber Crime Alert PDRM", "url": "https://www.facebook.com/CyberCrimeAlertRMP"},
+                {"text": "« Menu Utama", "callback_data": "help_menu"}
             ]
         ]
     }
@@ -2797,11 +2796,15 @@ def build_enforcement_police_view(rep_id_or_tmp_id, rep_data):
         "1. Salinan Kad Pengenalan (MyKad) anda.\n"
         "2. Salinan Penyata Bank rasmi atau Resit Transaksi Pemindahan Wang.\n"
         "3. Salinan Cetakan (Printout) Tangkap Layar Perbualan WhatsApp / Media Sosial.\n"
-        "4. No rujukan aduan NSRC (jika anda telah hubungi 997 sebelum ini)."
+        "4. No rujukan aduan NSRC (jika anda telah hubungi 997 sebelum ini).\n"
+        "5. Hubungi <b>CCID Scam Response Centre</b> di <code>03-2610 1559</code> / <code>03-2610 1599</code> jika perlukan panduan lanjut pegawai penyiasat Bukit Aman."
     )
     markup = {
         "inline_keyboard": [
-            [{"text": "💬 WhatsApp Hotline CCID PDRM", "url": "https://api.whatsapp.com/send?phone=60132111222"}],
+            [
+                {"text": "🌐 Semak Portal SemakMule PDRM", "url": "https://semakmule.rmp.gov.my"},
+                {"text": "📢 Facebook Cyber Crime Alert PDRM", "url": "https://www.facebook.com/CyberCrimeAlertRMP"}
+            ],
             [{"text": "« Kembali ke Pusat Agensi", "callback_data": f"enf_{rep_id_or_tmp_id}"}]
         ]
     }
