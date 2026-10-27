@@ -104,13 +104,13 @@ USER_KEYS_PATH = os.path.join(BASE_DIR, "user_api_keys.json")
 
 # Senarai Model Google Gemini yang disokong secara automatik (Fallback Terpantas)
 AVAILABLE_GEMINI_MODELS = [
-    "gemini-3.8-flash",                   # Generasi Terkini 2026 (Pilihan Utama: Ultra-Pantas, Vision & OCR)
-    "gemini-4-argon",                     # Model Flagship 2026 (Penalaran Siasatan Kompleks & Multi-Dispute)
-    "gemini-3.6-flash",                   # Generasi 3 Kestabilan Tinggi & Kependaman Rendah
-    "gemini-2.5-flash",                   # Generasi 2.5 Pantas
-    "gemini-2.5-pro",                     # Generasi 2.5 Penalaran Mendalam
-    "gemini-2.0-flash",                   # Sandaran Serasi ke Belakang
-    "gemini-1.5-flash"                    # Sandaran Warisan (Legacy Fallback)
+    "gemini-3.8-flash",            # Pilihan Utama 2026: Ultra-Pantas & Multimodal Vision
+    "gemini-3.8-flash-lite",       # Sandaran Pantas: Kependaman Sangat Rendah & Kuota Luas
+    "gemini-3.5-flash",            # Generasi 3.5: Kestabilan Tinggi & Vision
+    "gemini-3.5-flash-lite",       # Generasi 3.5 Flash-Lite: Jimat Kuota & Bebas Sekatan
+    "gemini-2.5-flash",            # Generasi 2.5: Pantas & Vision
+    "gemini-2.0-flash",            # Sandaran Serasi ke Belakang
+    "gemini-1.5-flash"             # Sandaran Warisan (Legacy Fallback)
 ]
 
 user_sessions = {}
@@ -5073,7 +5073,7 @@ def run_bot():
                     
                     # Semak status ujian sambungan jika ada kunci
                     google_status = "⚪ Belum Ditetapkan"
-                    active_model_info = "gemini-3.8-flash / gemini-4-argon (Generasi Terkini 2026)"
+                    active_model_info = "gemini-3.8-flash / gemini-3.5-flash-lite (Enjin Vision Pantas)"
                     if current_k:
                         test_models_diag = AVAILABLE_GEMINI_MODELS
                         r_chk = None
