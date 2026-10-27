@@ -59,8 +59,15 @@ except ImportError:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 except Exception:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+try:
+    from local_secrets import ADMIN_PASSCODE
+except ImportError:
+    ADMIN_PASSCODE = os.environ.get("ADMIN_PASSCODE", "kantoi2026")
+except Exception:
+    ADMIN_PASSCODE = os.environ.get("ADMIN_PASSCODE", "kantoi2026")
+
 CHANNEL_ID = "@kantoiradar"
-ADMIN_PASSCODE = "kantoi2026"
 
 DB_PATH = os.path.join(BASE_DIR, "kantoi_threats.db")
 if not os.path.exists(DB_PATH):
@@ -1140,6 +1147,13 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
         except Exception as read_err:
             print(f"[MULTI-IMAGE READ ERR ({idx})] {read_err}")
 
+    # Bersihkan fail JPEG sementara serta-merta sebaik sahaja selesai ditukar kepada Base64
+    for t_f in temp_opt_files:
+        if os.path.exists(t_f):
+            try: os.remove(t_f)
+            except Exception: pass
+    temp_opt_files.clear()
+
     if valid_images_count == 0:
         return None
 
@@ -1251,10 +1265,6 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
             handle_gemini_retry_delay(resp, idx, next_model)
             continue
 
-    for t_f in temp_opt_files:
-        if os.path.exists(t_f):
-            try: os.remove(t_f)
-            except: pass
     return None
 
 def synthesize_multi_images_offline(image_paths, captions=None):
@@ -1942,18 +1952,46 @@ def query_pdrm_semakmule_live(category, value):
 # ==============================================================================
 # SEMAKAN PAUTAN PHISHING & SANDBOX MALWARE APK (IDEA 3)
 # ==============================================================================
+def is_safe_external_url(target_url):
+    """
+    Perlindungan Anti-SSRF: Memastikan pautan adalah HTTP/HTTPS awam dan
+    bukan alamat persendirian/dalaman (localhost, RFC 1918, link-local metadata).
+    """
+    try:
+        import ipaddress
+        p = urllib.parse.urlparse(target_url)
+        if p.scheme not in ('http', 'https'):
+            return False
+        hostname = (p.hostname or '').strip().lower()
+        if not hostname or hostname in ('localhost', '127.0.0.1', '::1', '0.0.0.0'):
+            return False
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return False
+        except ValueError:
+            pass
+        return True
+    except Exception:
+        return False
+
 def inspect_url_phishing(url):
     """
     Menganalisis pautan web untuk mengesan pancingan data (Phishing) perbankan & bantuan palsu
+    dengan pertahanan Anti-SSRF terhadap pautan dalaman.
     """
     final_url = url
     try:
         parsed_init = urllib.parse.urlparse(url)
         host_init = (parsed_init.hostname or "").lower()
         shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'is.gd', 'cutt.ly', 'rb.gy', 'wa.me', 't.me']
-        if any(host_init == s or host_init.endswith('.' + s) for s in shorteners):
-            r = requests.head(url, allow_redirects=True, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
-            final_url = r.url
+        if is_safe_external_url(url) and any(host_init == s or host_init.endswith('.' + s) for s in shorteners):
+            # Anti-SSRF: allow_redirects dimatikan bagi memeriksa sasaran penghalaan
+            r = requests.head(url, allow_redirects=False, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+            if r.status_code in (301, 302, 303, 307, 308) and "Location" in r.headers:
+                target_loc = r.headers["Location"]
+                if is_safe_external_url(target_loc):
+                    final_url = target_loc
     except Exception:
         pass
 
@@ -5027,11 +5065,25 @@ def run_bot():
                 if text.startswith(("/gemini", "/key", "/ai_status", "/ai")):
                     parts = text.split(maxsplit=2)
                     candidate_key = ""
+                    has_admin_passcode = False
                     if len(parts) > 1:
                         if len(parts) > 2 and parts[1] == ADMIN_PASSCODE:
                             candidate_key = parts[2].strip()
+                            has_admin_passcode = True
                         else:
                             candidate_key = parts[1].strip()
+
+                    # KESELAMATAN (SEC-02): Sekat akses jika bukan Admin dan tiada Passcode sah
+                    is_admin_user = chat_id in get_admin_ids()
+                    if not is_admin_user and not has_admin_passcode:
+                        denied_msg = (
+                            "\u26d4 <b>Akses Ditolak (Pentadbir Sahaja):</b>\n"
+                            "Arahan <code>/gemini</code> dikhaskan untuk penetapan Kunci Pelayan KANTOI oleh Pentadbir.\n\n"
+                            "\ud83d\udc49 <b>Untuk Pengguna Komuniti:</b>\n"
+                            "Sila gunakan arahan <code>/mykey &lt;KUNCI_API&gt;</code> untuk mendaftar Kunci Percuma Peribadi anda (BYOK) secara berasingan tanpa had kuota awam!"
+                        )
+                        send_message(chat_id, denied_msg, parse_mode="HTML")
+                        continue
 
                     # Pengesahan format: Terima kunci format baharu (AQ...) atau lama (AIza...) atau panjang >= 15
                     is_valid_key_pattern = bool(
