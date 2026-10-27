@@ -816,6 +816,51 @@ def optimize_image_for_gemini(image_path, max_dim=1280, quality=85):
         print(f"[IMG OPTIMIZE WARN] {opt_err}. Menggunakan fail asal.")
         return image_path, get_image_mime_type(image_path), False
 
+def handle_gemini_retry_delay(resp, attempt_idx=0, next_model_name=None):
+    """
+    Mengira masa jeda pintar (smart backoff delay) sekiranya Google API memulangkan
+    status ralat seperti HTTP 423 (Locked), 429 (Rate Limit), atau 503 (Overload).
+    Memeriksa header 'Retry-After' atau menggunakan progressive backoff yang selamat.
+    """
+    if resp is None:
+        return
+
+    status = getattr(resp, "status_code", 0)
+    retry_header = None
+    if hasattr(resp, "headers") and resp.headers:
+        retry_header = resp.headers.get("Retry-After") or resp.headers.get("retry-after")
+
+    if retry_header:
+        try:
+            wait_sec = min(max(float(retry_header), 1.0), 5.0)
+            target_str = f" ke model {next_model_name}" if next_model_name else ""
+            print(f"[GEMINI RETRY-AFTER] Header pelayan meminta jeda {wait_sec:.1f}s sebelum bertukar{target_str}...")
+            time.sleep(wait_sec)
+            return
+        except Exception:
+            pass
+
+    if status == 423:
+        # HTTP 423 Locked: Kunci konkurensi/gateway mutex memerlukan jeda 2.0s - 3.5s untuk dilepaskan
+        wait_sec = min(2.0 + (attempt_idx * 0.5), 4.0)
+        target_str = f" ke model {next_model_name}" if next_model_name else ""
+        print(f"[GEMINI 423 LOCKED] Kunci sumber dikesan! Jeda selamat {wait_sec:.1f}s untuk pelepasan kunci gerbang sebelum bertukar{target_str}...")
+        time.sleep(wait_sec)
+    elif status == 429:
+        # HTTP 429 Rate Limit / Quota Exceeded: Jeda progresif 1.8s - 4.5s
+        wait_sec = min(1.8 + (attempt_idx * 0.6), 4.5)
+        target_str = f" ke model {next_model_name}" if next_model_name else ""
+        print(f"[GEMINI 429 RATE LIMIT] Had kuota dicapai! Jeda {wait_sec:.1f}s sebelum beralih{target_str}...")
+        time.sleep(wait_sec)
+    elif status in [500, 502, 503, 504]:
+        # Server Overload / Gateway Timeout: Jeda 1.2s untuk kestabilan kluster Google
+        time.sleep(1.2)
+    elif status in [400, 403, 404]:
+        # Model tidak wujud / kebenaran ditolak: Terus beralih ke model seterusnya (0.2s pantas)
+        time.sleep(0.2)
+    else:
+        time.sleep(0.5)
+
 def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
     """Menghantar imej ke Google Gemini Vision API dengan sokongan perlindungan keselamatan dan kebal SSL Windows 7"""
     global LAST_GEMINI_DIAGNOSTIC
@@ -907,7 +952,8 @@ def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
 
     models_to_try = AVAILABLE_GEMINI_MODELS
 
-    for model_name in models_to_try:
+    for idx, model_name in enumerate(models_to_try):
+        next_model = models_to_try[idx + 1] if idx + 1 < len(models_to_try) else None
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         headers = {
             "x-goog-api-key": api_key,
@@ -997,9 +1043,8 @@ def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
                 "timestamp": time.time()
             }
             # Tangani sebarang ralat (423 Locked, 429 Rate Limit, 403, 500/503 dll):
-            # Beri jeda 0.5s jika sekatan kunci/kuota dan cuba model seterusnya secara automatik!
-            if resp.status_code in [423, 429]:
-                time.sleep(0.5)
+            # Gunakan jeda pintar berperingkat (backoff) untuk mengelakkan kegagalan berulang
+            handle_gemini_retry_delay(resp, idx, next_model)
             continue
 
     return None
@@ -1114,7 +1159,8 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
 
     models_to_try = AVAILABLE_GEMINI_MODELS
 
-    for model_name in models_to_try:
+    for idx, model_name in enumerate(models_to_try):
+        next_model = models_to_try[idx + 1] if idx + 1 < len(models_to_try) else None
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         headers = {
             "x-goog-api-key": api_key,
@@ -1201,9 +1247,8 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
                 "timestamp": time.time()
             }
             # Tangani sebarang ralat (423 Locked, 429 Rate Limit, 403, 500/503 dll):
-            # Beri jeda 0.5s jika sekatan kunci/kuota dan cuba model seterusnya secara automatik!
-            if resp.status_code in [423, 429]:
-                time.sleep(0.5)
+            # Gunakan jeda pintar berperingkat (backoff) untuk mengelakkan kegagalan berulang
+            handle_gemini_retry_delay(resp, idx, next_model)
             continue
 
     for t_f in temp_opt_files:
