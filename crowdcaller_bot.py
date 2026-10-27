@@ -996,10 +996,11 @@ def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
                 "model": model_name,
                 "timestamp": time.time()
             }
-            if resp.status_code in [404, 400, 403, 429, 500, 502, 503]:
-                continue
-            else:
-                break
+            # Tangani sebarang ralat (423 Locked, 429 Rate Limit, 403, 500/503 dll):
+            # Beri jeda 0.5s jika sekatan kunci/kuota dan cuba model seterusnya secara automatik!
+            if resp.status_code in [423, 429]:
+                time.sleep(0.5)
+            continue
 
     return None
 
@@ -1199,10 +1200,11 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
                 "model": model_name,
                 "timestamp": time.time()
             }
-            if resp.status_code in [404, 400, 403, 429, 500, 502, 503]:
-                continue
-            else:
-                break
+            # Tangani sebarang ralat (423 Locked, 429 Rate Limit, 403, 500/503 dll):
+            # Beri jeda 0.5s jika sekatan kunci/kuota dan cuba model seterusnya secara automatik!
+            if resp.status_code in [423, 429]:
+                time.sleep(0.5)
+            continue
 
     for t_f in temp_opt_files:
         if os.path.exists(t_f):
