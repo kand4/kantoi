@@ -1,7 +1,7 @@
 # 🛡️ KANTOI: Sistem Pertahanan Siber, Pengenal Pemanggil & Anti-Trojan Android
 
 <p align="center">
-  <a href="https://github.com/kand4/kantoi/releases/latest"><img src="https://img.shields.io/badge/📥_Muat_Turun_APK-v1.13.10_Release-success?style=for-the-badge&logo=android&logoColor=white" height="36"/></a>
+  <a href="https://github.com/kand4/kantoi/releases/latest"><img src="https://img.shields.io/badge/📥_Muat_Turun_APK-v1.15.0_Release-success?style=for-the-badge&logo=android&logoColor=white" height="36"/></a>
   &nbsp;&nbsp;
   <a href="https://t.me/crowdcaller"><img src="https://img.shields.io/badge/💬_Saluran_Telegram-@crowdcaller-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" height="36"/></a>
   &nbsp;&nbsp;
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kand4/kantoi/releases"><img src="https://img.shields.io/badge/Versi-v1.13.10-emerald?style=flat-square&logo=android" /></a>
+  <a href="https://github.com/kand4/kantoi/releases"><img src="https://img.shields.io/badge/Versi-v1.15.0-cyan?style=flat-square&logo=android" /></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-8.0_hingga_12L_(API_26--32)-sky?style=flat-square&logo=android" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/Lesen-GPL--3.0-blue?style=flat-square" /></a>
 </p>
@@ -118,7 +118,7 @@ Projek ini menyokong kompilasi berdiri sendiri (*standalone automated build pipe
    ```
 3. Fail APK yang telah siap ditandatangani akan dijana di direktori utama:
    ```
-   Kantoi_v1.13.10_Release_signed.apk
+   Kantoi_v1.15.0_Release_signed.apk
    ```
 
 ---

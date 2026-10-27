@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KANTOI App - Cyberpunk HUD Menu Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Orbitron:wght@600;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+        .font-cyber { font-family: 'Orbitron', sans-serif; }
+        .font-sans-ui { font-family: 'Inter', sans-serif; }
+
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: #0A0A0F; }
+        ::-webkit-scrollbar-thumb { background: #1F293D; border-radius: 2px; }
+
+        .scanlines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(0, 212, 255, 0.02), rgba(0, 255, 136, 0.01), rgba(255, 0, 128, 0.02));
+            background-size: 100% 3px, 4px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-black text-slate-100 min-h-screen flex flex-col items-center justify-start p-2 font-sans-ui">
+
+    <!-- Screen Frame: 412px x 840px Standard Android Mobile -->
+    <div class="relative w-[412px] h-[840px] bg-[#0A0A0F] border-2 border-cyan-500/60 rounded-[36px] overflow-hidden flex flex-col shadow-2xl shadow-cyan-950/40" id="phone-container">
+        
+        <!-- Subtle Cyber Scanline Overlay -->
+        <div class="scanlines absolute inset-0 z-10 pointer-events-none opacity-30"></div>
+
+        <!-- 1. System Status Bar -->
+        <div class="px-6 pt-3 pb-2 flex justify-between items-center text-xs tracking-wider font-mono-code text-cyan-400 bg-[#0A0A0F] border-b border-cyan-950/80 z-20">
+            <span class="font-bold">09:41</span>
+            <div class="flex items-center gap-2">
+                <span class="text-[9px] px-1.5 py-0.5 rounded font-bold bg-cyan-950 text-cyan-400 border border-cyan-800">SECURE 4G</span>
+                <span class="text-xs">📶 100% 🔋</span>
+            </div>
+        </div>
+
+        <!-- 2. Cyberpunk App Header with Tactical HUD Button -->
+        <div class="px-5 py-3 border-b border-cyan-900/60 bg-[#0E0E17] flex justify-between items-center z-20">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-black bg-gradient-to-br from-cyan-400 to-blue-600 shadow-md">
+                    <svg viewBox="0 0 100 100" class="w-6 h-6 fill-none stroke-current" stroke-width="8" stroke-linecap="round">
+                        <path d="M50 10 L85 24 V52 C85 74 50 90 50 90 C50 90 15 74 15 52 V24 Z" />
+                        <line x1="50" y1="20" x2="50" y2="80" stroke-width="6" />
+                        <circle cx="50" cy="50" r="10" stroke-width="4" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-base font-extrabold tracking-wide font-cyber text-cyan-400">KANTOI</h2>
+                    <p class="text-[9px] font-mono-code text-slate-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> 3,500,000 DB AKTIF
+                    </p>
+                </div>
+            </div>
+
+            <!-- Header Tactical HUD Pill Button -->
+            <button onclick="toggleHud()" class="px-3 py-1.5 rounded-xl text-xs font-bold font-mono-code border border-cyan-500/60 bg-cyan-950 text-cyan-300 flex items-center gap-1.5 shadow-md shadow-cyan-950 active:scale-95" id="btn-header-hud">
+                <span class="animate-pulse">⚡</span>
+                <span>HUD</span>
+                <span class="text-[9px] px-1 rounded bg-black/40 text-emerald-400">AKTIF</span>
+            </button>
+        </div>
+
+        <!-- 3. Dynamic App View Container (Scrollable) -->
+        <div class="flex-1 overflow-y-auto px-4 py-3 space-y-3 z-20 relative" id="view-container">
+
+            <!-- ================= VIEW 1: PAD DAIL PINTAR ================= -->
+            <div id="view-dialer" class="space-y-3">
+                
+                <!-- Telemetry Banner -->
+                <div class="p-3 rounded-2xl border border-cyan-900/60 bg-[#12121E]">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase tracking-wider font-bold font-cyber text-cyan-400">RADAR ANCAMAN TERAS</span>
+                        <span class="text-[9px] font-mono-code font-bold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">SIAP SIAGA</span>
+                    </div>
+                    <div class="mt-1.5 flex items-center justify-between text-xs font-mono-code">
+                        <span class="text-slate-300">Pengimbas Luar Talian: <strong class="text-emerald-400">AKTIF</strong></span>
+                        <span class="text-slate-400 text-[10px]">Kependaman: <strong class="text-white">12ms</strong></span>
+                    </div>
+                </div>
+
+                <!-- Number Display Area -->
+                <div class="p-3 rounded-2xl border border-cyan-900/60 bg-[#12121E] flex flex-col items-center justify-center min-h-[66px] relative">
+                    <div class="text-2xl font-mono-code font-bold tracking-widest text-white text-center" id="dialer-num">
+                        018-987 6543
+                    </div>
+                    <div class="text-[10px] font-mono-code text-emerald-400 flex items-center gap-1 mt-0.5">
+                        <span>✓</span> TIADA REKOD SCAM (BERSIH)
+                    </div>
+                    <button onclick="clearNumber()" class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white text-xs">
+                        ✕
+                    </button>
+                </div>
+
+                <!-- 3x4 Compact Keypad with TIGHT letter-digit spacing -->
+                <div class="grid grid-cols-3 gap-2.5 max-w-[290px] mx-auto py-1">
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">1</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">⚡</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">2</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">ABC</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">3</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">DEF</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">4</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">GHI</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">5</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">JKL</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">6</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">MNO</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">7</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">PQRS</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">8</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">TUV</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">9</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">WXYZ</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">*</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">SEC</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">0</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">+</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center h-13 py-2 rounded-full border border-cyan-900/50 bg-[#141422] shadow-sm">
+                        <span class="text-xl font-bold leading-none text-white">#</span>
+                        <span class="text-[9px] font-bold leading-none text-cyan-400 -mt-0.5">HEX</span>
+                    </div>
+                </div>
+
+                <!-- Call Button & Action Controls -->
+                <div class="flex items-center justify-center gap-6 pt-1">
+                    <button class="w-12 h-12 rounded-full border border-cyan-900/50 bg-[#141422] flex items-center justify-center text-cyan-300 text-sm shadow-md">
+                        💬
+                    </button>
+                    <button class="w-16 h-16 rounded-full flex items-center justify-center bg-cyan-400 text-black shadow-xl shadow-cyan-400/40">
+                        <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                            <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        </svg>
+                    </button>
+                    <button class="w-12 h-12 rounded-full border border-cyan-900/50 bg-[#141422] flex items-center justify-center text-cyan-300 text-base shadow-md">
+                        ⌫
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ================= VIEW 2: LOG PANGGILAN (CALLS) ================= -->
+            <div id="view-calls" class="space-y-3 hidden">
+                
+                <!-- Search & Filter Bar -->
+                <div class="flex items-center gap-2">
+                    <div class="flex-1 p-2 rounded-xl border border-cyan-900/60 bg-[#12121E] flex items-center gap-2 text-xs font-mono-code text-slate-400">
+                        <span>🔍</span>
+                        <span>Cari log atau nombor suspek...</span>
+                    </div>
+                    <div class="px-2.5 py-2 rounded-xl border border-cyan-900/60 bg-[#141422] text-[10px] font-mono-code font-bold text-cyan-400">
+                        SEMUA
+                    </div>
+                </div>
+
+                <!-- Call Item 1: SCAMMER BLOCKED -->
+                <div class="p-3 rounded-2xl border border-red-900/60 bg-[#1A1116] flex items-center justify-between shadow-md">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-red-950 border border-red-500/60 flex items-center justify-center text-red-400 text-base font-bold">
+                            🚫
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white flex items-center gap-1.5 font-mono-code">
+                                03-8890 1200
+                                <span class="text-[9px] px-1.5 py-0.2 rounded font-mono-code bg-red-900/80 text-red-200 border border-red-700">DISEKAT</span>
+                            </div>
+                            <div class="text-[10px] text-red-300 font-sans-ui mt-0.5">Pegawai Palsu LHDN • CCID PDRM Flagged</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-mono-code text-red-400">10:24 AM</span>
+                        <div class="text-[9px] font-mono-code text-slate-500">Auto-reject</div>
+                    </div>
+                </div>
+
+                <!-- Call Item 2: VERIFIED SAFE CONTACT -->
+                <div class="p-3 rounded-2xl border border-cyan-900/40 bg-[#12121E] flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/60 flex items-center justify-center text-emerald-400 text-sm font-bold font-mono-code">
+                            IBU
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                Ibu Tercinta
+                                <span class="text-[9px] px-1.5 py-0.2 rounded font-mono-code bg-emerald-950 text-emerald-400 border border-emerald-800">SELAMAT</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-mono-code mt-0.5">012-345 6789 • Panggilan Masuk</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-mono-code text-slate-400">Semalam</span>
+                        <div class="text-[9px] font-mono-code text-emerald-400">2m 14s</div>
+                    </div>
+                </div>
+
+                <!-- Call Item 3: SUSPICIOUS INVESTMENT SCAM -->
+                <div class="p-3 rounded-2xl border border-amber-900/50 bg-[#181512] flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-950 border border-amber-500/60 flex items-center justify-center text-amber-400 text-base font-bold">
+                            ⚠️
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white flex items-center gap-1.5 font-mono-code">
+                                011-2345 6789
+                                <span class="text-[9px] px-1.5 py-0.2 rounded font-mono-code bg-amber-900/80 text-amber-200 border border-amber-700">SUSPEK</span>
+                            </div>
+                            <div class="text-[10px] text-amber-300/80 font-sans-ui mt-0.5">Tawaran Pelaburan Kripto Telegram</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-mono-code text-amber-400">24 Okt</span>
+                        <div class="text-[9px] font-mono-code text-slate-500">Tak dijawab</div>
+                    </div>
+                </div>
+
+                <!-- Call Item 4: OFFICIAL BANK VERIFIED -->
+                <div class="p-3 rounded-2xl border border-cyan-900/40 bg-[#12121E] flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-cyan-950 border border-cyan-500/60 flex items-center justify-center text-cyan-400 text-sm font-bold font-mono-code">
+                            BSN
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                Bank Simpanan Nasional
+                                <span class="text-[9px] px-1.5 py-0.2 rounded font-mono-code bg-cyan-950 text-cyan-400 border border-cyan-800">DISAHKAN</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-mono-code mt-0.5">03-2162 9000 • Talian Rasmi Bank</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-mono-code text-slate-400">22 Okt</span>
+                        <div class="text-[9px] font-mono-code text-slate-500">1m 02s</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ================= VIEW 3: BUKU KENALAN (CONTACTS) ================= -->
+            <div id="view-contacts" class="space-y-3 hidden">
+                
+                <!-- Search & Filter Category Chips -->
+                <div class="space-y-2">
+                    <div class="p-2 rounded-xl border border-cyan-900/60 bg-[#12121E] flex items-center gap-2 text-xs font-mono-code text-slate-400">
+                        <span>🔍</span>
+                        <span>Cari kenalan selamat...</span>
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto text-[10px] font-mono-code pb-1">
+                        <span class="px-2.5 py-1 rounded-lg bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold whitespace-nowrap">SEMUA (142)</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-[#141422] text-slate-400 border border-slate-800 whitespace-nowrap">KELUARGA (18)</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-[#141422] text-slate-400 border border-slate-800 whitespace-nowrap">KERJA (45)</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-[#141422] text-slate-400 border border-slate-800 whitespace-nowrap">VIP (6)</span>
+                    </div>
+                </div>
+
+                <!-- Contact 1 -->
+                <div class="p-3 rounded-2xl border border-cyan-900/40 bg-[#12121E] flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-800 flex items-center justify-center font-bold text-white text-xs font-mono-code shadow">
+                            AH
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                Ahmad Hafiz (Cyber Ops)
+                                <span class="text-[8px] px-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono-code">SAFE</span>
+                            </div>
+                            <div class="text-[10px] font-mono-code text-slate-400">019-223 3445</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 text-cyan-400 text-sm">
+                        <span class="p-1.5 rounded-lg bg-[#141422] border border-cyan-900/50">📞</span>
+                        <span class="p-1.5 rounded-lg bg-[#141422] border border-cyan-900/50">💬</span>
+                    </div>
+                </div>
+
+                <!-- Contact 2 -->
+                <div class="p-3 rounded-2xl border border-cyan-900/40 bg-[#12121E] flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-800 flex items-center justify-center font-bold text-white text-xs font-mono-code shadow">
+                            SB
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                Siti Sarah
+                                <span class="text-[8px] px-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono-code">SAFE</span>
+                            </div>
+                            <div class="text-[10px] font-mono-code text-slate-400">017-889 9001</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 text-cyan-400 text-sm">
+                        <span class="p-1.5 rounded-lg bg-[#141422] border border-cyan-900/50">📞</span>
+                        <span class="p-1.5 rounded-lg bg-[#141422] border border-cyan-900/50">💬</span>
+                    </div>
+                </div>
+
+                <!-- Contact 3 -->
+                <div class="p-3 rounded-2xl border border-cyan-900/40 bg-[#12121E] flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-800 flex items-center justify-center font-bold text-white text-xs font-mono-code shadow">
+                            MR
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                Mohd Razak
+                                <span class="text-[8px] px-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono-code">SAFE</span>
+                            </div>
+                            <div class="text-[10px] font-mono-code text-slate-400">012-998 8776</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 text-cyan-400 text-sm">
+                        <span class="p-1.5 rounded-lg bg-[#141422] border border-cyan-900/50">📞</span>
+                        <span class="p-1.5 rounded-lg bg-[#141422] border border-cyan-900/50">💬</span>
+                    </div>
+                </div>
+
+                <!-- Contact 4 -->
+                <div class="p-3 rounded-2xl border border-cyan-900/40 bg-[#12121E] flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-600 to-rose-800 flex items-center justify-center font-bold text-white text-xs font-mono-code shadow">
+                            NT
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                Nurul Tasha
+                                <span class="text-[8px] px-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono-code">SAFE</span>
+                            </div>
+                            <div class="text-[10px] font-mono-code text-slate-400">018-334 5566</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 text-cyan-400 text-sm">
+                        <span class="p-1.5 rounded-lg bg-[#141422] border border-cyan-900/50">📞</span>
+                        <span class="p-1.5 rounded-lg bg-[#141422] border border-cyan-900/50">💬</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ================= VIEW 4: PETI MASUK SMS ================= -->
+            <div id="view-messages" class="space-y-3 hidden">
+                
+                <!-- Search & Quarantine Tabs -->
+                <div class="space-y-2">
+                    <div class="p-2 rounded-xl border border-cyan-900/60 bg-[#12121E] flex items-center gap-2 text-xs font-mono-code text-slate-400">
+                        <span>🔍</span>
+                        <span>Cari mesej SMS...</span>
+                    </div>
+                    <div class="flex gap-2 text-[10px] font-mono-code">
+                        <span class="px-2.5 py-1 rounded-lg bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">PETI MASUK (28)</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-red-950/80 text-red-300 border border-red-700 font-bold">⚠️ KUARANTIN (3)</span>
+                    </div>
+                </div>
+
+                <!-- SMS 1: Phishing TAC alert -->
+                <div class="p-3 rounded-2xl border border-amber-900/60 bg-[#191310] flex items-start gap-3 shadow-md">
+                    <div class="w-9 h-9 rounded-xl bg-amber-950 border border-amber-500/60 flex items-center justify-center text-amber-400 text-sm font-bold shrink-0 mt-0.5">
+                        ⚠️
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-white font-mono-code">TAC Bank Alert</span>
+                            <span class="text-[9px] font-mono-code text-amber-400">08:15</span>
+                        </div>
+                        <div class="text-[9px] font-mono-code text-amber-300 font-bold mt-0.5">PAUTAN PANCINGAN DIASINGKAN</div>
+                        <p class="text-[10px] text-slate-300 truncate mt-0.5">RM950.00 disahkan. Jika bukan anda buka: bit.ly/bank-auth</p>
+                    </div>
+                </div>
+
+                <!-- SMS 2: Official Safe Transaction -->
+                <div class="p-3 rounded-2xl border border-cyan-900/40 bg-[#12121E] flex items-start gap-3 shadow-sm">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-950 border border-emerald-500/60 flex items-center justify-center text-emerald-400 text-sm font-bold shrink-0 mt-0.5">
+                        ✓
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-white font-mono-code">MyDebit Official</span>
+                            <span class="text-[9px] font-mono-code text-slate-400">Semalam</span>
+                        </div>
+                        <div class="text-[9px] font-mono-code text-emerald-400 font-bold mt-0.5">DISAHKAN SELAMAT</div>
+                        <p class="text-[10px] text-slate-300 truncate mt-0.5">Transaksi RM45.00 berjaya di Kedai Runcit Segar.</p>
+                    </div>
+                </div>
+
+                <!-- SMS 3: Fake Traffic Fine -->
+                <div class="p-3 rounded-2xl border border-red-900/60 bg-[#1B1115] flex items-start gap-3 shadow-md">
+                    <div class="w-9 h-9 rounded-xl bg-red-950 border border-red-500/60 flex items-center justify-center text-red-400 text-sm font-bold shrink-0 mt-0.5">
+                        🚫
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-white font-mono-code">JPJ Saman Palsu</span>
+                            <span class="text-[9px] font-mono-code text-red-400">24 Okt</span>
+                        </div>
+                        <div class="text-[9px] font-mono-code text-red-300 font-bold mt-0.5">SEKATAN AUTOMATIK KANTOI</div>
+                        <p class="text-[10px] text-slate-300 truncate mt-0.5">Tuntutan saman RM300 bit.ly/jpj-bayar (Scam Trojan APK)</p>
+                    </div>
+                </div>
+
+                <!-- SMS 4: Telco Balance -->
+                <div class="p-3 rounded-2xl border border-cyan-900/40 bg-[#12121E] flex items-start gap-3 shadow-sm">
+                    <div class="w-9 h-9 rounded-xl bg-cyan-950 border border-cyan-500/60 flex items-center justify-center text-cyan-400 text-sm font-bold shrink-0 mt-0.5">
+                        📶
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-white font-mono-code">CelcomDigi Alert</span>
+                            <span class="text-[9px] font-mono-code text-slate-400">22 Okt</span>
+                        </div>
+                        <div class="text-[9px] font-mono-code text-cyan-400 font-bold mt-0.5">TELCO RASMI</div>
+                        <p class="text-[10px] text-slate-300 truncate mt-0.5">Baki kuota internet 25.4GB aktif sehingga 15 Nov.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ================= VIEW 5: FLOATING HUD PANEL (TACTICAL DEFENSE OVERLAY) ================= -->
+            <div id="floating-hud-overlay" class="absolute inset-x-0 bottom-0 top-0 z-30 transform translate-y-full transition-transform duration-300 ease-out flex flex-col p-2">
+                <div class="w-full h-full rounded-2xl border border-cyan-500/60 bg-[#0E0E18]/95 p-4 flex flex-col shadow-2xl backdrop-blur-xl">
+                    
+                    <!-- HUD Header -->
+                    <div class="flex justify-between items-center pb-3 border-b border-cyan-900/60">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">🛡️</span>
+                            <div>
+                                <h3 class="text-xs font-black font-cyber tracking-wider text-cyan-400">PUSAT PERTAHANAN KANTOI</h3>
+                                <p class="text-[8px] font-mono-code text-slate-400">FORENSIK SIBER & REKOD ANCAMAN</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleHud()" class="p-1 px-2 rounded-lg bg-cyan-950 border border-cyan-800 text-cyan-300 text-[10px] font-bold font-mono-code">
+                            ✕ TUTUP
+                        </button>
+                    </div>
+
+                    <!-- HUD Defense Metrics & Tools -->
+                    <div class="flex-1 overflow-y-auto py-2.5 space-y-2.5 font-mono-code text-xs">
+                        
+                        <!-- Metric 1: 3.5M DB -->
+                        <div class="p-3 rounded-xl border border-cyan-900/60 bg-[#131322] flex items-center justify-between">
+                            <div>
+                                <div class="text-[9px] text-slate-400">PANGKALAN DATA LUAR TALIAN</div>
+                                <div class="text-base font-extrabold text-white">3,500,000</div>
+                                <div class="text-[8px] text-emerald-400">✓ SQLite Terpaut (v1.14.0)</div>
+                            </div>
+                            <div class="text-2xl">📦</div>
+                        </div>
+
+                        <!-- Metric 2: Auto-Block Status -->
+                        <div class="p-3 rounded-xl border border-cyan-900/60 bg-[#131322] flex items-center justify-between">
+                            <div>
+                                <div class="text-[9px] text-slate-400">STATUS ENJIN SEKATAN</div>
+                                <div class="text-base font-extrabold text-cyan-300">AUTO-BLOCK AKTIF</div>
+                                <div class="text-[8px] text-slate-300">Penolakan Senyap & Alert</div>
+                            </div>
+                            <div class="text-2xl">⚡</div>
+                        </div>
+
+                        <!-- 4 Quick Forensic Tools -->
+                        <div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase mb-1">Alat Forensik Taktikal</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="p-2 rounded-xl border border-cyan-900/60 bg-[#131322]">
+                                    <div class="text-xs mb-0.5">🔍</div>
+                                    <div class="text-[10px] font-bold text-white">Cari Nombor</div>
+                                    <div class="text-[8px] text-slate-400">Semak CCID & Telco</div>
+                                </div>
+                                <div class="p-2 rounded-xl border border-cyan-900/60 bg-[#131322]">
+                                    <div class="text-xs mb-0.5">🗄️</div>
+                                    <div class="text-[10px] font-bold text-white">Kuarantin SMS</div>
+                                    <div class="text-[8px] text-slate-400">14 mesej diasingkan</div>
+                                </div>
+                                <div class="p-2 rounded-xl border border-cyan-900/60 bg-[#131322]">
+                                    <div class="text-xs mb-0.5">🧪</div>
+                                    <div class="text-[10px] font-bold text-white">Sandbox Pautan</div>
+                                    <div class="text-[8px] text-slate-400">Uji URL meragukan</div>
+                                </div>
+                                <div class="p-2 rounded-xl border border-cyan-900/60 bg-[#131322]">
+                                    <div class="text-xs mb-0.5">📢</div>
+                                    <div class="text-[10px] font-bold text-white">Lapor Scammer</div>
+                                    <div class="text-[8px] text-slate-400">Sumbang ke DB</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- HUD Footer Status -->
+                    <div class="pt-2 border-t border-cyan-900/60 flex justify-between items-center text-[8px] font-mono-code text-slate-400">
+                        <span>KANTOI DEFENSE v1.14.0</span>
+                        <span class="text-emerald-400 font-bold">● HEURISTICS ONLINE</span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 4. FIXED 4-BUTTON BOTTOM DOCK -->
+        <div class="border-t border-cyan-900/60 bg-[#0E0E17] px-2 py-2 flex items-center justify-around z-20" id="bottom-dock">
+            
+            <!-- Tab 1: Panggilan -->
+            <button onclick="switchTab('calls')" class="bottom-tab flex-1 py-1 px-1 rounded-xl flex flex-col items-center justify-center transition" id="tab-calls">
+                <span class="text-base leading-none mb-1">📞</span>
+                <span class="text-[9px] font-bold tracking-tight leading-none text-slate-400" id="label-calls">Panggilan</span>
+            </button>
+
+            <!-- Tab 2: Kenalan -->
+            <button onclick="switchTab('contacts')" class="bottom-tab flex-1 py-1 px-1 rounded-xl flex flex-col items-center justify-center transition" id="tab-contacts">
+                <span class="text-base leading-none mb-1">📖</span>
+                <span class="text-[9px] font-bold tracking-tight leading-none text-slate-400" id="label-contacts">Kenalan</span>
+            </button>
+
+            <!-- Tab 3: Pad Dail (Active by default) -->
+            <button onclick="switchTab('dialer')" class="bottom-tab flex-1 py-1 px-1 rounded-xl flex flex-col items-center justify-center transition bg-cyan-950/80 border border-cyan-500/60 shadow-lg shadow-cyan-950 text-cyan-300" id="tab-dialer">
+                <span class="text-base leading-none mb-1">🔢</span>
+                <span class="text-[9px] font-bold tracking-tight leading-none text-white" id="label-dialer">Pad Dail</span>
+            </button>
+
+            <!-- Tab 4: Mesej -->
+            <button onclick="switchTab('messages')" class="bottom-tab flex-1 py-1 px-1 rounded-xl flex flex-col items-center justify-center transition" id="tab-messages">
+                <span class="text-base leading-none mb-1">💬</span>
+                <span class="text-[9px] font-bold tracking-tight leading-none text-slate-400" id="label-messages">Mesej</span>
+            </button>
+
+        </div>
+
+        <!-- 5. Android Home Indicator -->
+        <div class="h-3 flex items-center justify-center pb-1 z-20 bg-[#0E0E17]">
+            <div class="w-28 h-1 rounded-full bg-slate-600/50"></div>
+        </div>
+
+    </div>
+
+    <!-- Tab Control Script -->
+    <script>
+        let currentTab = 'dialer';
+        let isHudOpen = false;
+
+        function switchTab(tabId) {
+            currentTab = tabId;
+            if (isHudOpen) toggleHud();
+
+            ['dialer', 'calls', 'contacts', 'messages'].forEach(t => {
+                const el = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`tab-${t}`);
+                const lbl = document.getElementById(`label-${t}`);
+                if (t === tabId) {
+                    el.classList.remove('hidden');
+                    btn.className = 'bottom-tab flex-1 py-1 px-1 rounded-xl flex flex-col items-center justify-center transition bg-cyan-950/80 border border-cyan-500/60 shadow-lg shadow-cyan-950 text-cyan-300';
+                    lbl.className = 'text-[9px] font-bold tracking-tight leading-none text-white';
+                } else {
+                    el.classList.add('hidden');
+                    btn.className = 'bottom-tab flex-1 py-1 px-1 rounded-xl flex flex-col items-center justify-center transition text-slate-400 hover:text-white';
+                    lbl.className = 'text-[9px] font-bold tracking-tight leading-none text-slate-400';
+                }
+            });
+        }
+
+        function toggleHud() {
+            isHudOpen = !isHudOpen;
+            const hud = document.getElementById('floating-hud-overlay');
+            if (isHudOpen) {
+                hud.classList.remove('translate-y-full');
+            } else {
+                hud.classList.add('translate-y-full');
+            }
+        }
+
+        function clearNumber() {
+            document.getElementById('dialer-num').innerText = '';
+        }
+    </script>
+</body>
+</html>

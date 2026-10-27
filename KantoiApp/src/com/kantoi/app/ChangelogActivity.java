@@ -94,11 +94,43 @@ public class ChangelogActivity extends Activity {
         });
         root.addView(btnGithub);
 
+        // ==================== VERSION 1.15.0 ====================
+        LinearLayout cardV1150 = createCard(0xFF141422, 0xFF00D4FF, 12);
+        cardV1150.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1150Header = createVersionHeader("VERSI 1.15.0 (TERKINI)", "27 OKTOBER 2026", 0xFF00D4FF);
+        cardV1150.addView(v1150Header);
+
+        TextView tvV1150Content = new TextView(this);
+        tvV1150Content.setText(
+            "⚡ Reka Bentuk Generasi Baharu Cyberpunk HUD Tactical & Seni Bina Dok 4-Butang Bawah:\n\n" +
+            "⚡ 1. Antara Muka Rasmi Cyberpunk HUD Tactical (/ui-ux-pro-max):\n" +
+            "   • Transformasi visual penuh bertaraf forensik siber tentera dengan latar pekat Void Black (#0A0A0F) dan aksen Neon Cyan (#00D4FF).\n" +
+            "   • Ketetapan piawaian kontras tinggi WCAG 7:1 untuk kejelasan maksimum pada waktu siang mahupun malam.\n\n" +
+            "📐 2. Dok Navigasi 4-Butang Ergonomik (Fitts's Law):\n" +
+            "   • Navigasi bawah disusun semula kepada 4 butang teras: [📞 Panggilan] [📖 Kenalan] [🔢 Pad Dail] [💬 Mesej].\n" +
+            "   • Zon sentuhan setiap tab kini 30% lebih lebar (~95dp) untuk keselesaan menaip satu tangan tanpa risiko salah tekan.\n\n" +
+            "🛡️ 3. Integrasi Pusat Pertahanan ke Floating Tactical HUD (⚡ HUD):\n" +
+            "   • Panel Pertahanan, statistik 3,500,000 scammer disahkan, kuarantin SMS, dan sandbox pautan kini beroperasi di dalam Kapsul HUD Terapung.\n" +
+            "   • Boleh diakses secara langsung dari mana-mana paparan aplikasi dengan 1-klik melalui butang ⚡ HUD.\n\n" +
+            "🔢 4. Pad Dail Pintar Ergonomik Rapat:\n" +
+            "   • Jarak menegak angka nombor ke teks abjad dirapatkan rapi dengan pembetulan padding fon Android.\n" +
+            "   • Butang dail utama bergemerlapan Neon Cyan dengan maklum balas haptik pantas."
+        );
+        tvV1150Content.setTextColor(0xFFE2E8F0);
+        tvV1150Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tvV1150Content.setLineSpacing(dpToPx(4), 1.15f);
+        setMarginTop(tvV1150Content, 10);
+        cardV1150.addView(tvV1150Content);
+
+        setMarginTop(cardV1150, 14);
+        root.addView(cardV1150);
+
         // ==================== VERSION 1.14.0 ====================
         LinearLayout cardV1140 = createCard(0xFF1E293B, 0xFF10B981, 12);
         cardV1140.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        LinearLayout v1140Header = createVersionHeader("VERSI 1.14.0 (TERKINI)", "26 OKTOBER 2026", 0xFF10B981);
+        LinearLayout v1140Header = createVersionHeader("VERSI 1.14.0", "26 OKTOBER 2026", 0xFF94A3B8);
         cardV1140.addView(v1140Header);
 
         TextView tvV1140Content = new TextView(this);
