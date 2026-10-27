@@ -103,13 +103,11 @@ USER_KEYS_PATH = os.path.join(BASE_DIR, "user_api_keys.json")
 
 # Senarai Model Google Gemini yang disokong secara automatik (Fallback Terpantas)
 AVAILABLE_GEMINI_MODELS = [
-    "gemini-2.5-flash",       # Generasi Terkini Pantas (Workhorse Vision/OCR)
-    "gemini-2.0-flash",       # Standard Kestabilan Tinggi & Kependaman Rendah
-    "gemini-1.5-flash",       # Sandaran Kuota Luas & Keserasian Maksimum
-    "gemini-2.5-pro",         # Model Penalaran Siber Mendalam
-    "gemini-3.8-flash",       # Generasi Maju
-    "gemini-4-argon",         # Flagship 1M Context
-    "gemini-3.5-flash"        # Generasi 3.5 Flash
+    "gemini-2.0-flash",                   # Generasi Terkini Pantas (Workhorse Vision/OCR)
+    "gemini-1.5-flash",                   # Standard Kestabilan Tinggi & Kuota Paling Luas (15 RPM Percuma)
+    "gemini-1.5-flash-8b",                # Model Super Ringan & Rendah Kependaman
+    "gemini-1.5-pro",                     # Model Penalaran Siber Mendalam
+    "gemini-2.0-flash-lite-preview-02-05" # Generasi 2.0 Lite
 ]
 
 user_sessions = {}
@@ -785,6 +783,36 @@ def get_image_mime_type(image_path):
         pass
     return "image/jpeg"
 
+def optimize_image_for_gemini(image_path, max_dim=1280, quality=85):
+    """
+    Mengoptimumkan saiz fail imej sebelum dihantar ke Gemini API.
+    - Mengurangkan saiz fail drastik (dari 3-5MB ke 100-200KB)
+    - Mengelakkan sekatan gateway Google Cloud / Cloud Armor (HTTP 403 / 413)
+    - Memastikan teks, nombor telefon dan kod QR kekal tajam & boleh dibaca
+    """
+    if not image_path or not os.path.exists(image_path):
+        return image_path, "image/jpeg", False
+    try:
+        from PIL import Image
+        with Image.open(image_path) as img:
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            w, h = img.size
+            if max(w, h) > max_dim:
+                scale = max_dim / float(max(w, h))
+                new_w = int(w * scale)
+                new_h = int(h * scale)
+                resample_filter = getattr(Image, "Resampling", None)
+                filter_algo = resample_filter.LANCZOS if resample_filter else Image.LANCZOS
+                img = img.resize((new_w, new_h), filter_algo)
+            tmp_opt = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+            img.save(tmp_opt.name, format="JPEG", quality=quality, optimize=True)
+            tmp_opt.close()
+            return tmp_opt.name, "image/jpeg", True
+    except Exception as opt_err:
+        print(f"[IMG OPTIMIZE WARN] {opt_err}. Menggunakan fail asal.")
+        return image_path, get_image_mime_type(image_path), False
+
 def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
     """Menghantar imej ke Google Gemini Vision API dengan sokongan perlindungan keselamatan dan kebal SSL Windows 7"""
     global LAST_GEMINI_DIAGNOSTIC
@@ -800,13 +828,20 @@ def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
         }
         return None
         
-    mime_type = get_image_mime_type(image_path)
+    opt_img_path, mime_type, was_optimized = optimize_image_for_gemini(image_path)
     try:
-        with open(image_path, "rb") as f:
+        with open(opt_img_path, "rb") as f:
             b64_data = base64.b64encode(f.read()).decode("utf-8")
     except Exception as e:
         print(f"[GEMINI FILE READ ERR] {e}")
+        if was_optimized and os.path.exists(opt_img_path):
+            try: os.remove(opt_img_path)
+            except: pass
         return None
+    finally:
+        if was_optimized and os.path.exists(opt_img_path):
+            try: os.remove(opt_img_path)
+            except: pass
 
     prompt = (
         "Anda adalah penganalisis keselamatan siber risikan penipuan KANTOI (Malaysia).\n"
@@ -877,14 +912,14 @@ def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
         }
         resp = None
         try:
-            resp = requests.post(url, headers=headers, json=payload, timeout=25)
+            resp = requests.post(url, headers=headers, json=payload, timeout=45)
         except Exception as net_or_ssl_err:
             # Kebal SSL untuk Windows 7 SP1 & Python 3.8 embeddable
             print(f"[GEMINI SSL/NET WARN on {model_name}] {net_or_ssl_err}. Mencuba mod kebal SSL (verify=False)...")
             try:
                 import urllib3
                 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                resp = requests.post(url, headers=headers, json=payload, timeout=25, verify=False)
+                resp = requests.post(url, headers=headers, json=payload, timeout=45, verify=False)
             except Exception as e_retry:
                 print(f"[GEMINI RETRY ERR] {e_retry}")
                 LAST_GEMINI_DIAGNOSTIC = {
@@ -958,7 +993,7 @@ def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
                 "model": model_name,
                 "timestamp": time.time()
             }
-            if resp.status_code in [404, 400]:
+            if resp.status_code in [404, 400, 403, 429, 500, 502, 503]:
                 continue
             else:
                 break
@@ -1038,10 +1073,13 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
             parts.append({"text": "Catatan / Keterangan Pengguna berkaitan bukti: " + " | ".join(cap_clean)})
 
     valid_images_count = 0
+    temp_opt_files = []
     for idx, img_p in enumerate(image_paths[:10]):
         try:
-            m_type = get_image_mime_type(img_p)
-            with open(img_p, "rb") as f:
+            opt_path, m_type, was_opt = optimize_image_for_gemini(img_p)
+            if was_opt:
+                temp_opt_files.append(opt_path)
+            with open(opt_path, "rb") as f:
                 b64_d = base64.b64encode(f.read()).decode("utf-8")
             parts.append({
                 "inline_data": {
@@ -1080,13 +1118,13 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
         }
         resp = None
         try:
-            resp = requests.post(url, headers=headers, json=payload, timeout=35)
+            resp = requests.post(url, headers=headers, json=payload, timeout=45)
         except Exception as net_or_ssl_err:
             print(f"[GEMINI MULTI-IMG SSL/NET WARN on {model_name}] {net_or_ssl_err}. Mencuba kebal SSL...")
             try:
                 import urllib3
                 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-                resp = requests.post(url, headers=headers, json=payload, timeout=35, verify=False)
+                resp = requests.post(url, headers=headers, json=payload, timeout=45, verify=False)
             except Exception as e_retry:
                 print(f"[GEMINI MULTI-IMG RETRY ERR] {e_retry}")
                 LAST_GEMINI_DIAGNOSTIC = {
@@ -1158,11 +1196,15 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
                 "model": model_name,
                 "timestamp": time.time()
             }
-            if resp.status_code in [404, 400]:
+            if resp.status_code in [404, 400, 403, 429, 500, 502, 503]:
                 continue
             else:
                 break
 
+    for t_f in temp_opt_files:
+        if os.path.exists(t_f):
+            try: os.remove(t_f)
+            except: pass
     return None
 
 def synthesize_multi_images_offline(image_paths, captions=None):
