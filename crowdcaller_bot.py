@@ -31,6 +31,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import kantoi_faq_vault
 
 try:
     from PIL import Image
@@ -3018,9 +3019,10 @@ def format_welcome_message(is_admin=False, user_id=None):
 MAIN_REPLY_KEYBOARD = {
     "keyboard": [
         [{"text": "🔍 Semak No / Akaun"}, {"text": "🏛️ Semakan PDRM"}],
+        [{"text": "📚 30 FAQ Mangsa Scam"}, {"text": "📢 Lapor Scammer"}],
         [{"text": "🌐 Carian Media Sosial"}, {"text": "📸 Imbas Foto / QR"}],
-        [{"text": "🔑 Kunci API (BYOK)"}, {"text": "📢 Lapor Scammer"}],
-        [{"text": "📰 Buletin Berita Scam"}, {"text": "ℹ️ Menu Bantuan & Panduan"}]
+        [{"text": "🔑 Kunci API (BYOK)"}, {"text": "📰 Buletin Berita Scam"}],
+        [{"text": "ℹ️ Menu Bantuan & Panduan"}]
     ],
     "resize_keyboard": True,
     "is_persistent": True
@@ -3029,6 +3031,9 @@ MAIN_REPLY_KEYBOARD = {
 def get_help_menu_keyboard():
     return {
         "inline_keyboard": [
+            [
+                {"text": "📚 30 FAQ WAJIB MANGSA SCAM (PANDUAN HAK & TINDAKAN)", "callback_data": "faq_hub"}
+            ],
             [
                 {"text": "🔑 Kunci API Sendiri (BYOK)", "callback_data": "help_mykey"},
                 {"text": "🔍 Semakan No / Bank", "callback_data": "help_check"}
@@ -3260,6 +3265,7 @@ def register_bot_commands():
     """Mendaftar senarai perintah rasmi pada butang Menu Telegram"""
     commands = [
         {"command": "start", "description": "Mula & buka Menu Utama"},
+        {"command": "faq", "description": "30 Soalan Lazim & Panduan Hak Mangsa Scam"},
         {"command": "help", "description": "Pusat Bantuan & Panduan Interaktif"},
         {"command": "mykey", "description": "Daftar / Semak kunci AI Gemini (BYOK)"},
         {"command": "agensi", "description": "Salur aduan rasmi NSRC 997, SKMM, PDRM"},
@@ -4214,6 +4220,27 @@ def run_bot():
                             answer_callback(cb_id, "Laporan pukal berjaya dihantar ke Admin!", alert=False)
                         else:
                             answer_callback(cb_id, "Sesi laporan telah tamat tempoh.", alert=True)
+                        continue
+
+                    # 1e. Hab 30 FAQ Mangsa Scam (Hak & Prosedur)
+                    if cb_data == "faq_hub":
+                        f_text, f_kb = kantoi_faq_vault.build_faq_hub_view()
+                        edit_message(cb_chat_id, cb_msg_id, f_text, reply_markup=f_kb, parse_mode="HTML")
+                        answer_callback(cb_id, "Hab 30 FAQ Mangsa Scam", alert=False)
+                        continue
+
+                    if cb_data.startswith("faq_cat_"):
+                        c_id = cb_data.replace("faq_cat_", "")
+                        f_text, f_kb = kantoi_faq_vault.build_faq_category_view(c_id)
+                        edit_message(cb_chat_id, cb_msg_id, f_text, reply_markup=f_kb, parse_mode="HTML")
+                        answer_callback(cb_id, "Kategori FAQ", alert=False)
+                        continue
+
+                    if cb_data.startswith("faq_q_"):
+                        q_id = cb_data.replace("faq_q_", "")
+                        f_text, f_kb = kantoi_faq_vault.build_faq_answer_view(q_id)
+                        edit_message(cb_chat_id, cb_msg_id, f_text, reply_markup=f_kb, parse_mode="HTML")
+                        answer_callback(cb_id, "Jawapan FAQ", alert=False)
                         continue
 
                     # 1d. Pusat Bantuan & Panduan Interaktif Pengguna
@@ -5190,6 +5217,12 @@ def run_bot():
                     continue
 
                 # Butang Pantas Papan Kekunci Bawah (Quick Keyboard Buttons)
+                if text in ["📚 30 FAQ Mangsa Scam", "30 FAQ Mangsa Scam", "/faq", "faq", "/panduan_mangsa", "panduan mangsa", "soalan", "/soalan"]:
+                    user_sessions.pop(chat_id, None)
+                    f_text, f_kb = kantoi_faq_vault.build_faq_hub_view()
+                    send_message(chat_id, f_text, reply_markup=f_kb, parse_mode="HTML")
+                    continue
+
                 if text == "🔍 Semak No / Akaun":
                     send_message(
                         chat_id, 
