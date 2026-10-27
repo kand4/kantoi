@@ -3,19 +3,43 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    
+    <!-- Background: Deep Obsidian Stealth -->
     <path
-        android:fillColor="#0F172A"
+        android:fillColor="#090D16"
         android:pathData="M0,0h108v108h-108z"/>
-    <!-- Outer Shield -->
+
+    <!-- Outer Cyber Aegis Shield (Electric Cyan Stroke & Blue Core) -->
     <path
-        android:fillColor="#DC2626"
-        android:pathData="M54,14 L88,28 C88,64 54,92 54,92 C54,92 20,64 20,28 Z"/>
-    <!-- Inner Dark Shield -->
+        android:fillColor="#0284C7"
+        android:strokeColor="#22D3EE"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:pathData="M54,12 L88,26 C88,64 54,94 54,94 C54,94 20,64 20,26 Z"/>
+
+    <!-- Inner Core Shield -->
     <path
-        android:fillColor="#1E293B"
-        android:pathData="M54,20 L82,32 C82,62 54,86 54,86 C54,86 26,62 26,32 Z"/>
-    <!-- White Letter K -->
+        android:fillColor="#090E1A"
+        android:pathData="M54,18 L82,30 C82,58 54,86 54,86 C54,86 26,60 26,30 Z"/>
+
+    <!-- Monogram K: Vertical Spine (Pure White) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M42,34 L48,34 L48,72 L42,72 Z M48,54 L64,34 L72,34 L54,55 L73,72 L64,72 L48,57 Z"/>
+        android:pathData="M40,34 L47,34 L47,72 L40,72 Z"/>
+
+    <!-- Monogram K: Upper Diagonal Cyber Beam (Electric Cyan) -->
+    <path
+        android:fillColor="#22D3EE"
+        android:pathData="M50,51 L66,34 L76,34 L56,55 Z"/>
+
+    <!-- Monogram K: Lower Diagonal Cyber Beam (Sky Blue) -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M53,54 L74,72 L64,72 L48,58 Z"/>
+
+    <!-- Center Radar Focal Node (Bright Focal Point) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0"/>
+
 </vector>
