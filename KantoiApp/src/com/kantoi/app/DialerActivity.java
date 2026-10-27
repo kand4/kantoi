@@ -424,8 +424,8 @@ public class DialerActivity extends Activity {
 
         GradientDrawable normalBg = new GradientDrawable();
         normalBg.setShape(GradientDrawable.OVAL);
-        normalBg.setColor(0xFF1E293B);
-        normalBg.setStroke(dpToPx(1), 0xFF334155);
+        normalBg.setColor(0xFF131B2E);
+        normalBg.setStroke(dpToPx(1), 0xFF1E293B);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             ColorStateList rippleColor = ColorStateList.valueOf(0x3338BDF8); // Soft cyan ripple
@@ -440,6 +440,7 @@ public class DialerActivity extends Activity {
         tvDigit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
         tvDigit.setTypeface(Typeface.DEFAULT_BOLD);
         tvDigit.setGravity(Gravity.CENTER);
+        tvDigit.setIncludeFontPadding(false);
         btnLayout.addView(tvDigit);
 
         if (!key.letters.isEmpty()) {
@@ -448,10 +449,17 @@ public class DialerActivity extends Activity {
             tvSub.setTextColor(0xFF94A3B8);
             tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
             tvSub.setTypeface(Typeface.DEFAULT_BOLD);
+            tvSub.setIncludeFontPadding(false);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 tvSub.setLetterSpacing(0.08f);
             }
             tvSub.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            subLp.topMargin = -dpToPx(3);
+            tvSub.setLayoutParams(subLp);
             btnLayout.addView(tvSub);
         }
 
