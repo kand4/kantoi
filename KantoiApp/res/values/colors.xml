@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_dark">#0F172A</color>
-    <color name="bg_card">#1E293B</color>
+    <!-- KANTOI Cyber Defense Palette (Variasi 1 - Cyber Aegis) -->
+    <color name="bg_dark">#090D16</color>
+    <color name="bg_card">#111827</color>
+    <color name="card_surface">#131B2E</color>
+    <color name="primary_cyan">#22D3EE</color>
     <color name="primary_sky">#0284C7</color>
+    <color name="electric_blue">#38BDF8</color>
     <color name="danger_red">#DC2626</color>
-    <color name="warning_amber">#D97706</color>
-    <color name="success_emerald">#059669</color>
+    <color name="warning_amber">#F59E0B</color>
+    <color name="success_emerald">#10B981</color>
     <color name="text_white">#FFFFFF</color>
     <color name="text_muted">#94A3B8</color>
+    <color name="border_subtle">#1E293B</color>
 </resources>

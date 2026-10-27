@@ -30,7 +30,7 @@ public class KantoiBottomBar {
         LinearLayout navBar = new LinearLayout(context);
         navBar.setOrientation(LinearLayout.HORIZONTAL);
         navBar.setGravity(Gravity.CENTER_VERTICAL);
-        navBar.setBackgroundColor(0xFF0B0F19); // Stealth Dark
+        navBar.setBackgroundColor(0xFF090D16); // Deep Obsidian Stealth Dark
         navBar.setPadding(dpToPx(context, 8), dpToPx(context, 6), dpToPx(context, 8), dpToPx(context, 8));
         navBar.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(context, 62)));
 
@@ -125,14 +125,14 @@ public class KantoiBottomBar {
 
         GradientDrawable bg = new GradientDrawable();
         if (selected) {
-            bg.setColor(0xFF1E293B);
-            bg.setCornerRadius(dpToPx(context, 8));
-            bg.setStroke(dpToPx(context, 1), 0xFF0284C7);
+            bg.setColor(0xFF131B2E); // Deep Obsidian Card Surface
+            bg.setCornerRadius(dpToPx(context, 10));
+            bg.setStroke(dpToPx(context, 1), 0xFF0284C7); // Electric Cyber Blue Stroke
             btn.setBackground(bg);
-            btn.setTextColor(0xFF38BDF8); // Sky blue
+            btn.setTextColor(0xFF22D3EE); // Cyber Cyan Highlight
         } else {
             btn.setBackground(null);
-            btn.setTextColor(0xFF94A3B8); // Slate 400
+            btn.setTextColor(0xFF64748B); // Muted Slate
         }
         return btn;
     }
