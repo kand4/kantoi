@@ -50,11 +50,11 @@ public class DialerActivity extends Activity {
 
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
-        mainLayout.setBackgroundColor(0xFF0F172A);
+        mainLayout.setBackgroundColor(0xFF0A0A0F);
 
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackgroundColor(0xFF0F172A); // Slate 900
+        scrollView.setBackgroundColor(0xFF0A0A0F); // Slate 900
         scrollView.setClipToPadding(false);
         scrollView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
 
@@ -71,11 +71,12 @@ public class DialerActivity extends Activity {
 
         Button btnBack = new Button(this);
         btnBack.setText("← UTAMA");
-        btnBack.setTextColor(Color.WHITE);
+        btnBack.setTextColor(0xFF94A3B8);
         btnBack.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         btnBack.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable backBg = new GradientDrawable();
-        backBg.setColor(0xFF334155);
+        backBg.setColor(0xFF141422);
+        backBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         backBg.setCornerRadius(dpToPx(6));
         btnBack.setBackground(backBg);
         btnBack.setOnClickListener(new View.OnClickListener() {
@@ -88,7 +89,7 @@ public class DialerActivity extends Activity {
 
         TextView tvTitle = new TextView(this);
         tvTitle.setText("  📞 PENDAIL PINTAR");
-        tvTitle.setTextColor(0xFFF8FAFC);
+        tvTitle.setTextColor(0xFF00D4FF);
         tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
         topBar.addView(tvTitle);
@@ -99,12 +100,13 @@ public class DialerActivity extends Activity {
 
         Button btnContacts = new Button(this);
         btnContacts.setText("📖 BUKU TEL");
-        btnContacts.setTextColor(Color.WHITE);
+        btnContacts.setTextColor(0xFF00D4FF);
         btnContacts.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnContacts.setTypeface(Typeface.DEFAULT_BOLD);
         btnContacts.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
         GradientDrawable conBg = new GradientDrawable();
-        conBg.setColor(0xFF0284C7);
+        conBg.setColor(0xFF141422);
+        conBg.setStroke(dpToPx(1), 0xFF00D4FF);
         conBg.setCornerRadius(dpToPx(6));
         btnContacts.setBackground(conBg);
         btnContacts.setOnClickListener(new View.OnClickListener() {
@@ -127,7 +129,8 @@ public class DialerActivity extends Activity {
         LinearLayout displayCard = new LinearLayout(this);
         displayCard.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable cardBg = new GradientDrawable();
-        cardBg.setColor(0xFF1E293B);
+        cardBg.setColor(0xFF141422);
+        cardBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         cardBg.setCornerRadius(dpToPx(16));
         cardBg.setStroke(dpToPx(1), 0xFF334155);
         displayCard.setBackground(cardBg);
@@ -248,7 +251,7 @@ public class DialerActivity extends Activity {
         setMarginTop(actionsRow, 22);
 
         // SMS Shortcut Button
-        Button btnSms = createRoundButton("💬", 0xFF0284C7, dpToPx(56));
+        Button btnSms = createRoundButton("💬", 0xFF141422, dpToPx(56));
         btnSms.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -266,7 +269,8 @@ public class DialerActivity extends Activity {
         actionsRow.addView(createHorizontalSpacer(dpToPx(28)));
 
         // Main Call Button (Green)
-        Button btnCall = createRoundButton("📞", 0xFF16A34A, dpToPx(76));
+        Button btnCall = createRoundButton("📞", 0xFF00D4FF, dpToPx(76));
+        btnCall.setTextColor(Color.BLACK);
         btnCall.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -279,7 +283,7 @@ public class DialerActivity extends Activity {
         actionsRow.addView(createHorizontalSpacer(dpToPx(28)));
 
         // Profile / Risk Dossier Button
-        Button btnInfo = createRoundButton("👤", 0xFF475569, dpToPx(56));
+        Button btnInfo = createRoundButton("👤", 0xFF141422, dpToPx(56));
         btnInfo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -424,11 +428,11 @@ public class DialerActivity extends Activity {
 
         GradientDrawable normalBg = new GradientDrawable();
         normalBg.setShape(GradientDrawable.OVAL);
-        normalBg.setColor(0xFF131B2E);
-        normalBg.setStroke(dpToPx(1), 0xFF1E293B);
+        normalBg.setColor(0xFF141422);
+        normalBg.setStroke(dpToPx(1), 0xFF2A2A3A);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            ColorStateList rippleColor = ColorStateList.valueOf(0x3338BDF8); // Soft cyan ripple
+            ColorStateList rippleColor = ColorStateList.valueOf(0x4400D4FF); // Soft cyan ripple
             btnLayout.setBackground(new RippleDrawable(rippleColor, normalBg, null));
         } else {
             btnLayout.setBackground(normalBg);
@@ -446,7 +450,7 @@ public class DialerActivity extends Activity {
         if (!key.letters.isEmpty()) {
             TextView tvSub = new TextView(this);
             tvSub.setText(key.letters);
-            tvSub.setTextColor(0xFF94A3B8);
+            tvSub.setTextColor(0xFF00D4FF);
             tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
             tvSub.setTypeface(Typeface.DEFAULT_BOLD);
             tvSub.setIncludeFontPadding(false);
@@ -494,6 +498,9 @@ public class DialerActivity extends Activity {
         GradientDrawable normalBg = new GradientDrawable();
         normalBg.setShape(GradientDrawable.OVAL);
         normalBg.setColor(bgColor);
+        if (bgColor != 0xFF00D4FF) {
+            normalBg.setStroke(dpToPx(1), 0xFF2A2A3A);
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             ColorStateList rippleColor = ColorStateList.valueOf(0x44FFFFFF);
