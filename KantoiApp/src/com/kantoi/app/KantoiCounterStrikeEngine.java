@@ -96,11 +96,27 @@ public class KantoiCounterStrikeEngine {
                 @Override
                 public void onInit(int status) {
                     if (status == TextToSpeech.SUCCESS && mTts != null) {
+                        try {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                                android.media.AudioAttributes aa = new android.media.AudioAttributes.Builder()
+                                        .setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                                        .build();
+                                mTts.setAudioAttributes(aa);
+                            }
+                        } catch (Throwable ignored) {}
+
                         int res = mTts.setLanguage(new Locale("ms", "MY"));
                         if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
-                            res = mTts.setLanguage(new Locale("in", "ID"));
+                            res = mTts.setLanguage(new Locale("ms"));
                             if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
-                                mTts.setLanguage(Locale.getDefault());
+                                res = mTts.setLanguage(new Locale("in", "ID"));
+                                if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
+                                    res = mTts.setLanguage(Locale.getDefault());
+                                    if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
+                                        mTts.setLanguage(Locale.US);
+                                    }
+                                }
                             }
                         }
                         mTts.setPitch(0.92f);      // Nada autoriti, tegas, dan dalam
@@ -240,20 +256,19 @@ public class KantoiCounterStrikeEngine {
      */
     public void prepareAudioForBroadcast() {
         try {
-            // 1. Arahkan servis panggilan rasmi (InCallService) ke SPEAKER
+            // 1. Arahkan servis panggilan rasmi (InCallService) ke SPEAKER jika ada panggilan aktif
             KantoiInCallService.setSpeaker(true);
 
-            // 2. Paksa perkakasan AudioManager peranti ke Speakerphone & Volum 100%
+            // 2. Maksimumkan volum media (STREAM_MUSIC) dan panggilan supaya amaran lantang kedengaran
             AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
             if (am != null) {
-                am.setMode(AudioManager.MODE_IN_COMMUNICATION);
-                am.setSpeakerphoneOn(true);
+                int maxMusic = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                am.setStreamVolume(AudioManager.STREAM_MUSIC, maxMusic, 0);
 
                 int maxVoice = am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL);
                 am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVoice, 0);
 
-                int maxMusic = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-                am.setStreamVolume(AudioManager.STREAM_MUSIC, maxMusic, 0);
+                am.setSpeakerphoneOn(true);
             }
         } catch (Throwable t) {
             Log.e(TAG, "prepareAudioForBroadcast error: " + t.getMessage());
@@ -338,10 +353,10 @@ public class KantoiCounterStrikeEngine {
             public void run() {
                 ToneGenerator toneGen = null;
                 try {
-                    toneGen = new ToneGenerator(AudioManager.STREAM_VOICE_CALL, 100);
+                    toneGen = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
                     char[] dtmfSequence = new char[]{'1', '9', '#', '0', '*'};
                     for (int i = 0; i < 5; i++) {
-                        // Letuskan nada DTMF terus ke suis telekomunikasi
+                        // Letuskan nada DTMF terus ke suis telekomunikasi jika dalam talian
                         KantoiInCallService.playDtmfToneBurst(dtmfSequence[i % dtmfSequence.length], 200);
                         toneGen.startTone(ToneGenerator.TONE_DTMF_D, 220);
                         Thread.sleep(260);
@@ -366,22 +381,56 @@ public class KantoiCounterStrikeEngine {
         }).start();
     }
 
-    private void speakText(String text, int seq, int total, final Runnable onDone) {
+    private void speakText(final String text, final int seq, final int total, final Runnable onDone) {
         prepareAudioForBroadcast();
 
-        if (mTtsReady && mTts != null) {
+        if (mTts == null) {
+            initTts();
+        }
+
+        if (!mTtsReady) {
+            Log.w(TAG, "TTS not ready yet, queuing speech retry...");
+            mHandler.postDelayed(new Runnable() {
+                private int retry = 0;
+                @Override
+                public void run() {
+                    if (mTtsReady && mTts != null) {
+                        doSpeak(text, onDone);
+                    } else if (retry < 6) {
+                        retry++;
+                        mHandler.postDelayed(this, 350);
+                    } else {
+                        Log.e(TAG, "TTS timed out, playing fallback siren...");
+                        playRadarToneSequence();
+                        if (onDone != null) onDone.run();
+                    }
+                }
+            }, 300);
+            return;
+        }
+
+        doSpeak(text, onDone);
+    }
+
+    private void doSpeak(String text, final Runnable onDone) {
+        prepareAudioForBroadcast();
+        if (mTts != null) {
             try {
-                Bundle params = new Bundle();
-                params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_VOICE_CALL);
-                params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f);
-                mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "cs_pdrm_" + System.currentTimeMillis());
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                    Bundle params = new Bundle();
+                    params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f);
+                    mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "cs_pdrm_" + System.currentTimeMillis());
+                } else {
+                    java.util.HashMap<String, String> params = new java.util.HashMap<String, String>();
+                    params.put(TextToSpeech.Engine.KEY_PARAM_VOLUME, "1.0");
+                    mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params);
+                }
             } catch (Throwable t) {
-                Log.e(TAG, "TTS speak error: " + t.getMessage());
+                Log.e(TAG, "TTS speak error: " + t.getMessage(), t);
             }
         }
 
-        // Anggarkan masa bercakap berasaskan kepanjangan ayat (purata ~75ms per aksara)
-        long duration = Math.max(3000L, (long) (text.length() * 75L));
+        long duration = Math.max(3500L, (long) (text.length() * 80L));
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -398,10 +447,10 @@ public class KantoiCounterStrikeEngine {
             public void run() {
                 ToneGenerator toneGen = null;
                 try {
-                    // Letuskan isyarat nada DTMF terus ke talian telco
+                    // Letuskan isyarat nada DTMF terus ke talian telco jika dalam panggilan
                     KantoiInCallService.playDtmfToneBurst('*', 250);
 
-                    toneGen = new ToneGenerator(AudioManager.STREAM_VOICE_CALL, 100);
+                    toneGen = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
                     for (int i = 0; i < 3; i++) {
                         toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 180);
                         Thread.sleep(280);
@@ -418,6 +467,24 @@ public class KantoiCounterStrikeEngine {
                 }
             }
         }).start();
+    }
+
+    public void testAudioWarning(final Context context) {
+        prepareAudioForBroadcast();
+        playRadarToneSequence();
+
+        final String testScript = "Perhatian: Ini adalah ujian sistem amaran siber KANTOI. Siren frekuensi dan sistem audio bersedia sepenuhnya.";
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                speakText(testScript, 1, 1, new Runnable() {
+                    @Override
+                    public void run() {
+                        playRadarToneSequence();
+                    }
+                });
+            }
+        }, 1200);
     }
 
     public String getTacticName(int tactic) {
