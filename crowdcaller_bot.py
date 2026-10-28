@@ -3224,7 +3224,7 @@ def get_help_detail(topic):
             "🌐 *PANDUAN CARIAN PERTIKAIAN MEDIA SOSIAL (GOOGLE CSE)*\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "Ciri berkuasa yang diadaptasi terus daripada enjin carian khas aplikasi KANTOI!\n\n"
-            "Enjin Google CSE (Custom Search Engine ID: `53a0041f2f24f4e3b`) telah diprogramkan khusus untuk menyaring rekod penipuan dan pertikaian transaksi di platform utama Malaysia:\n\n"
+            "Enjin Carian Khusus KANTOI (Penyaring Komuniti & Forum Tempatan) telah diprogramkan khusus untuk menyaring rekod penipuan dan pertikaian transaksi di platform utama Malaysia:\n\n"
             "• 🔴 *Forum Lowyat* (Aduan Kopitiam & Trade Zone Dispute)\n"
             "• 🟡 *Forum CariGold* (Pendedahan Scammer & Skim Cepat Kaya)\n"
             "• 🔵 *Facebook & Kumpulan Komuniti Anti-Scam*\n"
