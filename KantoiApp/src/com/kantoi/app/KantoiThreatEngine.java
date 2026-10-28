@@ -100,7 +100,7 @@ import android.view.animation.TranslateAnimation;
 public class KantoiThreatEngine {
     private static final String TAG = "KantoiThreatEngine";
     private static final String DB_NAME = "kantoi_threats.db";
-    private static final int CURRENT_DB_VERSION = 9; // Version 9: 3,729 Threats (+67 Kes Pelaburan Palsu & Akaun Keldai Telegram)
+    private static final int CURRENT_DB_VERSION = 10; // Version 10: Inbound-Only Anti-Spoofing Hotline Shield (6,163 Threats) & Counter-Strike Engine
     private static final int SCAMMER_CALL_NOTIFICATION_ID = 999111;
     private static final String SCAMMER_CALL_CHANNEL_ID = "scammer_incoming_call_channel";
     private static final String SCAMMER_SMS_CHANNEL_ID = "kantoi_sms_alerts";
@@ -1713,11 +1713,13 @@ public class KantoiThreatEngine {
         String raw = input.trim();
         String digits = raw.replaceAll("[^0-9]", "");
 
-        // Only valid phone number lengths (8 to 14 digits) are evaluated
+        // Direct exact match for short-code hotlines (e.g. 997 NSRC) or special threats
+        if (mThreatMap.containsKey(digits)) {
+            return mThreatMap.get(digits);
+        }
+
+        // Standard phone number lengths (8 to 14 digits) are evaluated with prefix variations
         if (digits.length() >= 8 && digits.length() <= 14) {
-            if (mThreatMap.containsKey(digits)) {
-                return mThreatMap.get(digits);
-            }
             if (digits.startsWith("0")) {
                 String core = digits.substring(1);
                 if (mThreatMap.containsKey(core)) return mThreatMap.get(core);
@@ -5383,8 +5385,15 @@ public class KantoiThreatEngine {
     public boolean isSafeContact(String rawNumber) {
         if (rawNumber == null || rawNumber.trim().isEmpty()) return false;
         String digits = rawNumber.replaceAll("[^0-9]", "");
-        if (digits.length() < 7) return false;
+        if (digits.length() < 3) return false;
         String norm = normalizeToLocal(rawNumber);
+
+        // Jangan anggap selamat jika nombor ini adalah Inbound Hotline yang dispoof atau Sasaran Ujian Simulasi
+        ScammerThreat threat = checkThreat(rawNumber);
+        if (threat != null && ("TEST_SIMULATION".equals(threat.riskTag) || "SPOOFED_INBOUND_HOTLINE".equals(threat.riskTag))) {
+            return false;
+        }
+
         if (isCustomSafeContact(norm)) return true;
         if (mNativeContactsWhitelist.contains(norm) || mNativeContactsWhitelist.contains(digits)) return true;
         if (mContactNameCache.containsKey(norm) || mContactNameCache.containsKey(digits)) return true;
@@ -5399,8 +5408,14 @@ public class KantoiThreatEngine {
     public boolean isSafeContactFast(String rawNumber) {
         if (rawNumber == null || rawNumber.trim().isEmpty()) return false;
         String digits = rawNumber.replaceAll("[^0-9]", "");
-        if (digits.length() < 7) return false;
+        if (digits.length() < 3) return false;
         String norm = normalizeToLocal(rawNumber);
+
+        ScammerThreat threat = checkThreat(rawNumber);
+        if (threat != null && ("TEST_SIMULATION".equals(threat.riskTag) || "SPOOFED_INBOUND_HOTLINE".equals(threat.riskTag))) {
+            return false;
+        }
+
         if (isCustomSafeContact(norm)) return true;
         if (mNativeContactsWhitelist.contains(norm) || mNativeContactsWhitelist.contains(digits)) return true;
         if (mContactNameCache.containsKey(norm) || mContactNameCache.containsKey(digits)) return true;

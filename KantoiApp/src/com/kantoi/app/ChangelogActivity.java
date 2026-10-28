@@ -94,11 +94,40 @@ public class ChangelogActivity extends Activity {
         });
         root.addView(btnGithub);
 
+        // ==================== VERSION 1.16.0 ====================
+        LinearLayout cardV1160 = createCard(0xFF141422, 0xFF00FF88, 12);
+        cardV1160.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1160Header = createVersionHeader("VERSI 1.16.0 (TERKINI)", "28 OKTOBER 2026", 0xFF00FF88);
+        cardV1160.addView(v1160Header);
+
+        TextView tvV1160Content = new TextView(this);
+        tvV1160Content.setText(
+            "⚡ Perisai Anti-Spoofing Hotline Inbound-Only, Matriks Counter-Strike Hibrid & Mod Ujian Simulasi:\n\n" +
+            "🛡️ 1. Pangkalan Data Hotline Inbound-Only (Perisai Anti-Spoofing):\n" +
+            "     Penyepaduan 39 nombor talian rasmi PDRM Bukit Aman, NSRC 997, SKMM, BNM, LHDN, Mahkamah, dan bank utama (Maybank, CIMB, Public Bank, RHB, dll).\n" +
+            "     Pengesanan automatik sekiranya scammer cuba menyamar (spoof) sebagai agensi/bank rasmi — amaran merah '100% PANGGILAN PALSU' dicetuskan serta-merta.\n\n" +
+            "⚡ 2. Matriks Counter-Strike Siber Hibrid (Taktik A, B, C):\n" +
+            "     Taktik A (PDRM Audio Trap): Siren polis & sintesis amaran rasmi Jenayah Siber Seksyen 420 Kanun Keseksaan.\n" +
+            "     Taktik B (AI Voice Honeypot): Melayan scammer dengan watak bot 'Atuk Pekak', 'Mak Cik Blur', atau 'Abang Runcit' untuk membakar masa & kos VoIP sindiket.\n" +
+            "     Taktik C (Forensik Senyap): 100% aktif merakam cap jari digital & menyediakan laporan sedia tampal ke Telegram.\n" +
+            "     Mod Rawak & Adaptif Pintar untuk pertahanan taktikal optimum.\n\n" +
+            "🧪 3. Mod Ujian Simulasi Sendiri (Sandbox Kawan):\n" +
+            "     Daftarkan nombor rakan anda untuk simulasi ujian. KANTOI memintas panggilan ujian walaupun nombor ada dalam kenalan, membolehkan anda melihat sendiri hasil tindak balas Counter-Strike!\n\n" +
+            "📊 4. Pangkalan Data Ancaman Diperluas ke 6,163 Rekod Disahkan (DB v10)."
+        );
+        tvV1160Content.setTextColor(0xFFCBD5E1);
+        tvV1160Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        setMarginTop(tvV1160Content, 8);
+        cardV1160.addView(tvV1160Content);
+        setMarginTop(cardV1160, 14);
+        root.addView(cardV1160);
+
         // ==================== VERSION 1.15.0 ====================
-        LinearLayout cardV1150 = createCard(0xFF141422, 0xFF00D4FF, 12);
+        LinearLayout cardV1150 = createCard(0xFF141422, 0xFF334155, 12);
         cardV1150.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        LinearLayout v1150Header = createVersionHeader("VERSI 1.15.0 (TERKINI)", "27 OKTOBER 2026", 0xFF00D4FF);
+        LinearLayout v1150Header = createVersionHeader("VERSI 1.15.0", "27 OKTOBER 2026", 0xFF94A3B8);
         cardV1150.addView(v1150Header);
 
         TextView tvV1150Content = new TextView(this);

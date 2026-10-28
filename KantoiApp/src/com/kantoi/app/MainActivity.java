@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.app.role.RoleManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -1359,6 +1361,9 @@ public class MainActivity extends Activity {
         reportBotCard.addView(btnLaunchBot);
         root.addView(reportBotCard);
 
+        // 2b-2. Matriks Counter-Strike & Mod Ujian Simulasi Kawan
+        root.addView(buildCounterStrikeSection(prefs));
+
         // 2c. Kad Gelembung Terapung 1-Ketikan (Idea 1: Floating Threat HUD)
         LinearLayout hudCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
         hudCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
@@ -2547,6 +2552,350 @@ public class MainActivity extends Activity {
 
     private int dpToPx(int dp) {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics());
+    }
+
+    private LinearLayout buildCounterStrikeSection(final SharedPreferences prefs) {
+        final KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
+
+        LinearLayout card = createCard(0xFF141422, 0xFF00D4FF, 14);
+        card.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+        setMarginTop(card, 10);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText("⚡ MATRIKS COUNTER-STRIKE & PERANGKAP SCAMMER");
+        tvTitle.setTextColor(0xFF00D4FF);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        card.addView(tvTitle);
+
+        TextView tvDesc = new TextView(this);
+        tvDesc.setText("Pintasan pintar & serangan balas psikologi terhadap scammer & nombor spoofed. Menggabungkan siren PDRM, bot suara honeypot, dan telemetri forensik secara hibrid.");
+        tvDesc.setTextColor(0xFFCBD5E1);
+        tvDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
+        card.addView(tvDesc);
+
+        // Subheader: Pilihan Mod
+        TextView tvModeLabel = new TextView(this);
+        tvModeLabel.setText("PILIHAN MOD TINDAK BALAS:");
+        tvModeLabel.setTextColor(0xFF94A3B8);
+        tvModeLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tvModeLabel.setTypeface(Typeface.DEFAULT_BOLD);
+        setMarginTop(tvModeLabel, 6);
+        card.addView(tvModeLabel);
+
+        final LinearLayout modeRow = new LinearLayout(this);
+        modeRow.setOrientation(LinearLayout.VERTICAL);
+        setMarginTop(modeRow, 6);
+
+        final Button btnModeHybrid = createCsOptionButton("🎲 Hibrid Pintar & Rawak (Cadangan)", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
+        final Button btnModeA = createCsOptionButton("🚨 Taktik A: Amaran Siber PDRM & Siren", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
+        final Button btnModeB = createCsOptionButton("👴 Taktik B: AI Voice Honeypot (Atuk/Mak Cik)", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_B_HONEYPOT);
+        final Button btnModeC = createCsOptionButton("📡 Taktik C: Senyap & Rekod Forensik Sahaja", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
+
+        final View.OnClickListener modeListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (v == btnModeHybrid) csEngine.setMode(KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
+                else if (v == btnModeA) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
+                else if (v == btnModeB) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_B_HONEYPOT);
+                else if (v == btnModeC) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
+
+                int mode = csEngine.getMode();
+                updateCsOptionButton(btnModeHybrid, mode == KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
+                updateCsOptionButton(btnModeA, mode == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
+                updateCsOptionButton(btnModeB, mode == KantoiCounterStrikeEngine.MODE_TACTIC_B_HONEYPOT);
+                updateCsOptionButton(btnModeC, mode == KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
+            }
+        };
+
+        btnModeHybrid.setOnClickListener(modeListener);
+        btnModeA.setOnClickListener(modeListener);
+        btnModeB.setOnClickListener(modeListener);
+        btnModeC.setOnClickListener(modeListener);
+
+        modeRow.addView(btnModeHybrid);
+        modeRow.addView(btnModeA);
+        modeRow.addView(btnModeB);
+        modeRow.addView(btnModeC);
+        card.addView(modeRow);
+
+        // Persona selector
+        TextView tvPersonaLabel = new TextView(this);
+        tvPersonaLabel.setText("PERSONA SUARA HONEYPOT:");
+        tvPersonaLabel.setTextColor(0xFF94A3B8);
+        tvPersonaLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tvPersonaLabel.setTypeface(Typeface.DEFAULT_BOLD);
+        setMarginTop(tvPersonaLabel, 10);
+        card.addView(tvPersonaLabel);
+
+        final LinearLayout personaRow = new LinearLayout(this);
+        personaRow.setOrientation(LinearLayout.HORIZONTAL);
+        setMarginTop(personaRow, 4);
+
+        final Button btnP0 = createCsSmallButton("👴 Atuk", csEngine.getPersona() == KantoiCounterStrikeEngine.PERSONA_ATUK_PEKAK);
+        final Button btnP1 = createCsSmallButton("👵 Mak Cik", csEngine.getPersona() == KantoiCounterStrikeEngine.PERSONA_MAK_CIK_BLUR);
+        final Button btnP2 = createCsSmallButton("🏪 Runcit", csEngine.getPersona() == KantoiCounterStrikeEngine.PERSONA_ABANG_RUNCIT);
+
+        final View.OnClickListener pListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (v == btnP0) csEngine.setPersona(KantoiCounterStrikeEngine.PERSONA_ATUK_PEKAK);
+                else if (v == btnP1) csEngine.setPersona(KantoiCounterStrikeEngine.PERSONA_MAK_CIK_BLUR);
+                else if (v == btnP2) csEngine.setPersona(KantoiCounterStrikeEngine.PERSONA_ABANG_RUNCIT);
+
+                int p = csEngine.getPersona();
+                updateCsSmallButton(btnP0, p == KantoiCounterStrikeEngine.PERSONA_ATUK_PEKAK);
+                updateCsSmallButton(btnP1, p == KantoiCounterStrikeEngine.PERSONA_MAK_CIK_BLUR);
+                updateCsSmallButton(btnP2, p == KantoiCounterStrikeEngine.PERSONA_ABANG_RUNCIT);
+            }
+        };
+        btnP0.setOnClickListener(pListener);
+        btnP1.setOnClickListener(pListener);
+        btnP2.setOnClickListener(pListener);
+
+        personaRow.addView(btnP0);
+        personaRow.addView(btnP1);
+        personaRow.addView(btnP2);
+        card.addView(personaRow);
+
+        // Auto Answer Toggle
+        final Button btnAutoAnswer = createButton(
+                csEngine.isAutoAnswerEnabled() ? "⚡ AUTO-JAWAB & PERANGKAP: AKTIF" : "⚡ AUTO-JAWAB & PERANGKAP: BUKAN AKTIF",
+                csEngine.isAutoAnswerEnabled() ? 0xFF059669 : 0xFF334155,
+                Color.WHITE
+        );
+        setMarginTop(btnAutoAnswer, 10);
+        btnAutoAnswer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean next = !csEngine.isAutoAnswerEnabled();
+                csEngine.setAutoAnswerEnabled(next);
+                btnAutoAnswer.setText(next ? "⚡ AUTO-JAWAB & PERANGKAP: AKTIF" : "⚡ AUTO-JAWAB & PERANGKAP: BUKAN AKTIF");
+                GradientDrawable g = new GradientDrawable();
+                g.setColor(next ? 0xFF059669 : 0xFF334155);
+                g.setCornerRadius(dpToPx(8));
+                btnAutoAnswer.setBackground(g);
+                Toast.makeText(MainActivity.this, next ? "Auto-Jawab diaktifkan untuk scammer." : "Auto-Jawab dimatikan.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        card.addView(btnAutoAnswer);
+
+        // ==========================================
+        // 🧪 MOD UJIAN SIMULASI (SANDBOX NOMBOR KAWAN)
+        // ==========================================
+        LinearLayout testBox = new LinearLayout(this);
+        testBox.setOrientation(LinearLayout.VERTICAL);
+        testBox.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+        setMarginTop(testBox, 14);
+
+        GradientDrawable tbBg = new GradientDrawable();
+        tbBg.setColor(0xFF0F172A);
+        tbBg.setCornerRadius(dpToPx(12));
+        tbBg.setStroke(dpToPx(1), 0xFF00FF88);
+        testBox.setBackground(tbBg);
+
+        TextView tvTestTitle = new TextView(this);
+        tvTestTitle.setText("🧪 MOD UJIAN SIMULASI (NOMBOR KAWAN)");
+        tvTestTitle.setTextColor(0xFF00FF88);
+        tvTestTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvTestTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        testBox.addView(tvTestTitle);
+
+        TextView tvTestDesc = new TextView(this);
+        tvTestDesc.setText("Ingin menguji sendiri fungsi ini? Masukkan nombor telefon rakan anda di bawah. KANTOI akan memintas panggilan daripada nombor tersebut untuk menguji tindak balas Counter-Strike walaupun nombor itu ada dalam kenalan telefon anda!");
+        tvTestDesc.setTextColor(0xFFE2E8F0);
+        tvTestDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        setMarginTop(tvTestDesc, 4);
+        testBox.addView(tvTestDesc);
+
+        final TextView tvTestStatus = new TextView(this);
+        final String currentTest = csEngine.getTestNumber();
+        boolean hasTest = (currentTest != null && !currentTest.isEmpty());
+        tvTestStatus.setText(hasTest ? "🟢 UJIAN AKTIF: " + KantoiThreatEngine.formatPhoneNumber(currentTest) + " (Sedia Diuji)" : "⚪ Tiada nombor ujian didaftarkan.");
+        tvTestStatus.setTextColor(hasTest ? 0xFF00FF88 : 0xFF94A3B8);
+        tvTestStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvTestStatus.setTypeface(Typeface.DEFAULT_BOLD);
+        setMarginTop(tvTestStatus, 8);
+        testBox.addView(tvTestStatus);
+
+        final EditText etTestNum = new EditText(this);
+        etTestNum.setHint("Masukkan nombor kawan (cth: 0123456789)");
+        etTestNum.setHintTextColor(0xFF64748B);
+        etTestNum.setTextColor(Color.WHITE);
+        etTestNum.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        etTestNum.setInputType(InputType.TYPE_CLASS_PHONE);
+        GradientDrawable etBg = new GradientDrawable();
+        etBg.setColor(0xFF1E293B);
+        etBg.setCornerRadius(dpToPx(8));
+        etBg.setStroke(dpToPx(1), 0xFF334155);
+        etTestNum.setBackground(etBg);
+        etTestNum.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+        setMarginTop(etTestNum, 8);
+        testBox.addView(etTestNum);
+
+        LinearLayout testBtnRow = new LinearLayout(this);
+        testBtnRow.setOrientation(LinearLayout.HORIZONTAL);
+        setMarginTop(testBtnRow, 8);
+
+        final Button btnRegisterTest = createButton("➕ AKTIFKAN UJIAN", 0xFF00FF88, Color.BLACK);
+        LinearLayout.LayoutParams rtLp = new LinearLayout.LayoutParams(0, dpToPx(42), 1.0f);
+        rtLp.rightMargin = dpToPx(6);
+        btnRegisterTest.setLayoutParams(rtLp);
+
+        final Button btnClearTest = createButton("🗑️ PADAM", 0xFFEF4444, Color.WHITE);
+        LinearLayout.LayoutParams ctLp = new LinearLayout.LayoutParams(0, dpToPx(42), 1.0f);
+        btnClearTest.setLayoutParams(ctLp);
+
+        btnRegisterTest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String input = etTestNum.getText().toString().trim();
+                if (input.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Sila masukkan nombor telefon rakan.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                boolean ok = csEngine.registerTestNumber(input);
+                if (ok) {
+                    String norm = csEngine.getTestNumber();
+                    tvTestStatus.setText("🟢 UJIAN AKTIF: " + KantoiThreatEngine.formatPhoneNumber(norm) + " (Sedia Diuji)");
+                    tvTestStatus.setTextColor(0xFF00FF88);
+                    etTestNum.setText("");
+                    Toast.makeText(MainActivity.this, "Nombor ujian didaftarkan! Sila minta rakan anda membuat panggilan.", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(MainActivity.this, "Gagal mendaftar nombor. Pastikan format betul.", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        btnClearTest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                csEngine.clearTestNumber();
+                tvTestStatus.setText("⚪ Tiada nombor ujian didaftarkan.");
+                tvTestStatus.setTextColor(0xFF94A3B8);
+                Toast.makeText(MainActivity.this, "Nombor ujian dipadam. Panggilan rakan kembali normal.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        testBtnRow.addView(btnRegisterTest);
+        testBtnRow.addView(btnClearTest);
+        testBox.addView(testBtnRow);
+        card.addView(testBox);
+
+        // ==========================================
+        // 📡 TONGGAK C: LOG FORENSIK TERKINI & TELEGRAM
+        // ==========================================
+        Button btnViewForensics = createButton("📡 LIHAT LOG FORENSIK & SALIN LAPORAN TELEGRAM", 0xFF0284C7, Color.WHITE);
+        setMarginTop(btnViewForensics, 12);
+        btnViewForensics.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showForensicLogsDialog(csEngine);
+            }
+        });
+        card.addView(btnViewForensics);
+
+        return card;
+    }
+
+    private void showForensicLogsDialog(final KantoiCounterStrikeEngine csEngine) {
+        List<KantoiCounterStrikeEngine.TelemetryLogItem> logs = csEngine.getRecentTelemetryLogs();
+        if (logs.isEmpty()) {
+            AlertDialog.Builder b = new AlertDialog.Builder(this);
+            b.setTitle("📡 Log Telemetri Forensik KANTOI");
+            b.setMessage("Belum ada panggilan scammer atau ujian yang dipintas setakat ini.\n\nSetiap kali scammer atau nombor ujian dikesan, KANTOI akan merekodkan bukti panggilan secara automatik di sini.");
+            b.setPositiveButton("BAIK", null);
+            b.show();
+            return;
+        }
+
+        final KantoiCounterStrikeEngine.TelemetryLogItem latest = logs.get(0);
+        StringBuilder sb = new StringBuilder();
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault());
+
+        sb.append("📊 JUMLAH REKOD: ").append(logs.size()).append(" PINTASAN\n\n");
+        for (int i = 0; i < Math.min(logs.size(), 10); i++) {
+            KantoiCounterStrikeEngine.TelemetryLogItem item = logs.get(i);
+            sb.append("───────────────────────\n");
+            sb.append("⏰ ").append(sdf.format(new Date(item.timestamp))).append("\n");
+            sb.append("📞 ").append(item.phone).append("\n");
+            sb.append("👤 ").append(item.suspectName).append("\n");
+            sb.append("⚡ ").append(item.tacticUsed).append("\n");
+        }
+
+        AlertDialog.Builder b = new AlertDialog.Builder(this);
+        b.setTitle("📡 Log Forensik KANTOI (Tonggak C)");
+        b.setMessage(sb.toString());
+        b.setPositiveButton("📋 SALIN LAPORAN TELEGRAM", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String report = csEngine.generateTelegramReportText(latest);
+                ClipboardManager cb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cb != null) {
+                    cb.setPrimaryClip(ClipData.newPlainText("KantoiReport", report));
+                    Toast.makeText(MainActivity.this, "Laporan disalin ke papan klip! Anda boleh tampal di Telegram.", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+        b.setNegativeButton("TUTUP", null);
+        b.show();
+    }
+
+    private Button createCsOptionButton(String text, boolean active) {
+        Button btn = new Button(this);
+        btn.setText(text);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btn.setTypeface(Typeface.DEFAULT_BOLD);
+        btn.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        btn.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(42));
+        lp.bottomMargin = dpToPx(4);
+        btn.setLayoutParams(lp);
+        updateCsOptionButton(btn, active);
+        return btn;
+    }
+
+    private void updateCsOptionButton(Button btn, boolean active) {
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(dpToPx(8));
+        if (active) {
+            g.setColor(0xFF1E293B);
+            g.setStroke(dpToPx(1), 0xFF00D4FF);
+            btn.setTextColor(0xFF00D4FF);
+        } else {
+            g.setColor(0xFF0F172A);
+            g.setStroke(dpToPx(1), 0xFF1E293B);
+            btn.setTextColor(0xFF94A3B8);
+        }
+        btn.setBackground(g);
+    }
+
+    private Button createCsSmallButton(String text, boolean active) {
+        Button btn = new Button(this);
+        btn.setText(text);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btn.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dpToPx(38), 1.0f);
+        lp.rightMargin = dpToPx(4);
+        btn.setLayoutParams(lp);
+        updateCsSmallButton(btn, active);
+        return btn;
+    }
+
+    private void updateCsSmallButton(Button btn, boolean active) {
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(dpToPx(6));
+        if (active) {
+            g.setColor(0xFF1E293B);
+            g.setStroke(dpToPx(1), 0xFF00FF88);
+            btn.setTextColor(0xFF00FF88);
+        } else {
+            g.setColor(0xFF0F172A);
+            g.setStroke(dpToPx(1), 0xFF1E293B);
+            btn.setTextColor(0xFF94A3B8);
+        }
+        btn.setBackground(g);
     }
 
     private String getAppVersionName() {

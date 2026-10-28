@@ -53,13 +53,17 @@ public class KantoiScreeningService extends CallScreeningService {
             if (threat != null) {
                 Log.w(TAG, "🚨 KANTOI! Panggilan scammer dikesan: " + rawNumber + " (" + threat.suspectName + ")");
 
-                if (autoBlock) {
+                KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
+                boolean isTestSim = "TEST_SIMULATION".equals(threat.riskTag);
+                boolean isCsAutoTrap = csEngine.isEnabled() && (csEngine.isAutoAnswerEnabled() || isTestSim);
+
+                if (autoBlock && !isCsAutoTrap) {
                     respondBlock(callDetails);
                     engine.showScammerCallNotification(this, rawNumber, threat, true);
                     Log.i(TAG, "Call auto-blocked successfully for scammer: " + rawNumber);
                 } else {
                     respondAllow(callDetails);
-                    // Dibenarkan berdering, IncomingCallActivity akan memaparkan UI amaran secara bersih
+                    // Dibenarkan berdering, IncomingCallActivity akan memaparkan UI amaran & Counter-Strike
                 }
             } else {
                 respondAllow(callDetails);
