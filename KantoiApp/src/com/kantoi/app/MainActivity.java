@@ -16,6 +16,7 @@ import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -1096,72 +1097,244 @@ public class MainActivity extends Activity {
 
     private void showCallLogActionDialog(final CallLogItem item) {
         AlertDialog.Builder b = new AlertDialog.Builder(this);
-        String title = item.name != null ? item.name : KantoiThreatEngine.formatPhoneNumber(item.number);
-        b.setTitle(title);
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("Nombor: ").append(KantoiThreatEngine.formatPhoneNumber(item.number)).append("\n");
-        sb.append("Masa: ").append(formatCallDate(item.date)).append("\n");
-        if (item.duration > 0) {
-            sb.append("Tempoh: ").append(formatCallDuration(item.duration)).append("\n");
-        }
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setVerticalScrollBarEnabled(false);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dpToPx(18), dpToPx(20), dpToPx(18), dpToPx(20));
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setColor(0xFF0A0A0F); // Void Black
+        rootBg.setCornerRadius(dpToPx(16));
+        rootBg.setStroke(dpToPx(2), item.isScammer ? 0xFFFF3366 : 0xFF00D4FF);
+        root.setBackground(rootBg);
+
+        // Header Card (Contact/Caller Overview)
+        LinearLayout headerCard = new LinearLayout(this);
+        headerCard.setOrientation(LinearLayout.VERTICAL);
+        headerCard.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+        GradientDrawable hBg = new GradientDrawable();
+        hBg.setColor(item.isScammer ? 0xFF450A0A : 0xFF141422);
+        hBg.setCornerRadius(dpToPx(10));
+        hBg.setStroke(dpToPx(1), item.isScammer ? 0xFFFF3366 : 0xFF2A2A3A);
+        headerCard.setBackground(hBg);
+        LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hLp.bottomMargin = dpToPx(12);
+        headerCard.setLayoutParams(hLp);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText(item.name != null ? item.name : KantoiThreatEngine.formatPhoneNumber(item.number));
+        tvTitle.setTextColor(item.isScammer ? 0xFFFCA5A5 : Color.WHITE);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        headerCard.addView(tvTitle);
+
+        TextView tvNum = new TextView(this);
+        tvNum.setText(KantoiThreatEngine.formatPhoneNumber(item.number) + " • " + formatCallDate(item.date) + (item.duration > 0 ? " (" + formatCallDuration(item.duration) + ")" : ""));
+        tvNum.setTextColor(0xFF94A3B8);
+        tvNum.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tvNum.setPadding(0, dpToPx(2), 0, 0);
+        headerCard.addView(tvNum);
+
         if (item.isScammer) {
-            sb.append("\n🚨 STATUS: SCAMMER DISAHKAN PDRM\n• ").append(item.scammerDetails).append("\n");
+            TextView tvScam = new TextView(this);
+            tvScam.setText("🚨 SCAMMER DISAHKAN PDRM\n" + (item.scammerDetails != null ? item.scammerDetails : "Nombor terlibat kes jenayah penipuan."));
+            tvScam.setTextColor(0xFFFECDD3);
+            tvScam.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            tvScam.setLineSpacing(dpToPx(2), 1.0f);
+            tvScam.setPadding(0, dpToPx(6), 0, 0);
+            headerCard.addView(tvScam);
         } else if (item.isSafeContact) {
-            sb.append("\n✅ STATUS: Kenalan Buku Telefon Selamat\n");
-        } else {
-            sb.append("\nℹ️ STATUS: Nombor Asing (Tiada rekod penipuan)\n");
+            TextView tvSafe = new TextView(this);
+            tvSafe.setText("✅ Kenalan Selamat (Senarai Putih)");
+            tvSafe.setTextColor(0xFF00FF88);
+            tvSafe.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            tvSafe.setPadding(0, dpToPx(4), 0, 0);
+            headerCard.addView(tvSafe);
         }
-        b.setMessage(sb.toString());
+        root.addView(headerCard);
 
-        CharSequence[] options = new CharSequence[]{
-            "📞 Panggil (" + KantoiThreatEngine.formatPhoneNumber(item.number) + ")",
-            "💬 Chat WhatsApp Terus",
-            "✉️ Hantar Mesej SMS",
-            "👤 Lihat Profil / Simpan Kenalan",
-            "🗑️ Padam Rekod Panggilan Ini",
-            "☑️ Masuk Mod Pilih & Padam Banyak"
-        };
+        final AlertDialog[] dialogHolder = new AlertDialog[1];
 
-        b.setItems(options, new DialogInterface.OnClickListener() {
+        // Action 1: Call
+        root.addView(createCallLogActionTile(dialogHolder, "📞", "Panggil Nombor Ini", KantoiThreatEngine.formatPhoneNumber(item.number), 0xFF00D4FF, new View.OnClickListener() {
             @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which) {
-                    case 0: {
-                        Intent callIt = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(item.number)));
-                        startActivity(callIt);
-                        break;
-                    }
-                    case 1: {
-                        openWhatsAppChat(item.number);
-                        break;
-                    }
-                    case 2: {
-                        Intent smsIt = new Intent(MainActivity.this, SmsActivity.class);
-                        smsIt.putExtra(SmsActivity.EXTRA_RECIPIENT, item.number);
-                        startActivity(smsIt);
-                        break;
-                    }
-                    case 3: {
-                        Intent pIt = new Intent(MainActivity.this, ContactProfileActivity.class);
-                        pIt.putExtra(ContactProfileActivity.EXTRA_PHONE_NUMBER, item.number);
-                        startActivity(pIt);
-                        break;
-                    }
-                    case 4: {
-                        deleteSingleCallLog(item);
-                        break;
-                    }
-                    case 5: {
-                        enterCallLogSelectionMode(item.id);
-                        break;
-                    }
+            public void onClick(View v) {
+                Intent callIt = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(item.number)));
+                startActivity(callIt);
+            }
+        }));
+
+        // Action 2: WhatsApp
+        root.addView(createCallLogActionTile(dialogHolder, "💬", "Chat WhatsApp Terus", "Hantar mesej tanpa simpan nombor", 0xFF059669, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openWhatsAppChat(item.number);
+            }
+        }));
+
+        // Action 3: SMS
+        root.addView(createCallLogActionTile(dialogHolder, "✉️", "Hantar Mesej SMS", "Buka aplikasi mesej rasmi KANTOI", 0xFF38BDF8, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent smsIt = new Intent(MainActivity.this, SmsActivity.class);
+                smsIt.putExtra(SmsActivity.EXTRA_RECIPIENT, item.number);
+                startActivity(smsIt);
+            }
+        }));
+
+        // Action 4: Profile / Save Contact
+        root.addView(createCallLogActionTile(dialogHolder, "👤", "Lihat Profil & Risikan", "Semak rekod penuh atau daftarkan", 0xFF818CF8, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent pIt = new Intent(MainActivity.this, ContactProfileActivity.class);
+                pIt.putExtra(ContactProfileActivity.EXTRA_PHONE_NUMBER, item.number);
+                startActivity(pIt);
+            }
+        }));
+
+        // Action 5: Delete Single Log
+        root.addView(createCallLogActionTile(dialogHolder, "🗑️", "Padam Rekod Panggilan Ini", "Keluarkan rekod panggilan ini dari peranti", 0xFFEF4444, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                deleteSingleCallLog(item);
+            }
+        }));
+
+        // Action 6: Select Multiple
+        root.addView(createCallLogActionTile(dialogHolder, "☑️", "Mod Pilih & Padam Banyak", "Pilih pelbagai rekod panggilan serentak", 0xFFF59E0B, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                enterCallLogSelectionMode(item.id);
+            }
+        }));
+
+        // Close Button
+        Button btnClose = new Button(this);
+        btnClose.setText("✕ TUTUP");
+        btnClose.setTextColor(0xFF94A3B8);
+        btnClose.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btnClose.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable cBg = new GradientDrawable();
+        cBg.setColor(0xFF141422);
+        cBg.setCornerRadius(dpToPx(8));
+        cBg.setStroke(dpToPx(1), 0xFF2A2A3A);
+        btnClose.setBackground(cBg);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(42));
+        clp.topMargin = dpToPx(6);
+        btnClose.setLayoutParams(clp);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (dialogHolder[0] != null && dialogHolder[0].isShowing()) {
+                    dialogHolder[0].dismiss();
+                }
+            }
+        });
+        root.addView(btnClose);
+
+        scroll.addView(root);
+        b.setView(scroll);
+
+        final AlertDialog dialog = b.create();
+        dialogHolder[0] = dialog;
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().setDimAmount(0.75f);
+        }
+        dialog.show();
+    }
+
+    private LinearLayout createCallLogActionTile(
+            final AlertDialog[] dialogHolder,
+            final String icon,
+            final String title,
+            final String desc,
+            final int accentColor,
+            final View.OnClickListener onClick
+    ) {
+        final LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dpToPx(12), dpToPx(9), dpToPx(12), dpToPx(9));
+
+        final GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF141422); // Card Void
+        bg.setCornerRadius(dpToPx(10));
+        bg.setStroke(dpToPx(1), 0xFF2A2A3A);
+        card.setBackground(bg);
+
+        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        cardLp.bottomMargin = dpToPx(7);
+        card.setLayoutParams(cardLp);
+
+        // Icon Box
+        LinearLayout iconBox = new LinearLayout(this);
+        iconBox.setGravity(Gravity.CENTER);
+        int boxSize = dpToPx(38);
+        LinearLayout.LayoutParams ibLp = new LinearLayout.LayoutParams(boxSize, boxSize);
+        iconBox.setLayoutParams(ibLp);
+
+        GradientDrawable ibBg = new GradientDrawable();
+        ibBg.setColor(0xFF1C1C2E);
+        ibBg.setCornerRadius(dpToPx(8));
+        ibBg.setStroke(dpToPx(1), accentColor);
+        iconBox.setBackground(ibBg);
+
+        TextView tvIcon = new TextView(this);
+        tvIcon.setText(icon);
+        tvIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        tvIcon.setGravity(Gravity.CENTER);
+        iconBox.addView(tvIcon);
+        card.addView(iconBox);
+
+        // Text
+        LinearLayout textBox = new LinearLayout(this);
+        textBox.setOrientation(LinearLayout.VERTICAL);
+        textBox.setPadding(dpToPx(10), 0, dpToPx(8), 0);
+        LinearLayout.LayoutParams tbLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        textBox.setLayoutParams(tbLp);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText(title);
+        tvTitle.setTextColor(0xFFF8FAFC);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        textBox.addView(tvTitle);
+
+        TextView tvDesc = new TextView(this);
+        tvDesc.setText(desc);
+        tvDesc.setTextColor(0xFF94A3B8);
+        tvDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        textBox.addView(tvDesc);
+        card.addView(textBox);
+
+        TextView tvArrow = new TextView(this);
+        tvArrow.setText("▶");
+        tvArrow.setTextColor(accentColor);
+        tvArrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        tvArrow.setTypeface(Typeface.DEFAULT_BOLD);
+        card.addView(tvArrow);
+
+        card.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (dialogHolder != null && dialogHolder[0] != null && dialogHolder[0].isShowing()) {
+                    dialogHolder[0].dismiss();
+                }
+                if (onClick != null) {
+                    onClick.onClick(v);
                 }
             }
         });
 
-        b.setNegativeButton("TUTUP", null);
-        b.show();
+        return card;
     }
 
     private void openWhatsAppChat(String phone) {

@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
@@ -312,38 +313,88 @@ public class AfterCallActivity extends Activity {
         gridRow3.addView(btnWhatsApp);
 
         // Action 6: Simpan Nombor ke Contacts
-        Button btnSaveContact = createSmallButton("👤 SIMPAN KENALAN", 0xFF334155, 0xFF64748B, 0xFFF8FAFC);
+        Button btnSaveContact = createSmallButton("👤 SIMPAN KENALAN", 0xFF141422, 0xFF2A2A3A, 0xFF00D4FF);
         setMarginLeft(btnSaveContact, 14);
         btnSaveContact.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                AlertDialog.Builder b = new AlertDialog.Builder(AfterCallActivity.this, android.R.style.Theme_DeviceDefault_Dialog_Alert);
-                b.setTitle("👤 CARA SIMPAN KENALAN");
-                b.setItems(new CharSequence[]{
-                    "👥 Simpan Sebagai Rakan Selamat KANTOI (Senarai Putih)",
-                    "📖 Eksport ke Buku Telefon Android"
-                }, new DialogInterface.OnClickListener() {
+                AlertDialog.Builder b = new AlertDialog.Builder(AfterCallActivity.this);
+                LinearLayout root = new LinearLayout(AfterCallActivity.this);
+                root.setOrientation(LinearLayout.VERTICAL);
+                root.setPadding(dpToPx(18), dpToPx(20), dpToPx(18), dpToPx(20));
+
+                GradientDrawable rootBg = new GradientDrawable();
+                rootBg.setColor(0xFF0A0A0F);
+                rootBg.setCornerRadius(dpToPx(16));
+                rootBg.setStroke(dpToPx(2), 0xFF00D4FF);
+                root.setBackground(rootBg);
+
+                TextView tvT = new TextView(AfterCallActivity.this);
+                tvT.setText("👤 CARA SIMPAN KENALAN");
+                tvT.setTextColor(Color.WHITE);
+                tvT.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+                tvT.setTypeface(Typeface.DEFAULT_BOLD);
+                tvT.setGravity(Gravity.CENTER);
+                tvT.setPadding(0, 0, 0, dpToPx(12));
+                root.addView(tvT);
+
+                final AlertDialog[] dHolder = new AlertDialog[1];
+
+                root.addView(createOptionTile(dHolder, "👥", "Rakan Selamat KANTOI", "Daftar ke Senarai Putih anti-sekat peranti", 0xFF00FF88, new View.OnClickListener() {
                     @Override
-                    public void onClick(DialogInterface d, int which) {
-                        if (which == 0) {
-                            mEngine.showRegisterFriendDialog(AfterCallActivity.this, cleanLocal);
-                        } else {
-                            try {
-                                Intent insertIt = new Intent(Intent.ACTION_INSERT);
-                                insertIt.setType(ContactsContract.Contacts.CONTENT_TYPE);
-                                insertIt.putExtra(ContactsContract.Intents.Insert.PHONE, cleanLocal);
-                                if (mThreat != null && mThreat.suspectName != null) {
-                                    insertIt.putExtra(ContactsContract.Intents.Insert.NAME, "[SCAMMER] " + mThreat.suspectName);
-                                }
-                                startActivity(insertIt);
-                            } catch (Throwable t) {
-                                Toast.makeText(AfterCallActivity.this, "Gagal membuka kenalan: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    public void onClick(View v) {
+                        mEngine.showRegisterFriendDialog(AfterCallActivity.this, cleanLocal);
+                    }
+                }));
+
+                root.addView(createOptionTile(dHolder, "📖", "Buku Telefon Android", "Eksport nombor terus ke buku kenalan Google/peranti", 0xFF00D4FF, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        try {
+                            Intent insertIt = new Intent(Intent.ACTION_INSERT);
+                            insertIt.setType(ContactsContract.Contacts.CONTENT_TYPE);
+                            insertIt.putExtra(ContactsContract.Intents.Insert.PHONE, cleanLocal);
+                            if (mThreat != null && mThreat.suspectName != null) {
+                                insertIt.putExtra(ContactsContract.Intents.Insert.NAME, "[SCAMMER] " + mThreat.suspectName);
                             }
+                            startActivity(insertIt);
+                        } catch (Throwable t) {
+                            Toast.makeText(AfterCallActivity.this, "Gagal membuka kenalan: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }));
+
+                Button btnCancel = new Button(AfterCallActivity.this);
+                btnCancel.setText("✕ BATAL");
+                btnCancel.setTextColor(0xFF94A3B8);
+                btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                btnCancel.setTypeface(Typeface.DEFAULT_BOLD);
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setColor(0xFF141422);
+                cBg.setCornerRadius(dpToPx(8));
+                cBg.setStroke(dpToPx(1), 0xFF2A2A3A);
+                btnCancel.setBackground(cBg);
+                LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(42));
+                clp.topMargin = dpToPx(8);
+                btnCancel.setLayoutParams(clp);
+                btnCancel.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (dHolder[0] != null && dHolder[0].isShowing()) {
+                            dHolder[0].dismiss();
                         }
                     }
                 });
-                b.setNegativeButton("BATAL", null);
-                b.show();
+                root.addView(btnCancel);
+
+                b.setView(root);
+                final AlertDialog dialog = b.create();
+                dHolder[0] = dialog;
+                if (dialog.getWindow() != null) {
+                    dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                    dialog.getWindow().setDimAmount(0.75f);
+                }
+                dialog.show();
             }
         });
         gridRow3.addView(btnSaveContact);
@@ -411,4 +462,92 @@ public class AfterCallActivity extends Activity {
     private int dpToPx(int dp) {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics());
     }
+
+    private LinearLayout createOptionTile(
+            final AlertDialog[] dHolder,
+            final String icon,
+            final String title,
+            final String desc,
+            final int accentColor,
+            final View.OnClickListener onClick
+    ) {
+        final LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+
+        final GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF141422);
+        bg.setCornerRadius(dpToPx(10));
+        bg.setStroke(dpToPx(1), 0xFF2A2A3A);
+        card.setBackground(bg);
+
+        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        cardLp.bottomMargin = dpToPx(8);
+        card.setLayoutParams(cardLp);
+
+        LinearLayout iconBox = new LinearLayout(this);
+        iconBox.setGravity(Gravity.CENTER);
+        int boxSize = dpToPx(38);
+        LinearLayout.LayoutParams ibLp = new LinearLayout.LayoutParams(boxSize, boxSize);
+        iconBox.setLayoutParams(ibLp);
+
+        GradientDrawable ibBg = new GradientDrawable();
+        ibBg.setColor(0xFF1C1C2E);
+        ibBg.setCornerRadius(dpToPx(8));
+        ibBg.setStroke(dpToPx(1), accentColor);
+        iconBox.setBackground(ibBg);
+
+        TextView tvIcon = new TextView(this);
+        tvIcon.setText(icon);
+        tvIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        tvIcon.setGravity(Gravity.CENTER);
+        iconBox.addView(tvIcon);
+        card.addView(iconBox);
+
+        LinearLayout textBox = new LinearLayout(this);
+        textBox.setOrientation(LinearLayout.VERTICAL);
+        textBox.setPadding(dpToPx(10), 0, dpToPx(8), 0);
+        LinearLayout.LayoutParams tbLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        textBox.setLayoutParams(tbLp);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText(title);
+        tvTitle.setTextColor(0xFFF8FAFC);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        textBox.addView(tvTitle);
+
+        TextView tvDesc = new TextView(this);
+        tvDesc.setText(desc);
+        tvDesc.setTextColor(0xFF94A3B8);
+        tvDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        textBox.addView(tvDesc);
+        card.addView(textBox);
+
+        TextView tvArrow = new TextView(this);
+        tvArrow.setText("▶");
+        tvArrow.setTextColor(accentColor);
+        tvArrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tvArrow.setTypeface(Typeface.DEFAULT_BOLD);
+        card.addView(tvArrow);
+
+        card.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (dHolder != null && dHolder[0] != null && dHolder[0].isShowing()) {
+                    dHolder[0].dismiss();
+                }
+                if (onClick != null) {
+                    onClick.onClick(v);
+                }
+            }
+        });
+
+        return card;
+    }
+
 }
