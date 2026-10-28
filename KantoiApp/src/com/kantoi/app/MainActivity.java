@@ -2686,89 +2686,86 @@ public class MainActivity extends Activity {
         setMarginTop(card, 10);
 
         TextView tvTitle = new TextView(this);
-        tvTitle.setText("⚡ MATRIKS COUNTER-STRIKE & PERANGKAP SCAMMER");
+        tvTitle.setText("⚡ PERTAHANAN KANTOI (STANDARD INDUSTRI)");
         tvTitle.setTextColor(0xFF00D4FF);
         tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
         card.addView(tvTitle);
 
         TextView tvDesc = new TextView(this);
-        tvDesc.setText("Pintasan pintar & serangan balas psikologi terhadap scammer & nombor spoofed. Menggabungkan siren PDRM, bot suara honeypot, dan telemetri forensik secara hibrid.");
+        tvDesc.setText("Pintasan siber automatik mengikut piawaian telekomunikasi antarabangsa. Menggabungkan sekatan kelajuan 0-saat (zero-ring drop) bagi mematikan bot pendail scammer, disokong oleh SMS Amaran Forensik Seksyen 420 PDRM terus ke peranti pemanggil.");
         tvDesc.setTextColor(0xFFCBD5E1);
         tvDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         tvDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
         card.addView(tvDesc);
 
-        // Subheader: Pilihan Mod
-        TextView tvModeLabel = new TextView(this);
-        tvModeLabel.setText("PILIHAN MOD TINDAK BALAS:");
-        tvModeLabel.setTextColor(0xFF94A3B8);
-        tvModeLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        tvModeLabel.setTypeface(Typeface.DEFAULT_BOLD);
-        setMarginTop(tvModeLabel, 6);
-        card.addView(tvModeLabel);
-
-        final LinearLayout modeRow = new LinearLayout(this);
-        modeRow.setOrientation(LinearLayout.VERTICAL);
-        setMarginTop(modeRow, 6);
-
-        final Button btnModeA = createCsOptionButton("🚨 Taktik A: Amaran Rasmi Siber PDRM & Siren (Disyorkan)", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
-        final Button btnModeB = createCsOptionButton("🔊 Taktik B: Siren Frekuensi Tinggi Pemutus Talian", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC);
-        final Button btnModeC = createCsOptionButton("📡 Taktik C: Sekatan Senyap & Telemetri Forensik", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
-        final Button btnModeHybrid = createCsOptionButton("🎲 Hibrid Pintar & Rawak (Taktik A & B)", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
-
-        final View.OnClickListener modeListener = new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (v == btnModeA) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
-                else if (v == btnModeB) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC);
-                else if (v == btnModeC) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
-                else if (v == btnModeHybrid) csEngine.setMode(KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
-
-                int mode = csEngine.getMode();
-                updateCsOptionButton(btnModeA, mode == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
-                updateCsOptionButton(btnModeB, mode == KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC);
-                updateCsOptionButton(btnModeC, mode == KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
-                updateCsOptionButton(btnModeHybrid, mode == KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
-            }
-        };
-
-        btnModeA.setOnClickListener(modeListener);
-        btnModeB.setOnClickListener(modeListener);
-        btnModeC.setOnClickListener(modeListener);
-        btnModeHybrid.setOnClickListener(modeListener);
-
-        modeRow.addView(btnModeA);
-        modeRow.addView(btnModeB);
-        modeRow.addView(btnModeC);
-        modeRow.addView(btnModeHybrid);
-        card.addView(modeRow);
-
-        // Auto Answer Toggle
-        final Button btnAutoAnswer = createButton(
-                csEngine.isAutoAnswerEnabled() ? "⚡ AUTO-JAWAB & PERANGKAP: AKTIF" : "⚡ AUTO-JAWAB & PERANGKAP: BUKAN AKTIF",
-                csEngine.isAutoAnswerEnabled() ? 0xFF059669 : 0xFF2A2A3A,
+        // 1. KAWALAN UTAMA 1: SEKATAN 0-SAAT (ZERO-RING DROP)
+        final Button btnZeroRing = createButton(
+                csEngine.isZeroRingBlockEnabled() ? "🛡️ SEKATAN 0-SAAT (ZERO-RING): AKTIF" : "🛡️ SEKATAN 0-SAAT: TIDAK AKTIF",
+                csEngine.isZeroRingBlockEnabled() ? 0xFF059669 : 0xFF2A2A3A,
                 Color.WHITE
         );
-        setMarginTop(btnAutoAnswer, 10);
-        btnAutoAnswer.setOnClickListener(new View.OnClickListener() {
+        setMarginTop(btnZeroRing, 8);
+        btnZeroRing.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                boolean next = !csEngine.isAutoAnswerEnabled();
-                csEngine.setAutoAnswerEnabled(next);
-                btnAutoAnswer.setText(next ? "⚡ AUTO-JAWAB & PERANGKAP: AKTIF" : "⚡ AUTO-JAWAB & PERANGKAP: BUKAN AKTIF");
+                boolean next = !csEngine.isZeroRingBlockEnabled();
+                csEngine.setZeroRingBlockEnabled(next);
+                btnZeroRing.setText(next ? "🛡️ SEKATAN 0-SAAT (ZERO-RING): AKTIF" : "🛡️ SEKATAN 0-SAAT: TIDAK AKTIF");
                 GradientDrawable g = new GradientDrawable();
                 g.setColor(next ? 0xFF059669 : 0xFF2A2A3A);
                 g.setCornerRadius(dpToPx(8));
-                btnAutoAnswer.setBackground(g);
-                Toast.makeText(MainActivity.this, next ? "Auto-Jawab diaktifkan untuk scammer." : "Auto-Jawab dimatikan.", Toast.LENGTH_SHORT).show();
+                btnZeroRing.setBackground(g);
+                Toast.makeText(MainActivity.this, next ? "Sekatan pantas 0-saat diaktifkan." : "Sekatan 0-saat dimatikan.", Toast.LENGTH_SHORT).show();
             }
         });
-        card.addView(btnAutoAnswer);
+        card.addView(btnZeroRing);
 
-        // Butang Ujian Audio Amaran Siber & Siren
+        TextView tvZeroHint = new TextView(this);
+        tvZeroHint.setText("Panggilan scammer ditolak serta-merta sebelum telefon sempat berdering. Pendail automatik scammer merekodkan talian ini sebagai talian mati / tidak aktif.");
+        tvZeroHint.setTextColor(0xFF94A3B8);
+        tvZeroHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tvZeroHint.setPadding(0, dpToPx(3), 0, dpToPx(6));
+        card.addView(tvZeroHint);
+
+        // 2. KAWALAN UTAMA 2: SMS COUNTER-STRIKE (AMARAN PDRM)
+        final Button btnSmsStrike = createButton(
+                csEngine.isSmsCounterStrikeEnabled() ? "✉️ SMS COUNTER-STRIKE (PDRM): AKTIF" : "✉️ SMS COUNTER-STRIKE (PDRM): TIDAK AKTIF",
+                csEngine.isSmsCounterStrikeEnabled() ? 0xFF0284C7 : 0xFF2A2A3A,
+                Color.WHITE
+        );
+        setMarginTop(btnSmsStrike, 6);
+        btnSmsStrike.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean next = !csEngine.isSmsCounterStrikeEnabled();
+                csEngine.setSmsCounterStrikeEnabled(next);
+                btnSmsStrike.setText(next ? "✉️ SMS COUNTER-STRIKE (PDRM): AKTIF" : "✉️ SMS COUNTER-STRIKE (PDRM): TIDAK AKTIF");
+                GradientDrawable g = new GradientDrawable();
+                g.setColor(next ? 0xFF0284C7 : 0xFF2A2A3A);
+                g.setCornerRadius(dpToPx(8));
+                btnSmsStrike.setBackground(g);
+
+                if (next && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    if (checkCallingOrSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{Manifest.permission.SEND_SMS}, 771);
+                    }
+                }
+                Toast.makeText(MainActivity.this, next ? "SMS Amaran Siber diaktifkan." : "SMS Amaran Siber dimatikan.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        card.addView(btnSmsStrike);
+
+        TextView tvSmsHint = new TextView(this);
+        tvSmsHint.setText("Menghantar SMS berkanun Seksyen 420 PDRM secara automatik ke peranti pemanggil sebaik sahaja panggilan disekat. SMS dijamin 100% sampai ke peranti scammer.");
+        tvSmsHint.setTextColor(0xFF94A3B8);
+        tvSmsHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tvSmsHint.setPadding(0, dpToPx(3), 0, dpToPx(8));
+        card.addView(tvSmsHint);
+
+        // 3. Butang Ujian Bunyi Amaran & Siren Terus
         final Button btnTestAudio = createButton("🔊 UJI AMARAN AUDIO SEKARANG (TEST SOUND)", 0xFF141422, 0xFF00FF88);
-        setMarginTop(btnTestAudio, 8);
+        setMarginTop(btnTestAudio, 4);
         btnTestAudio.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -2800,7 +2797,7 @@ public class MainActivity extends Activity {
         testBox.addView(tvTestTitle);
 
         TextView tvTestDesc = new TextView(this);
-        tvTestDesc.setText("Ingin menguji sendiri fungsi ini? Masukkan nombor telefon rakan anda di bawah. KANTOI akan memintas panggilan daripada nombor tersebut untuk menguji tindak balas Counter-Strike walaupun nombor itu ada dalam kenalan telefon anda!");
+        tvTestDesc.setText("Ingin menguji sendiri fungsi ini? Masukkan nombor telefon rakan anda di bawah. Apabila rakan mendail anda, panggilan mereka akan disekat serta-merta dalam 0-saat (zero-ring), dan peranti rakan anda akan menerima SMS Amaran Siber KANTOI!");
         tvTestDesc.setTextColor(0xFFE2E8F0);
         tvTestDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         setMarginTop(tvTestDesc, 4);
@@ -2939,61 +2936,7 @@ public class MainActivity extends Activity {
         b.show();
     }
 
-    private Button createCsOptionButton(String text, boolean active) {
-        Button btn = new Button(this);
-        btn.setText(text);
-        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        btn.setTypeface(Typeface.DEFAULT_BOLD);
-        btn.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        btn.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(42));
-        lp.bottomMargin = dpToPx(4);
-        btn.setLayoutParams(lp);
-        updateCsOptionButton(btn, active);
-        return btn;
-    }
 
-    private void updateCsOptionButton(Button btn, boolean active) {
-        GradientDrawable g = new GradientDrawable();
-        g.setCornerRadius(dpToPx(8));
-        if (active) {
-            g.setColor(0xFF141422);
-            g.setStroke(dpToPx(1), 0xFF00D4FF);
-            btn.setTextColor(0xFF00D4FF);
-        } else {
-            g.setColor(0xFF0A0A0F);
-            g.setStroke(dpToPx(1), 0xFF141422);
-            btn.setTextColor(0xFF94A3B8);
-        }
-        btn.setBackground(g);
-    }
-
-    private Button createCsSmallButton(String text, boolean active) {
-        Button btn = new Button(this);
-        btn.setText(text);
-        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        btn.setTypeface(Typeface.DEFAULT_BOLD);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dpToPx(38), 1.0f);
-        lp.rightMargin = dpToPx(4);
-        btn.setLayoutParams(lp);
-        updateCsSmallButton(btn, active);
-        return btn;
-    }
-
-    private void updateCsSmallButton(Button btn, boolean active) {
-        GradientDrawable g = new GradientDrawable();
-        g.setCornerRadius(dpToPx(6));
-        if (active) {
-            g.setColor(0xFF141422);
-            g.setStroke(dpToPx(1), 0xFF00FF88);
-            btn.setTextColor(0xFF00FF88);
-        } else {
-            g.setColor(0xFF0A0A0F);
-            g.setStroke(dpToPx(1), 0xFF141422);
-            btn.setTextColor(0xFF94A3B8);
-        }
-        btn.setBackground(g);
-    }
 
     private String getAppVersionName() {
         try {

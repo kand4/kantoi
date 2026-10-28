@@ -38,6 +38,8 @@ public class KantoiCounterStrikeEngine {
     public static final String KEY_AUTO_ANSWER = "cs_auto_answer";
     public static final String KEY_TEST_NUMBER = "cs_test_number";
     public static final String KEY_TELEMETRY_LOGS = "cs_telemetry_logs";
+    public static final String KEY_ZERO_RING_BLOCK = "cs_zero_ring_block";
+    public static final String KEY_SMS_COUNTER_STRIKE = "cs_sms_counter_strike";
 
     public static final int MODE_HYBRID_RANDOM = 0;   // Hibrid Pintar (Taktik A & B)
     public static final int MODE_TACTIC_A_PDRM = 1;    // Taktik A: Amaran Rasmi Siber PDRM & Siren (Disyorkan)
@@ -169,6 +171,58 @@ public class KantoiCounterStrikeEngine {
     public int getPersona() { return 0; }
     public void setPersona(int persona) {}
     public String getPersonaName(int persona) { return "Mod Rasmi Siber"; }
+
+    public boolean isZeroRingBlockEnabled() {
+        return mPrefs.getBoolean(KEY_ZERO_RING_BLOCK, true);
+    }
+
+    public void setZeroRingBlockEnabled(boolean enabled) {
+        mPrefs.edit().putBoolean(KEY_ZERO_RING_BLOCK, enabled).apply();
+    }
+
+    public boolean isSmsCounterStrikeEnabled() {
+        return mPrefs.getBoolean(KEY_SMS_COUNTER_STRIKE, true);
+    }
+
+    public void setSmsCounterStrikeEnabled(boolean enabled) {
+        mPrefs.edit().putBoolean(KEY_SMS_COUNTER_STRIKE, enabled).apply();
+    }
+
+    /**
+     * Hantar SMS Amaran Rasmi Siber PDRM terus ke peranti scammer.
+     * Dijamin sampai ke pemanggil tanpa halangan isolasi audio Android.
+     */
+    public boolean sendCounterStrikeSms(String targetPhone, String suspectName) {
+        if (targetPhone == null || targetPhone.trim().isEmpty()) return false;
+        if (!isSmsCounterStrikeEnabled()) return false;
+
+        if (mContext.checkCallingOrSelfPermission(android.Manifest.permission.SEND_SMS) 
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "Kebenaran SEND_SMS belum diberikan, abaikan SMS Counter-Strike.");
+            return false;
+        }
+
+        try {
+            String digits = targetPhone.replaceAll("[^0-9+]", "");
+            String message = "[AMARAN KANTOI/PDRM JSJK] Panggilan anda telah dipintas. Nombor ini disahkan dalam senarai ancaman penipuan siber & direkodkan di bawah Seksyen 420 Kanun Keseksaan.";
+
+            android.telephony.SmsManager smsManager;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                smsManager = mContext.getSystemService(android.telephony.SmsManager.class);
+            } else {
+                smsManager = android.telephony.SmsManager.getDefault();
+            }
+
+            if (smsManager != null) {
+                smsManager.sendTextMessage(digits, null, message, null, null);
+                Log.i(TAG, "✉️ SMS Amaran Siber berjaya dihantar ke scammer: " + digits);
+                return true;
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Ralat sendCounterStrikeSms: " + t.getMessage(), t);
+        }
+        return false;
+    }
 
     public boolean isAutoAnswerEnabled() {
         return mPrefs.getBoolean(KEY_AUTO_ANSWER, false);

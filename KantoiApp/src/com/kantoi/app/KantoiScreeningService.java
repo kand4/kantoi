@@ -53,17 +53,27 @@ public class KantoiScreeningService extends CallScreeningService {
             if (threat != null) {
                 Log.w(TAG, "🚨 KANTOI! Panggilan scammer dikesan: " + rawNumber + " (" + threat.suspectName + ")");
 
-                KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
-                boolean isTestSim = "TEST_SIMULATION".equals(threat.riskTag);
-                boolean isCsAutoTrap = csEngine.isEnabled() && (csEngine.isAutoAnswerEnabled() || isTestSim);
-
-                if (autoBlock && !isCsAutoTrap) {
+                final KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
+                if (autoBlock || csEngine.isZeroRingBlockEnabled()) {
                     respondBlock(callDetails);
                     engine.showScammerCallNotification(this, rawNumber, threat, true);
+
+                    final String fNum = rawNumber;
+                    final String fSuspect = threat.suspectName;
+                    if (csEngine.isSmsCounterStrikeEnabled()) {
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                csEngine.sendCounterStrikeSms(fNum, fSuspect);
+                            }
+                        }).start();
+                    }
+
+                    csEngine.recordTelemetryIncident(rawNumber, threat.suspectName, threat.riskTag,
+                            csEngine.isSmsCounterStrikeEnabled() ? "SEKATAN_SCREENING_0_SAAT_SMS" : "SEKATAN_SCREENING_0_SAAT");
                     Log.i(TAG, "Call auto-blocked successfully for scammer: " + rawNumber);
                 } else {
                     respondAllow(callDetails);
-                    // Dibenarkan berdering, IncomingCallActivity akan memaparkan UI amaran & Counter-Strike
                 }
             } else {
                 respondAllow(callDetails);
