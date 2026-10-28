@@ -90,9 +90,35 @@ OFFICIAL_DOMAINS = {
     'affin': ['affinonline.com', 'affinbank.com.my'],
     'bsn': ['mybsn.com.my', 'bsn.com.my'],
     'tng': ['touchngo.com.my', 'tngdigital.com.my'],
+    'touchngo': ['touchngo.com.my', 'tngdigital.com.my'],
+    'tngdigital': ['touchngo.com.my', 'tngdigital.com.my'],
+    'moneypacket': ['touchngo.com.my', 'tngdigital.com.my'],
+    'moneypocket': ['touchngo.com.my', 'tngdigital.com.my'],
+    'duitnow': ['duitnow.my', 'paynet.my'],
     'gxbank': ['gxbank.my'],
     'bigpay': ['bigpayme.com']
 }
+
+TNG_GENUINE_DOMAINS = [
+    'touchngo.com.my',
+    'tngdigital.com.my'
+]
+
+TNG_PHISHING_KEYWORDS = [
+    'tng', 'touchngo', 'touch-n-go', 'tngdigital', 'tngewallet', 'tngwallet',
+    'moneypacket', 'moneypocket', 'angpow-tng', 'angpau-tng', 'angpowtng',
+    'duitraya-tng', 'tng-claim', 'tng-subsidi', 'tng-bantuan', 'tng-bonus',
+    'tng-login', 'tng-reward', 'tng-angpau', 'tng-angpow', 'pocket-tng', 'packet-tng'
+]
+
+TNG_MONEY_PACKET_SAFETY_NOTE = (
+    "💡 <b>PANDUAN KESELAMATAN TOUCH 'N GO MONEY PACKET:</b>\n"
+    "• <b>Money Packet yang SEBENAR:</b>\n"
+    "  Apabila anda mengimbas kod QR atau menekan pautan rasmi, ia akan <b>terus membuka aplikasi Touch 'n Go eWallet</b> anda dan wang akan <b>TERUS MASUK</b> ke dalam baki eWallet serta-merta tanpa meminta sebarang maklumat peribadi!\n"
+    "• <b>Tanda-Tanda Phishing / SCAM:</b>\n"
+    "  Jika pautan membuka laman web pelayar (browser) dan meminta anda <b>memasukkan Nombor Telefon, Kata Laluan, Kod PIN 6-digit eWallet, atau SMS OTP/TAC</b>, itu adalah <b>100% PERANGKAP PHISHING!</b>\n"
+    "• TNG Digital <b>TIDAK PERNAH</b> meminta nombor PIN atau OTP melalui laman web untuk menebus Money Packet."
+)
 
 SUSPICIOUS_TLDS = {
     '.top', '.xyz', '.vip', '.icu', '.tk', '.ml', '.ga', '.cf', '.gq', 
@@ -714,7 +740,7 @@ def parse_qr_payload(raw_data):
         }
         
     # 2. Pengesanan Pautan Web / Phishing / Quishing / APK Dropper daripada Kod QR
-    url_m = re.search(r'(https?://[^\s<>"]+|www\.[^\s<>"]+)', raw_data, re.IGNORECASE)
+    url_m = re.search(r'(https?://[^\s<>"]+|www\.[^\s<>"]+|tngd://[^\s<>"]+)', raw_data, re.IGNORECASE)
     if not url_m:
         dom_m = re.search(r'\b([a-zA-Z0-9-]+\.(?:top|xyz|vip|icu|cc|site|club|app|info|online|live|shop|cfd|buzz|gov\.my|com\.my|com|net|org)(?:/[^\s<>"]*)?)\b', raw_data, re.IGNORECASE)
         if dom_m:
@@ -727,10 +753,13 @@ def parse_qr_payload(raw_data):
             url_str = 'https://' + url_str
 
     if url_str:
-        u = urllib.parse.urlparse(url_str)
-        domain = u.netloc.lower()
+        u_inspect = inspect_url_phishing(url_str)
+        domain = u_inspect.get("domain") or ""
         bank_name = 'PAUTAN_WEB'
-        if 'tngdigital' in domain: bank_name = 'TNG DIGITAL'
+        if u_inspect.get("is_genuine_tng"):
+            bank_name = 'TNG DIGITAL (RASMI)'
+        elif u_inspect.get("is_tng"):
+            bank_name = 'TNG PALSU (PHISHING)'
         elif 'maybank' in domain: bank_name = 'MAYBANK'
         elif 'cimb' in domain: bank_name = 'CIMB'
         elif 'duitnow' in domain: bank_name = 'DUITNOW'
@@ -746,6 +775,7 @@ def parse_qr_payload(raw_data):
             'account_number': '',
             'proxy_phone': phone,
             'url': url_str,
+            'url_inspect': u_inspect,
             'raw_payload': raw_data
         }
         
@@ -924,6 +954,11 @@ def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
         "   - scam_tactic: 'Penipuan Sedekah Palsu / Quishing TNG Money Packet'.\n\n"
         "5. RESIT PEMINDAHAN BANK / DUITNOW QR:\n"
         "   - Ekstrak nombor akaun, nama bank, nama penerima, dan jumlah.\n\n"
+        "6. PENGESANAN KOD QR & PAUTAN TNG MONEY PACKET (SEBENAR VS PHISHING):\n"
+        "   - Perhatikan sebarang pautan/QR 'Money Packet', 'Money Pocket', 'Sedekah', 'Duit Raya', atau 'Bantuan TNG':\n"
+        "   - Pautan SEBENAR HANYA menggunakan domain rasmi: *.tngdigital.com.my atau *.touchngo.com.my (atau tngd://), di mana wang terus masuk ke eWallet tanpa meminta maklumat peribadi.\n"
+        "   - Pautan PALSU (PHISHING) menggunakan domain selain itu (cth tng-claim.com, tapak percuma) dan meminta nombor telefon, PIN 6-digit atau OTP.\n"
+        "   - Jika dikesan penipuan ini: scam_tactic = 'Penipuan Pancingan Data (Phishing) TNG Money Packet Palsu', dan sertakan peringatan bahawa Money Packet sebenar tidak meminta maklumat peribadi sebaliknya terus masuk ke akaun eWallet.\n\n"
         "Formatkan maklumat dalam JSON sah dengan kunci berikut:\n"
         "{\n"
         '  "phone_numbers": ["senarai nombor telefon unik cth 011xxxxxxxx, 014xxxxxxxx"],\n'
@@ -1102,6 +1137,11 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
         "3. RUMUSAN KES & ANGGARAN KERUGIAN (Case Synthesis Narrative):\n"
         "   - Bina satu ringkasan jalan cerita penipuan yang padat dan jelas menghubungkan kronologi kejadian: Bagaimana mangsa mula berhubung, taktik penipuan yang digunakan, arahan pembayaran, jumlah kerugian wang (jika dinyatakan cth: RM300), dan tindakan suspek selepas wang dipindahkan (cth: menyekat nombor mangsa).\n"
         "   - Kenalpasti modus operandi / taktik scammer utama.\n\n"
+        "4. PENGESANAN KOD QR & PAUTAN TNG MONEY PACKET / BANTUAN:\n"
+        "   - Kenalpasti sebarang kod QR atau tangkapan layar pautan mendakwa 'Money Packet', 'Money Pocket', 'Angpow TNG', atau 'Bantuan E-Wallet'.\n"
+        "   - Kaedah mengesan Money Packet SEBENAR: Hanya menggunakan domain *.tngdigital.com.my atau *.touchngo.com.my (atau tngd://), dan wang TERUS MASUK ke eWallet tanpa meminta maklumat peribadi.\n"
+        "   - Pautan PALSU (PHISHING) menggunakan domain selain itu dan memancing mangsa memasukkan nombor telefon, PIN 6-digit eWallet, atau SMS OTP/TAC.\n"
+        "   - Jika terdapat penipuan ini: scam_tactic = 'Penipuan Pancingan Data (Phishing) TNG Money Packet Palsu' dan perincikan dalam case_summary.\n\n"
         "Formatkan hasil analisis HANYA dalam JSON SAH dengan struktur berikut:\n"
         "{\n"
         '  "has_intel": true,\n'
@@ -1978,11 +2018,33 @@ def is_safe_external_url(target_url):
 def inspect_url_phishing(url):
     """
     Menganalisis pautan web untuk mengesan pancingan data (Phishing) perbankan & bantuan palsu
-    dengan pertahanan Anti-SSRF terhadap pautan dalaman.
+    dengan kepintaran khusus membezakan pautan Touch 'n Go / Money Packet yang sebenar vs phishing,
+    serta pertahanan Anti-SSRF terhadap pautan dalaman.
     """
     final_url = url
+    url_l = (url or "").strip().lower()
+
+    # 1. Semak jika Deep Link rasmi aplikasi Touch 'n Go (tngd://)
+    if url_l.startswith("tngd://"):
+        return {
+            "url": url,
+            "final_url": url,
+            "domain": "tngd:// (Aplikasi Rasmi)",
+            "verdict": "✅ SAH - DEEP LINK RASMI APLIKASI TOUCH 'N GO EWALLET",
+            "severity": "SAFE",
+            "target_brand": "TOUCH 'N GO DIGITAL",
+            "reasons": [
+                "Skim pautan terus (Deep Link) rasmi aplikasi Touch 'n Go eWallet.",
+                "Pautan membuka aplikasi secara langsung tanpa melalui pelayar web."
+            ],
+            "is_tng": True,
+            "is_genuine_tng": True,
+            "safety_note": TNG_MONEY_PACKET_SAFETY_NOTE
+        }
+
+    # Nyah-pemendek URL dengan perlindungan Anti-SSRF
     try:
-        parsed_init = urllib.parse.urlparse(url)
+        parsed_init = urllib.parse.urlparse(url if "://" in url else "https://" + url)
         host_init = (parsed_init.hostname or "").lower()
         shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'is.gd', 'cutt.ly', 'rb.gy', 'wa.me', 't.me']
         if is_safe_external_url(url) and any(host_init == s or host_init.endswith('.' + s) for s in shorteners):
@@ -1995,16 +2057,73 @@ def inspect_url_phishing(url):
     except Exception:
         pass
 
-    parsed = urllib.parse.urlparse(final_url)
+    parsed = urllib.parse.urlparse(final_url if "://" in final_url else "https://" + final_url)
     hostname = (parsed.hostname or '').lower()
     path = parsed.path.lower()
+    query = parsed.query.lower()
+    combined_target = f"{hostname}{path}?{query}"
     
     reasons = []
     verdict = "BERSIH / TIADA INDIKATOR PHISHING"
     severity = "INFO"
     target_brand = ""
+    is_tng = False
+    is_genuine_tng = False
+    safety_note = None
 
-    # Semak penyamaran jenama bank rasmi
+    # 2. PENGESANAN PINTAR TOUCH 'N GO / TNG DIGITAL (SEBENAR VS PHISHING)
+    # A. Semak jika domain rasmi Touch 'n Go / TNG Digital Sdn Bhd
+    for leg in TNG_GENUINE_DOMAINS:
+        if hostname == leg or hostname.endswith('.' + leg):
+            is_genuine_tng = True
+            is_tng = True
+            break
+
+    if is_genuine_tng:
+        verdict = "✅ SAH - PAUTAN RASMI TOUCH 'N GO DIGITAL SDN BHD"
+        severity = "SAFE"
+        target_brand = "TOUCH 'N GO DIGITAL"
+        reasons.append("Domain rasmi disahkan milik TNG Digital Sdn Bhd.")
+        reasons.append("Disahkan selamat daripada ancaman pancingan data (phishing).")
+        safety_note = TNG_MONEY_PACKET_SAFETY_NOTE
+        return {
+            "url": url,
+            "final_url": final_url,
+            "domain": hostname,
+            "verdict": verdict,
+            "severity": severity,
+            "target_brand": target_brand,
+            "reasons": reasons,
+            "is_tng": True,
+            "is_genuine_tng": True,
+            "safety_note": safety_note
+        }
+
+    # B. Semak jika pautan luar cuba menyamar sebagai Touch 'n Go / Money Packet (PHISHING TNG)
+    tng_indicators = [k for k in TNG_PHISHING_KEYWORDS if k in combined_target]
+    if tng_indicators and not is_genuine_tng:
+        is_tng = True
+        verdict = "🚨 BAHAYA - LAMAN PANCINGAN DATA (PHISHING) TNG MONEY PACKET PALSU!"
+        severity = "CRITICAL"
+        target_brand = "TOUCH 'N GO EWALLET (MONEY PACKET SCAM)"
+        reasons.append(f"Domain luar `{hostname}` menyamar sebagai Touch 'n Go / Money Packet menggunakan indikator: {', '.join(tng_indicators[:3])}")
+        reasons.append("TNG Digital Sdn Bhd HANYA menggunakan domain rasmi `*.tngdigital.com.my` atau `*.touchngo.com.my`.")
+        reasons.append("AMARAN: Scammer berniat memancing Nombor Telefon, Kata Laluan, PIN 6-digit dan OTP eWallet mangsa!")
+        safety_note = TNG_MONEY_PACKET_SAFETY_NOTE
+        return {
+            "url": url,
+            "final_url": final_url,
+            "domain": hostname,
+            "verdict": verdict,
+            "severity": severity,
+            "target_brand": target_brand,
+            "reasons": reasons,
+            "is_tng": True,
+            "is_genuine_tng": False,
+            "safety_note": safety_note
+        }
+
+    # 3. Semak penyamaran jenama bank rasmi
     for brand, legits in OFFICIAL_DOMAINS.items():
         if brand in hostname:
             if not any(hostname == leg or hostname.endswith('.' + leg) for leg in legits):
@@ -2014,7 +2133,7 @@ def inspect_url_phishing(url):
                 reasons.append(f"Menyamar sebagai perbankan rasmi {brand.upper()} menggunakan domain luar: `{hostname}`")
                 break
 
-    # Semak umpan bantuan kerajaan / subsidi
+    # 4. Semak umpan bantuan kerajaan / subsidi
     if severity != "CRITICAL":
         for kw in GOV_KEYWORDS:
             if kw in hostname or kw in path:
@@ -2025,7 +2144,7 @@ def inspect_url_phishing(url):
                     reasons.append(f"Menggunakan kata kunci bantuan (`{kw}`) tanpa pengesahan domain rasmi `.gov.my`")
                     break
 
-    # Semak akhiran domain berisiko tinggi
+    # 5. Semak akhiran domain berisiko tinggi
     for tld in SUSPICIOUS_TLDS:
         if hostname.endswith(tld):
             reasons.append(f"Menggunakan akhiran domain risiko tinggi sindiket (`{tld}`)")
@@ -2033,7 +2152,7 @@ def inspect_url_phishing(url):
                 severity = "MEDIUM"
                 verdict = "MENCURIGAKAN - DOMAIN RISIKO TINGGI"
 
-    # Semak muat turun APK terus
+    # 6. Semak muat turun APK terus
     if path.endswith('.apk'):
         reasons.append("Pautan memuat turun fail aplikasi Android (`.apk`) secara terus dari web tidak sah!")
         verdict = "AMARAN - PAUTAN DROPPER MALWARE APK"
@@ -2046,7 +2165,10 @@ def inspect_url_phishing(url):
         "verdict": verdict,
         "severity": severity,
         "target_brand": target_brand,
-        "reasons": reasons
+        "reasons": reasons,
+        "is_tng": is_tng,
+        "is_genuine_tng": is_genuine_tng,
+        "safety_note": safety_note
     }
 
 def download_url_to_temp_apk(url, max_size_mb=25):
@@ -2595,12 +2717,13 @@ def build_unified_cyber_dossier(
             "has_threat": has_acc_threat
         })
 
-    # Risikan Kod QR DuitNow
+    # Risikan Kod QR (DuitNow EMVCo vs Pautan URL / Quishing)
     has_qr = bool(qr_data and qr_data.get("qr_detected"))
     qr_danger = False
+    qr_url_res = None
     if has_qr and qr_data.get("url"):
-        u_res = inspect_url_phishing(qr_data["url"])
-        if u_res.get("severity") in ["CRITICAL", "HIGH"]:
+        qr_url_res = inspect_url_phishing(qr_data["url"])
+        if qr_url_res.get("severity") in ["CRITICAL", "HIGH"]:
             is_threat = True
             qr_danger = True
 
@@ -2710,22 +2833,45 @@ def build_unified_cyber_dossier(
                 lines.append(f"  🕸️ <b>Rangkaian Sindiket:</b> ⚠️ <i>Akaun ini berkongsi sindiket dengan {c_cnt} mangsa/kes!</i>")
             lines.append("")
 
-    # Seksyen 4: Kod QR DuitNow (EMVCo)
+    # Seksyen 4: Kod QR (DuitNow EMVCo vs Pautan URL / Quishing)
     if has_qr:
-        lines.append("📷 <b>KOD QR DUITNOW (EMVCo BINARY):</b>")
-        qr_holder = qr_data.get("name") or "Tidak Dinyatakan"
-        qr_bank_d = qr_data.get("bank") or "N/A"
-        qr_acc_d = qr_data.get("account_number") or qr_data.get("proxy_phone") or "N/A"
-        lines.append(f"• <b>Nama Pemegang:</b> {html.escape(qr_holder)}")
-        if qr_bank_d != "N/A":
-            lines.append(f"• <b>Institusi / Bank:</b> {html.escape(qr_bank_d)}")
-        if qr_acc_d != "N/A":
-            lines.append(f"• <b>Akaun Tersembunyi:</b> <code>{html.escape(qr_acc_d)}</code>")
-        if qr_danger:
-            lines.append("• <b>Status Pautan:</b> 🚫 <b>QUISHING PHISHING / MALWARE DETECTED!</b>")
+        if qr_data.get("qr_type") == "URL" or qr_data.get("url"):
+            q_url = qr_data.get("url", "")
+            q_dom = qr_url_res.get("domain", "") if qr_url_res else ""
+            q_verdict = qr_url_res.get("verdict", "N/A") if qr_url_res else "N/A"
+            q_sev = qr_url_res.get("severity", "INFO") if qr_url_res else "INFO"
+            
+            lines.append("📷 <b>KOD QR PAUTAN WEB (QUISHING / URL):</b>")
+            lines.append(f"• <b>Pautan:</b> <code>{html.escape(q_url)}</code>")
+            if q_dom:
+                lines.append(f"• <b>Domain:</b> <code>{html.escape(q_dom)}</code>")
+            
+            badge_icon = "🚨" if q_sev in ["CRITICAL", "HIGH"] else ("⚠️" if q_sev == "MEDIUM" else "✅")
+            lines.append(f"• <b>Status Pautan:</b> {badge_icon} <b>{html.escape(q_verdict)}</b>")
+            
+            if qr_url_res and qr_url_res.get("reasons"):
+                for rsn in qr_url_res["reasons"]:
+                    lines.append(f"  └ <i>{html.escape(rsn)}</i>")
+                    
+            if qr_url_res and qr_url_res.get("safety_note"):
+                lines.append("")
+                lines.append(qr_url_res["safety_note"])
+            lines.append("")
         else:
-            lines.append("• <b>Status Matriks:</b> ✅ EMVCo Standard Sah")
-        lines.append("")
+            lines.append("📷 <b>KOD QR DUITNOW (EMVCo BINARY):</b>")
+            qr_holder = qr_data.get("name") or "Tidak Dinyatakan"
+            qr_bank_d = qr_data.get("bank") or "N/A"
+            qr_acc_d = qr_data.get("account_number") or qr_data.get("proxy_phone") or "N/A"
+            lines.append(f"• <b>Nama Pemegang:</b> {html.escape(qr_holder)}")
+            if qr_bank_d != "N/A":
+                lines.append(f"• <b>Institusi / Bank:</b> {html.escape(qr_bank_d)}")
+            if qr_acc_d != "N/A":
+                lines.append(f"• <b>Akaun Tersembunyi:</b> <code>{html.escape(qr_acc_d)}</code>")
+            if qr_danger:
+                lines.append("• <b>Status Pautan:</b> 🚫 <b>QUISHING PHISHING / MALWARE DETECTED!</b>")
+            else:
+                lines.append("• <b>Status Matriks:</b> ✅ EMVCo Standard Kebangsaan PayNet Sah")
+            lines.append("")
 
     # Seksyen 5: Carian Media Sosial & Forum Tempatan (Google CSE)
     lines.append("🌐 <b>HASIL SEMAKAN MEDIA SOSIAL & FORUM (Google CSE):</b>")
@@ -3606,6 +3752,99 @@ def forward_report_to_admins(rep_id, rep_data):
                 "disable_web_page_preview": True
             })
 
+def format_channel_approved_post(rep, admin_username):
+    """
+    Membina teks laporan penuh, komprehensif dan terperinci untuk saluran rasmi @kantoiradar
+    tanpa diringkaskan atau memotong bukti dan kronologi awal kes.
+    """
+    rep_id = rep.get("report_id") or "N/A"
+    phone_norm = rep.get("phone_norm") or "N/A"
+    all_phones = rep.get("all_phones") or []
+    if phone_norm not in all_phones and phone_norm != "N/A":
+        all_phones = [phone_norm] + [p for p in all_phones if p != phone_norm]
+    
+    suspect_name = rep.get("suspect_name") or "Tidak Dinyatakan"
+    bank_account = rep.get("bank_account") or "Tiada"
+    victim_loss = rep.get("victim_loss")
+    evidence_text = rep.get("evidence_text") or ""
+    reviewed_by = admin_username or rep.get("reviewed_by") or "Pentadbir KANTOI"
+    qr_data = rep.get("qr_data")
+    tactic = rep.get("tactic") or "Laporan Komuniti Disahkan"
+    
+    lines = [
+        "🚨 <b>AMARAN RASMI KANTOI RADAR: LAPORAN SCAMMER DISAHKAN</b>",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"🛡️ <b>STATUS:</b> 🚨 <b>SAH SEBAGAI ANCAMAN PENIPUAN (DILULUSKAN MOD)</b>",
+        f"🆔 <b>Rujukan Kes:</b> <code>{html.escape(str(rep_id))}</code>",
+        f"👤 <b>Disahkan Oleh:</b> @{html.escape(str(reviewed_by))} (Pentadbir Saluran)",
+        ""
+    ]
+    
+    # Seksyen 1: Profil & Taktik Suspek
+    lines.append("👤 <b>PROFIL & TAKTIK SUSPEK:</b>")
+    lines.append(f"• <b>Taktik / Kategori:</b> <i>{html.escape(str(tactic))}</i>")
+    lines.append(f"• <b>Nama / Samaran:</b> {html.escape(str(suspect_name))}")
+    if victim_loss:
+        lines.append(f"• <b>Kerugian Dilaporkan:</b> <code>{html.escape(str(victim_loss))}</code>")
+    if rep.get("email"):
+        lines.append(f"• <b>Emel Suspek:</b> <code>{html.escape(str(rep['email']))}</code>")
+    lines.append("")
+    
+    # Seksyen 2: Nombor Telefon Sasaran
+    lines.append("📱 <b>NOMBOR TELEFON SASARAN:</b>")
+    lines.append(f"• <b>Nombor Utama:</b> <code>{html.escape(str(phone_norm))}</code>")
+    if len(all_phones) > 1:
+        other_phones = [p for p in all_phones if p != phone_norm]
+        if other_phones:
+            lines.append(f"• <b>Nombor Rangkaian Terkait:</b> " + ", ".join(f"<code>{html.escape(str(p))}</code>" for p in other_phones))
+    lines.append("")
+    
+    # Seksyen 3: Akaun Bank Sasaran
+    if bank_account and bank_account != "Tiada" and bank_account != "N/A":
+        lines.append("💳 <b>AKAUN BANK / DUITNOW SASARAN:</b>")
+        lines.append(f"• <b>Butiran Akaun:</b> {html.escape(str(bank_account))}")
+        lines.append("")
+        
+    # Seksyen 4: Maklumat Kod QR / Pautan Quishing (jika ada)
+    if qr_data:
+        if qr_data.get("url"):
+            lines.append("📷 <b>KOD QR / PAUTAN WEB (QUISHING):</b>")
+            lines.append(f"• <b>Pautan:</b> <code>{html.escape(str(qr_data['url']))}</code>")
+            u_res = inspect_url_phishing(qr_data["url"])
+            if u_res.get("domain"):
+                lines.append(f"• <b>Domain:</b> <code>{html.escape(str(u_res['domain']))}</code>")
+            lines.append(f"• <b>Keputusan:</b> <b>{html.escape(str(u_res.get('verdict', 'Mencurigakan')))}</b>")
+            if u_res.get("safety_note"):
+                lines.append("")
+                lines.append(u_res["safety_note"])
+            lines.append("")
+        elif qr_data.get("account_number") or qr_data.get("proxy_phone"):
+            lines.append("📷 <b>KOD QR DUITNOW (EMVCo BINARY):</b>")
+            if qr_data.get("name"):
+                lines.append(f"• <b>Nama Penerima:</b> {html.escape(str(qr_data['name']))}")
+            if qr_data.get("bank"):
+                lines.append(f"• <b>Bank / Institusi:</b> {html.escape(str(qr_data['bank']))}")
+            lines.append("")
+
+    # Seksyen 5: Kronologi & Keterangan Kes Lengkap (Tanpa Dipotong!)
+    if evidence_text and evidence_text.strip():
+        lines.append("📝 <b>KRONOLOGI & BUKTI KES LENGKAP:</b>")
+        lines.append(html.escape(evidence_text.strip()))
+        lines.append("")
+
+    # Seksyen 6: Nasihat Keselamatan & Footer
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("⚠️ <b>PERINGATAN AWAM:</b>")
+    lines.append("JANGAN buat sebarang bayaran atau berikan maklumat peribadi (OTP / PIN). Maklumat ini telah dimasukkan ke pangkalan data KANTOI bagi menyekat panggilan & SMS secara automatik.")
+    lines.append("")
+    lines.append("📲 <i>Buka Tab Pertahanan Aplikasi KANTOI untuk perlindungan masa nyata.</i>")
+    lines.append("💬 <i>Bantu komuniti: Hantar bukti scammer terus ke Bot Risikan: @crowdcallerbot</i>")
+    lines.append("📢 <i>Saluran Rasmi: @kantoiradar | Kod Sumber: https://github.com/kand4/kantoi</i>\n")
+    lines.append("#KANTOI_UPDATE #PDRM #SEMAKMULE #SCAMALERT")
+    lines.append(f"{html.escape(str(phone_norm))} | {html.escape(str(suspect_name))} | LAPORAN_KOMUNITI_DISAHKAN | {html.escape(str(bank_account or 'Tiada'))}")
+    
+    return "\n".join(lines)
+
 def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message_id):
     reports = get_pending_reports()
     rep = reports.get(rep_id)
@@ -3627,47 +3866,67 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
         rep["reviewed_at"] = int(time.time())
         save_pending_report(rep_id, rep)
 
-        # 1. Pos ke saluran @kantoiradar dengan format HTML yang selamat dari ralat aksara khas
-        safe_suspect = html.escape(str(suspect_name or 'N/A'))
-        safe_bank = html.escape(str(bank_account or 'Tiada'))
-        safe_rep_id = html.escape(str(rep_id))
-
-        channel_post = (
-            "🚨 <b>AMARAN SCAMMER DISAHKAN (SUMBANGAN KOMUNITI)</b>\n"
-            "==================================================\n"
-            f"🚨 <b>NOMBOR TELEFON</b> : <code>{phone_norm}</code>\n"
-            f"👤 <b>NAMA / TAKTIK</b>  : {safe_suspect}\n"
-            "⚠️ <b>KLASIFIKASI</b>    : LAPORAN_KOMUNITI_DISAHKAN\n"
-        )
-        if safe_bank and safe_bank != "Tiada":
-            channel_post += f"🏦 <b>AKAUN BANK</b>     : {safe_bank}\n"
-            
-        channel_post += (
-            f"📚 <b>SUMBER SITASI</b>  : Risikan Komuniti KANTOI (Ref: <code>{safe_rep_id}</code>)\n"
-            "--------------------------------------------------\n"
-            "ℹ️ <i>Laporan disahkan oleh pentadbir Saluran Rasmi KANTOI Radar (@kantoiradar).</i>\n"
-            "📲 <i>Buka Tab Pertahanan Aplikasi KANTOI untuk perlindungan masa nyata.</i>\n"
-            "💬 <i>Bantu komuniti: Hantar bukti scammer terus ke Bot Risikan KANTOI (@crowdcallerbot).</i>\n"
-            "🔗 <i>Semak kod sumber projek di: https://github.com/kand4/kantoi</i>\n\n"
-            "#KANTOI_UPDATE\n"
-            f"{phone_norm} | {safe_suspect} | LAPORAN_KOMUNITI_DISAHKAN | {safe_bank or 'Tiada'}"
-        )
-
+        # 1. Pos ke saluran @kantoiradar dengan format terperinci dan lengkap (tidak diringkaskan)
+        channel_post = format_channel_approved_post(rep, admin_username)
         photo_id = rep.get("photo_file_id")
+
         if photo_id:
-            api_call("sendPhoto", {
-                "chat_id": CHANNEL_ID,
-                "photo": photo_id,
-                "caption": channel_post,
-                "parse_mode": "HTML"
-            })
+            # Semak had panjang kapsyen foto Telegram (maksimum 1024 aksara)
+            if len(channel_post) <= 1024:
+                api_call("sendPhoto", {
+                    "chat_id": CHANNEL_ID,
+                    "photo": photo_id,
+                    "caption": channel_post,
+                    "parse_mode": "HTML"
+                })
+            else:
+                # Jika laporan terperinci melebihi 1024 aksara:
+                # Hantar foto dengan tajuk ringkas bukti, disusuli mesej teks laporan penuh tanpa potongan!
+                short_caption = (
+                    f"🚨 <b>AMARAN RASMI KANTOI RADAR (Ref: <code>{html.escape(str(rep_id))}</code>)</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"📱 <b>Sasaran:</b> <code>{html.escape(str(phone_norm))}</code>\n"
+                    f"👤 <b>Modus:</b> {html.escape(str(suspect_name)[:80])}\n"
+                    f"📸 <i>Bukti tangkapan layar dilampirkan. Sila rujuk laporan dan keterangan kes penuh di bawah:</i>"
+                )
+                api_call("sendPhoto", {
+                    "chat_id": CHANNEL_ID,
+                    "photo": photo_id,
+                    "caption": short_caption,
+                    "parse_mode": "HTML"
+                })
+                # Hantar teks penuh (sehingga 4096 aksara)
+                if len(channel_post) <= 4096:
+                    api_call("sendMessage", {
+                        "chat_id": CHANNEL_ID,
+                        "text": channel_post,
+                        "parse_mode": "HTML",
+                        "disable_web_page_preview": True
+                    })
+                else:
+                    for chunk_idx in range(0, len(channel_post), 4000):
+                        api_call("sendMessage", {
+                            "chat_id": CHANNEL_ID,
+                            "text": channel_post[chunk_idx:chunk_idx+4000],
+                            "parse_mode": "HTML",
+                            "disable_web_page_preview": True
+                        })
         else:
-            api_call("sendMessage", {
-                "chat_id": CHANNEL_ID,
-                "text": channel_post,
-                "parse_mode": "HTML",
-                "disable_web_page_preview": True
-            })
+            if len(channel_post) <= 4096:
+                api_call("sendMessage", {
+                    "chat_id": CHANNEL_ID,
+                    "text": channel_post,
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": True
+                })
+            else:
+                for chunk_idx in range(0, len(channel_post), 4000):
+                    api_call("sendMessage", {
+                        "chat_id": CHANNEL_ID,
+                        "text": channel_post[chunk_idx:chunk_idx+4000],
+                        "parse_mode": "HTML",
+                        "disable_web_page_preview": True
+                    })
 
         # 2. Masukkan ke dalam SQLite KANTOI (simpan semua nombor telefon kes)
         all_phones_list = rep.get("all_phones") or [phone_norm]
@@ -3993,8 +4252,16 @@ def execute_multi_photo_case(chat_id, username):
             if single_qr and single_qr.get("url"):
                 res_url = inspect_url_phishing(single_qr["url"])
                 is_danger = res_url["severity"] in ["CRITICAL", "HIGH"]
-                badge = "🚨" if is_danger else ("⚠️" if res_url["severity"] == "MEDIUM" else "✅")
-                title_text = "PERISAI KANTOI: KOD QR PHISHING (QUISHING) DIKESAN!" if is_danger else "HASIL IMBASAN KOD QR: PAUTAN (URL)"
+                is_safe_tng = res_url.get("is_genuine_tng", False)
+                badge = "🚨" if is_danger else ("✅" if is_safe_tng else ("⚠️" if res_url["severity"] == "MEDIUM" else "ℹ️"))
+                
+                if is_safe_tng:
+                    title_text = "PERISAI KANTOI: PAUTAN TOUCH 'N GO EWALLET SAH DISAHKAN"
+                elif is_danger:
+                    title_text = "PERISAI KANTOI: KOD QR PHISHING (QUISHING) DIKESAN!"
+                else:
+                    title_text = "HASIL IMBASAN KOD QR: PAUTAN (URL)"
+
                 lines = [
                     f"{badge} <b>{title_text}</b>",
                     "━━━━━━━━━━━━━━━━━━━━━━━━━━",
@@ -4003,18 +4270,80 @@ def execute_multi_photo_case(chat_id, username):
                     f"🛡️ <b>Keputusan:</b> <b>{html.escape(res_url['verdict'])}</b>",
                     ""
                 ]
-                if res_url["reasons"]:
+                if res_url.get("reasons"):
                     lines.append("⚠️ <b>Faktor Penilaian Risiko:</b>")
                     for rsn in res_url["reasons"]:
                         lines.append(f"   • {html.escape(rsn)}")
                     lines.append("")
+
+                if res_url.get("safety_note"):
+                    lines.append(res_url["safety_note"])
+                    lines.append("")
+
                 lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
                 if is_danger:
-                    lines.append("🚫 <b>AMARAN:</b> Ini adalah perangkap pancingan data (Quishing) untuk mencuri kata laluan atau TAC bank anda. Jangan buka pautan ini!")
-                else:
+                    lines.append("🚫 <b>AMARAN:</b> Ini adalah perangkap pancingan data (Quishing) untuk mencuri kata laluan atau TAC/PIN akaun anda. Jangan buka pautan ini!")
+                elif not is_safe_tng:
                     lines.append("ℹ️ <i>Pautan ini tidak menunjukkan sebarang ciri phishing atau penyamaran bank rasmi yang diketahui.</i>")
+
+                # Butang tindakan: Jika pautan bahaya atau mencurigakan, sediakan draf laporan untuk dihantar ke Admin
+                inline_kb = []
+                if is_danger:
+                    tmp_id = f"tmp_{int(time.time()*1000) % 1000000}"
+                    ev_text = (
+                        f"[Kod QR Quishing Dikesan]\n"
+                        f"Pautan: {res_url['url']}\n"
+                        f"Domain: {res_url['domain']}\n"
+                        f"Keputusan: {res_url['verdict']}\n"
+                        f"Faktor Risiko:\n" + "\n".join(f"- {r}" for r in res_url['reasons'])
+                    )
+                    rep_data = {
+                        "user_id": chat_id,
+                        "username": username,
+                        "phone_norm": single_qr.get("proxy_phone") or res_url["domain"],
+                        "all_phones": [single_qr["proxy_phone"]] if single_qr.get("proxy_phone") else [],
+                        "suspect_name": res_url.get("target_brand") or "Quishing Phishing",
+                        "bank_account": f"Pautan Phishing ({res_url['domain']})",
+                        "all_accounts": [],
+                        "evidence_text": ev_text,
+                        "victim_loss": None,
+                        "photo_file_id": items[0]["file_id"] if items else None,
+                        "photo_file_ids": [items[0]["file_id"]] if items else [],
+                        "qr_data": single_qr,
+                        "tactic": f"Quishing / Phishing ({res_url.get('target_brand', 'Pautan Palsu')})",
+                        "case_summary": f"Kod QR Quishing dikesan: {res_url['url']}",
+                        "status": "PENDING"
+                    }
+                    unconfirmed_reports[tmp_id] = rep_data
+                    save_pending_report(tmp_id, rep_data)
+
+                    is_admin_sender = chat_id in get_admin_ids()
+                    if is_admin_sender:
+                        inline_kb.append([
+                            {"text": "⚡ Luluskan & Siar ke Saluran", "callback_data": f"cfrm_direct_{tmp_id}"},
+                            {"text": "❌ Batal", "callback_data": f"cncl_{tmp_id}"}
+                        ])
+                    else:
+                        inline_kb.append([
+                            {"text": "🚀 Sahkan & Hantar Laporan ke Admin", "callback_data": f"cfrm_{tmp_id}"},
+                            {"text": "📝 Tambah Cerita Kes", "callback_data": f"repqr_{tmp_id}"}
+                        ])
+                        inline_kb.append([
+                            {"text": "🏛️ Salur Tindakan ke Agensi Penguatkuasa", "callback_data": f"enf_{tmp_id}"}
+                        ])
+
+                share_target = res_url["domain"]
+                share_text = urllib.parse.quote(
+                    f"⚠️ Semakan Keselamatan KANTOI: Pautan {share_target} dikesan. Semak status keselamatan pautan/scammer di Telegram: @crowdcallerbot"
+                )
+                wa_share_url = f"https://api.whatsapp.com/send?text={share_text}"
+                inline_kb.append([
+                    {"text": "📤 Kongsi Amaran ke WhatsApp", "url": wa_share_url},
+                    {"text": "ℹ️ Menu Utama", "callback_data": "help_menu"}
+                ])
+
                 hud.update(100, "✨ Analisis Pautan Selesai!", "Anti-Quishing")
-                hud.complete_with_message("\n".join(lines), parse_mode="HTML")
+                hud.complete_with_message("\n".join(lines), reply_markup={"inline_keyboard": inline_kb}, parse_mode="HTML")
                 return
 
         # Jalankan sintesis kes multi-imej
@@ -4054,6 +4383,10 @@ def execute_multi_photo_case(chat_id, username):
                 "victim_loss": intel.get("victim_loss"),
                 "photo_file_id": p_ids[0] if p_ids else None,
                 "photo_file_ids": p_ids,
+                "qr_data": intel.get("qr_data"),
+                "email": (intel.get("emails") or [""])[0] if intel.get("emails") else "",
+                "tactic": intel.get("tactic", "Semakan Keselamatan Siber"),
+                "case_summary": intel.get("case_summary", ""),
                 "status": "PENDING"
             }
             unconfirmed_reports[tmp_id] = rep_data
