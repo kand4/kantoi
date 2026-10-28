@@ -445,20 +445,25 @@ def extract_freeform_report(text):
     """
     clean_text = text.strip()
     
-    # 1. Ekstrak Nombor Telefon
-    phone_match = re.search(r'(?:\+?60\s?1[0-9][\s\-\.]?\d{3,4}[\s\-\.]?\d{4}|01[0-9][\s\-\.]?\d{3,4}[\s\-\.]?\d{4})', clean_text)
-    if not phone_match:
-        # Cuba cari rentetan nombor 9-11 digit yang bermula dengan 01 atau 601
-        digits_match = re.search(r'\b(?:601|01)\d{7,9}\b', re.sub(r'[\s\-]', '', clean_text))
-        if digits_match:
-            phone_norm = normalize_phone(digits_match.group(0))
-        else:
-            return None
-    else:
-        phone_norm = normalize_phone(phone_match.group(0))
-        
-    if not phone_norm or len(phone_norm) < 9:
+    # 1. Ekstrak Semua Nombor Telefon
+    all_found_phones = []
+    raw_found = re.findall(r'(?:\+?60\s?1[0-9][\s\-\.]?\d{3,4}[\s\-\.]?\d{4}|01[0-9][\s\-\.]?\d{3,4}[\s\-\.]?\d{4})', clean_text)
+    for rf in raw_found:
+        np = normalize_phone(rf)
+        if np and len(np) >= 9 and np not in all_found_phones:
+            all_found_phones.append(np)
+            
+    if not all_found_phones:
+        digits_matches = re.findall(r'\b(?:601|01)\d{7,9}\b', re.sub(r'[\s\-]', '', clean_text))
+        for dm in digits_matches:
+            np = normalize_phone(dm)
+            if np and len(np) >= 9 and np not in all_found_phones:
+                all_found_phones.append(np)
+                
+    if not all_found_phones:
         return None
+        
+    phone_norm = all_found_phones[0]
 
     # 2. Ekstrak Akaun Bank
     bank_info = "Tiada"
@@ -500,6 +505,7 @@ def extract_freeform_report(text):
 
     return {
         "phone_norm": phone_norm,
+        "all_phones": all_found_phones,
         "suspect_name": suspect_title,
         "bank_account": bank_info,
         "evidence_text": clean_text
@@ -5929,6 +5935,7 @@ def run_bot():
                             "user_id": chat_id,
                             "username": username,
                             "phone_norm": extracted["phone_norm"],
+                            "all_phones": extracted.get("all_phones") or [extracted["phone_norm"]],
                             "suspect_name": extracted["suspect_name"],
                             "bank_account": extracted["bank_account"],
                             "evidence_text": extracted["evidence_text"],
