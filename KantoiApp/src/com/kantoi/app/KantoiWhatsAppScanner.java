@@ -219,7 +219,7 @@ public class KantoiWhatsAppScanner {
                 LinearLayout card = new LinearLayout(activity);
                 card.setOrientation(LinearLayout.VERTICAL);
                 GradientDrawable cBg = new GradientDrawable();
-                cBg.setColor(0xFF1E293B);
+                cBg.setColor(0xFF141422);
                 cBg.setCornerRadius(dpToPx(activity, 8));
                 cBg.setStroke(dpToPx(activity, 1), 0xFFDC2626);
                 card.setBackground(cBg);

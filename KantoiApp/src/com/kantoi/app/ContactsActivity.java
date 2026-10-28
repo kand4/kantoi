@@ -145,7 +145,7 @@ public class ContactsActivity extends Activity {
         // Root layout
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF0F172A); // Slate 900
+        root.setBackgroundColor(0xFF0A0A0F); // Slate 900
 
         // 1. Top Header Bar
         root.addView(buildTopHeaderBar());
@@ -246,7 +246,7 @@ public class ContactsActivity extends Activity {
         mNormalHeaderBar.setOrientation(LinearLayout.HORIZONTAL);
         mNormalHeaderBar.setGravity(Gravity.CENTER_VERTICAL);
         mNormalHeaderBar.setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(12));
-        mNormalHeaderBar.setBackgroundColor(0xFF1E293B); // Slate 800
+        mNormalHeaderBar.setBackgroundColor(0xFF0A0A0F); // Slate 800
         mNormalHeaderBar.setVisibility(mContactSelectionMode ? View.GONE : View.VISIBLE);
 
         // Back button
@@ -308,7 +308,7 @@ public class ContactsActivity extends Activity {
         // Add Contact (+) Button
         Button btnAdd = new Button(this);
         btnAdd.setText("➕ Tambah");
-        btnAdd.setTextColor(0xFF0F172A);
+        btnAdd.setTextColor(Color.BLACK);
         btnAdd.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         btnAdd.setTypeface(Typeface.DEFAULT_BOLD);
         btnAdd.setBackground(createRipplePill(0xFF38BDF8, 0xFF0284C7, dpToPx(20)));
@@ -333,7 +333,7 @@ public class ContactsActivity extends Activity {
         mSelectionHeaderBar.setOrientation(LinearLayout.HORIZONTAL);
         mSelectionHeaderBar.setGravity(Gravity.CENTER_VERTICAL);
         mSelectionHeaderBar.setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(14));
-        mSelectionHeaderBar.setBackgroundColor(0xFF1E293B);
+        mSelectionHeaderBar.setBackgroundColor(0xFF141422);
         mSelectionHeaderBar.setVisibility(mContactSelectionMode ? View.VISIBLE : View.GONE);
 
         mBtnSelectAll = new Button(this);
@@ -341,7 +341,7 @@ public class ContactsActivity extends Activity {
         mBtnSelectAll.setTextColor(0xFF34D399); // Emerald 400
         mBtnSelectAll.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         mBtnSelectAll.setTypeface(Typeface.DEFAULT_BOLD);
-        mBtnSelectAll.setBackground(createRipplePill(0xFF0F172A, 0xFF334155, dpToPx(8)));
+        mBtnSelectAll.setBackground(createRipplePill(0xFF141422, 0xFF2A2A3A, dpToPx(8)));
         mBtnSelectAll.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
         mBtnSelectAll.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -381,7 +381,7 @@ public class ContactsActivity extends Activity {
         btnCancel.setTextColor(0xFF94A3B8);
         btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         btnCancel.setTypeface(Typeface.DEFAULT_BOLD);
-        btnCancel.setBackground(createRipplePill(0xFF0F172A, 0xFF334155, dpToPx(8)));
+        btnCancel.setBackground(createRipplePill(0xFF141422, 0xFF2A2A3A, dpToPx(8)));
         btnCancel.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
         LinearLayout.LayoutParams canLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         canLp.setMarginStart(dpToPx(8));
@@ -408,7 +408,7 @@ public class ContactsActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.HORIZONTAL);
         box.setGravity(Gravity.CENTER_VERTICAL);
-        box.setBackground(createPillDrawable(0xFF1E293B, 0xFF334155, 1, dpToPx(10)));
+        box.setBackground(createPillDrawable(0xFF141422, 0xFF2A2A3A, 1, dpToPx(10)));
         box.setPadding(dpToPx(12), dpToPx(4), dpToPx(12), dpToPx(4));
         box.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(46)));
 
@@ -503,16 +503,16 @@ public class ContactsActivity extends Activity {
 
     private void updateFilterChipStyles() {
         if (mBtnFilterName == null) return;
-        mBtnFilterName.setBackground(createPillDrawable(mCurrentFilterMode == 0 ? 0xFF0284C7 : 0xFF1E293B, mCurrentFilterMode == 0 ? 0xFF38BDF8 : 0xFF334155, 1, dpToPx(16)));
+        mBtnFilterName.setBackground(createPillDrawable(mCurrentFilterMode == 0 ? 0xFF141422 : 0xFF0A0A0F, mCurrentFilterMode == 0 ? 0xFF00D4FF : 0xFF2A2A3A, 1, dpToPx(16)));
         mBtnFilterName.setTextColor(mCurrentFilterMode == 0 ? Color.WHITE : 0xFF94A3B8);
 
-        mBtnFilterRecent.setBackground(createPillDrawable(mCurrentFilterMode == 1 ? 0xFF059669 : 0xFF1E293B, mCurrentFilterMode == 1 ? 0xFF34D399 : 0xFF334155, 1, dpToPx(16)));
+        mBtnFilterRecent.setBackground(createPillDrawable(mCurrentFilterMode == 1 ? 0xFF141422 : 0xFF0A0A0F, mCurrentFilterMode == 1 ? 0xFF00FF88 : 0xFF2A2A3A, 1, dpToPx(16)));
         mBtnFilterRecent.setTextColor(mCurrentFilterMode == 1 ? Color.WHITE : 0xFF94A3B8);
 
-        mBtnFilterFreq.setBackground(createPillDrawable(mCurrentFilterMode == 2 ? 0xFFD97706 : 0xFF1E293B, mCurrentFilterMode == 2 ? 0xFFFBBF24 : 0xFF334155, 1, dpToPx(16)));
+        mBtnFilterFreq.setBackground(createPillDrawable(mCurrentFilterMode == 2 ? 0xFF141422 : 0xFF0A0A0F, mCurrentFilterMode == 2 ? 0xFFFBBF24 : 0xFF2A2A3A, 1, dpToPx(16)));
         mBtnFilterFreq.setTextColor(mCurrentFilterMode == 2 ? Color.WHITE : 0xFF94A3B8);
 
-        mBtnFilterThreat.setBackground(createPillDrawable(mCurrentFilterMode == 3 ? 0xFFDC2626 : 0xFF1E293B, mCurrentFilterMode == 3 ? 0xFFF87171 : 0xFF334155, 1, dpToPx(16)));
+        mBtnFilterThreat.setBackground(createPillDrawable(mCurrentFilterMode == 3 ? 0xFF450A0A : 0xFF0A0A0F, mCurrentFilterMode == 3 ? 0xFFFF3366 : 0xFF2A2A3A, 1, dpToPx(16)));
         mBtnFilterThreat.setTextColor(mCurrentFilterMode == 3 ? Color.WHITE : 0xFF94A3B8);
     }
 
@@ -954,7 +954,7 @@ public class ContactsActivity extends Activity {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setBackground(createPillDrawable(0xFF1E293B, 0xFF334155, 1, dpToPx(12)));
+        card.setBackground(createPillDrawable(0xFF141422, 0xFF2A2A3A, 1, dpToPx(12)));
         card.setPadding(dpToPx(12), dpToPx(12), dpToPx(14), dpToPx(12));
 
         // 0. Checkbox Indicator (Pilihan Berbilang & Padam)
@@ -1051,7 +1051,7 @@ public class ContactsActivity extends Activity {
         final boolean isSelected = mContactSelectionMode && mSelectedContactIds.contains(contact.id);
 
         if (mCardNormalBg == null) {
-            mCardNormalBg = createPillDrawable(0xFF1E293B, 0xFF334155, 1, dpToPx(12));
+            mCardNormalBg = createPillDrawable(0xFF141422, 0xFF2A2A3A, 1, dpToPx(12));
             mCardSelectedBg = createPillDrawable(0xFF1E3A8A, 0xFF38BDF8, 1, dpToPx(12));
         }
 

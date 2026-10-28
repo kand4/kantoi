@@ -25,7 +25,7 @@ public class ChangelogActivity extends Activity {
 
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackgroundColor(0xFF0F172A); // Deep Slate 900
+        scrollView.setBackgroundColor(0xFF0A0A0F); // Deep Slate 900
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -77,7 +77,7 @@ public class ChangelogActivity extends Activity {
         btnGithub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnGithub.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable ghBg = new GradientDrawable();
-        ghBg.setColor(0xFF0F172A);
+        ghBg.setColor(0xFF0A0A0F);
         ghBg.setCornerRadius(dpToPx(6));
         ghBg.setStroke(dpToPx(1), 0xFF0284C7);
         btnGithub.setBackground(ghBg);
@@ -156,7 +156,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1150);
 
         // ==================== VERSION 1.14.0 ====================
-        LinearLayout cardV1140 = createCard(0xFF1E293B, 0xFF10B981, 12);
+        LinearLayout cardV1140 = createCard(0xFF141422, 0xFF10B981, 12);
         cardV1140.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1140Header = createVersionHeader("VERSI 1.14.0", "26 OKTOBER 2026", 0xFF94A3B8);
@@ -186,7 +186,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1140);
 
         // ==================== VERSION 1.13.9 ====================
-        LinearLayout cardV1139 = createCard(0xFF1E293B, 0xFF64748B, 12);
+        LinearLayout cardV1139 = createCard(0xFF141422, 0xFF64748B, 12);
         cardV1139.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1139Header = createVersionHeader("VERSI 1.13.9", "20 OKTOBER 2026", 0xFF94A3B8);
@@ -215,7 +215,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1139);
 
         // ==================== VERSION 1.13.8 ====================
-        LinearLayout cardV1138 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1138 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1138.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1138Header = createVersionHeader("VERSI 1.13.8", "20 OKTOBER 2026", 0xFF94A3B8);
@@ -248,7 +248,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1138);
 
         // ==================== VERSION 1.13.7 ====================
-        LinearLayout cardV1137 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1137 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1137.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1137Header = createVersionHeader("VERSI 1.13.7", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -277,7 +277,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1137);
 
         // ==================== VERSION 1.13.6 ====================
-        LinearLayout cardV1136 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1136 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1136.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1136Header = createVersionHeader("VERSI 1.13.6", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -305,7 +305,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1136);
 
         // ==================== VERSION 1.13.5 ====================
-        LinearLayout cardV1135 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1135 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1135.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1135Header = createVersionHeader("VERSI 1.13.5", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -334,7 +334,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1135);
 
         // ==================== VERSION 1.13.4 ====================
-        LinearLayout cardV1134 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1134 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1134.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1134Header = createVersionHeader("VERSI 1.13.4", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -361,7 +361,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1134);
 
         // ==================== VERSION 1.13.3 ====================
-        LinearLayout cardV1133 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1133 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1133.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1133Header = createVersionHeader("VERSI 1.13.3", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -389,7 +389,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1133);
 
         // ==================== VERSION 1.13.2 ====================
-        LinearLayout cardV1132 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1132 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1132.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1132Header = createVersionHeader("VERSI 1.13.2", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -415,7 +415,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1132);
 
         // ==================== VERSION 1.13.1 ====================
-        LinearLayout cardV1131 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1131 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1131.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1131Header = createVersionHeader("VERSI 1.13.1", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -447,7 +447,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1131);
 
         // ==================== VERSION 1.13.0 ====================
-        LinearLayout cardV1130 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1130 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1130.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1130Header = createVersionHeader("VERSI 1.13.0", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -484,7 +484,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1130);
 
         // ==================== VERSION 1.12.0 ====================
-        LinearLayout cardV1120 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1120 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1120.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1120Header = createVersionHeader("VERSI 1.12.0", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -521,7 +521,7 @@ public class ChangelogActivity extends Activity {
         setMarginTop(cardV1120, 10);
 
         // ==================== VERSION 1.11.9 ====================
-        LinearLayout cardV1119 = createCard(0xFF1E293B, 0xFF64748B, 12);
+        LinearLayout cardV1119 = createCard(0xFF141422, 0xFF64748B, 12);
         cardV1119.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         LinearLayout v1119Header = createVersionHeader("VERSI 1.11.9", "19 OKTOBER 2026", 0xFF94A3B8);
@@ -553,7 +553,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1119);
 
         // ==================== VERSION 1.11.8 ====================
-        LinearLayout cardV1118 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1118 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1118.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV1118, 14);
 
@@ -583,7 +583,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1118);
 
         // ==================== VERSION 1.11.7 ====================
-        LinearLayout cardV1117 = createCard(0xFF1E293B, 0xFF38BDF8, 12);
+        LinearLayout cardV1117 = createCard(0xFF141422, 0xFF38BDF8, 12);
         cardV1117.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV1117, 14);
 
@@ -617,7 +617,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1117);
 
         // ==================== VERSION 1.11.6 ====================
-        LinearLayout cardV1116 = createCard(0xFF1E293B, 0xFF10B981, 12);
+        LinearLayout cardV1116 = createCard(0xFF141422, 0xFF10B981, 12);
         cardV1116.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV1116, 14);
 
@@ -647,7 +647,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1116);
 
         // ==================== VERSION 1.11.5 ====================
-        LinearLayout cardV1115 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV1115 = createCard(0xFF141422, 0xFF334155, 12);
         cardV1115.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV1115, 14);
 
@@ -685,7 +685,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1115);
 
         // ==================== VERSION 1.11.3 ====================
-        LinearLayout cardV1113 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV1113 = createCard(0xFF141422, 0xFF334155, 12);
         cardV1113.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV1113, 14);
 
@@ -716,7 +716,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1113);
 
         // ==================== VERSION 1.11.2 ====================
-        LinearLayout cardV1112 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV1112 = createCard(0xFF141422, 0xFF334155, 12);
         cardV1112.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV1112, 14);
 
@@ -743,7 +743,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1112);
 
         // ==================== VERSION 1.11.1 ====================
-        LinearLayout cardV1111 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV1111 = createCard(0xFF141422, 0xFF334155, 12);
         cardV1111.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV1111, 14);
 
@@ -772,7 +772,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1111);
 
         // ==================== VERSION 1.11.0 ====================
-        LinearLayout cardV1110 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV1110 = createCard(0xFF141422, 0xFF334155, 12);
         cardV1110.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV1110, 14);
 
@@ -808,7 +808,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1110);
 
         // ==================== VERSION 1.10.0 ====================
-        LinearLayout cardV1100 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV1100 = createCard(0xFF141422, 0xFF334155, 12);
         cardV1100.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV1100, 14);
 
@@ -844,7 +844,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV1100);
 
         // ==================== VERSION 1.9.1 ====================
-        LinearLayout cardV191 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV191 = createCard(0xFF141422, 0xFF334155, 12);
         cardV191.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV191, 14);
 
@@ -873,7 +873,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV191);
 
         // ==================== VERSION 1.9.0 ====================
-        LinearLayout cardV19 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV19 = createCard(0xFF141422, 0xFF334155, 12);
         cardV19.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV19, 14);
 
@@ -903,7 +903,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV19);
 
         // ==================== VERSION 1.8.0 ====================
-        LinearLayout cardV18 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV18 = createCard(0xFF141422, 0xFF334155, 12);
         cardV18.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV18, 14);
 
@@ -932,7 +932,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV18);
 
         // ==================== VERSION 1.7.1 ====================
-        LinearLayout cardV171 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV171 = createCard(0xFF141422, 0xFF334155, 12);
         cardV171.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV171, 14);
 
@@ -963,7 +963,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV171);
 
         // ==================== VERSION 1.7.0 ====================
-        LinearLayout cardV17 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV17 = createCard(0xFF141422, 0xFF334155, 12);
         cardV17.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV17, 14);
 
@@ -997,7 +997,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV17);
 
         // ==================== VERSION 1.6.0 ====================
-        LinearLayout cardV16 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV16 = createCard(0xFF141422, 0xFF334155, 12);
         cardV16.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV16, 14);
 
@@ -1031,7 +1031,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV16);
 
         // ==================== VERSION 1.5.0 ====================
-        LinearLayout cardV15 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV15 = createCard(0xFF141422, 0xFF334155, 12);
         cardV15.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV15, 14);
 
@@ -1063,7 +1063,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV15);
 
         // ==================== VERSION 1.4.0 ====================
-        LinearLayout cardV14 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV14 = createCard(0xFF141422, 0xFF334155, 12);
         cardV14.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV14, 14);
 
@@ -1096,7 +1096,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV14);
 
         // ==================== VERSION 1.3.0 ====================
-        LinearLayout cardV13 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV13 = createCard(0xFF141422, 0xFF334155, 12);
         cardV13.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV13, 14);
 
@@ -1122,7 +1122,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV13);
 
         // ==================== VERSION 1.2.0 ====================
-        LinearLayout cardV12 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV12 = createCard(0xFF141422, 0xFF334155, 12);
         cardV12.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV12, 14);
 
@@ -1150,7 +1150,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV12);
 
         // ==================== VERSION 1.1.0 ====================
-        LinearLayout cardV11 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV11 = createCard(0xFF141422, 0xFF334155, 12);
         cardV11.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV11, 14);
 
@@ -1177,7 +1177,7 @@ public class ChangelogActivity extends Activity {
         root.addView(cardV11);
 
         // ==================== VERSION 1.0.0 ====================
-        LinearLayout cardV10 = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout cardV10 = createCard(0xFF141422, 0xFF334155, 12);
         cardV10.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(cardV10, 14);
 

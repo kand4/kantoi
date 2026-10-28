@@ -132,7 +132,7 @@ public class MainActivity extends Activity {
         // Root container (Vertical Layout: Header + TabContentFrame + BottomNavBar)
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFF0F172A); // Deep Slate 900
+        root.setBackgroundColor(0xFF0A0A0F); // Deep Slate 900
 
         // 1. App Bar Header (Brand Identity + Changelog Button)
         LinearLayout topHeaderRow = new LinearLayout(this);
@@ -189,12 +189,13 @@ public class MainActivity extends Activity {
 
         Button btnChangelog = new Button(this);
         btnChangelog.setText("📜 CHANGELOG v" + getAppVersionName());
-        btnChangelog.setTextColor(Color.WHITE);
+        btnChangelog.setTextColor(0xFF00D4FF);
         btnChangelog.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnChangelog.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable chBg = new GradientDrawable();
-        chBg.setColor(0xFF0284C7);
+        chBg.setColor(0xFF141422);
         chBg.setCornerRadius(dpToPx(6));
+        chBg.setStroke(dpToPx(1), 0xFF00D4FF);
         btnChangelog.setBackground(chBg);
         btnChangelog.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
         btnChangelog.setOnClickListener(new View.OnClickListener() {
@@ -308,7 +309,7 @@ public class MainActivity extends Activity {
     private ScrollView buildCallsView(final SharedPreferences prefs) {
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackgroundColor(0xFF0F172A);
+        scrollView.setBackgroundColor(0xFF0A0A0F);
         scrollView.setSmoothScrollingEnabled(true);
         scrollView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
         scrollView.setClipToPadding(false);
@@ -326,8 +327,8 @@ public class MainActivity extends Activity {
         searchBox.setOrientation(LinearLayout.HORIZONTAL);
         searchBox.setGravity(Gravity.CENTER_VERTICAL);
         GradientDrawable sbBg = new GradientDrawable();
-        sbBg.setColor(0xFF1E293B);
-        sbBg.setStroke(dpToPx(1), 0xFF334155);
+        sbBg.setColor(0xFF141422);
+        sbBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         sbBg.setCornerRadius(dpToPx(10));
         searchBox.setBackground(sbBg);
         searchBox.setPadding(dpToPx(12), dpToPx(4), dpToPx(8), dpToPx(4));
@@ -371,11 +372,11 @@ public class MainActivity extends Activity {
 
         Button btnSemak = new Button(this);
         btnSemak.setText("SEMAK");
-        btnSemak.setTextColor(Color.WHITE);
+        btnSemak.setTextColor(Color.BLACK);
         btnSemak.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnSemak.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable semakBg = new GradientDrawable();
-        semakBg.setColor(0xFF0284C7);
+        semakBg.setColor(0xFF00D4FF);
         semakBg.setCornerRadius(dpToPx(6));
         btnSemak.setBackground(semakBg);
         btnSemak.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
@@ -418,9 +419,11 @@ public class MainActivity extends Activity {
         btnSelectLog.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnSelectLog.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable selBg = new GradientDrawable();
-        selBg.setColor(0xFF334155);
+        selBg.setColor(0xFF141422);
         selBg.setCornerRadius(dpToPx(6));
+        selBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         btnSelectLog.setBackground(selBg);
+        btnSelectLog.setTextColor(0xFFCBD5E1);
         btnSelectLog.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
         btnSelectLog.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -436,9 +439,11 @@ public class MainActivity extends Activity {
         btnRefreshLog.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnRefreshLog.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable rfBg = new GradientDrawable();
-        rfBg.setColor(0xFF1E293B);
+        rfBg.setColor(0xFF141422);
         rfBg.setCornerRadius(dpToPx(6));
+        rfBg.setStroke(dpToPx(1), 0xFF00D4FF);
         btnRefreshLog.setBackground(rfBg);
+        btnRefreshLog.setTextColor(0xFF00D4FF);
         btnRefreshLog.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
         LinearLayout.LayoutParams rfLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         rfLp.leftMargin = dpToPx(6);
@@ -465,7 +470,7 @@ public class MainActivity extends Activity {
         mBtnCallLogSelectAll.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         mBtnCallLogSelectAll.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable saBg = new GradientDrawable();
-        saBg.setColor(0xFF1E293B);
+        saBg.setColor(0xFF141422);
         saBg.setCornerRadius(dpToPx(6));
         mBtnCallLogSelectAll.setBackground(saBg);
         mBtnCallLogSelectAll.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
@@ -511,7 +516,7 @@ public class MainActivity extends Activity {
         btnCancelSelect.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnCancelSelect.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable canBg = new GradientDrawable();
-        canBg.setColor(0xFF1E293B);
+        canBg.setColor(0xFF141422);
         canBg.setCornerRadius(dpToPx(6));
         btnCancelSelect.setBackground(canBg);
         btnCancelSelect.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
@@ -550,7 +555,7 @@ public class MainActivity extends Activity {
             if (checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
                 mCallLogsListContainer.removeAllViews();
 
-                LinearLayout permCard = createCard(0xFF1E293B, 0xFFF59E0B, 10);
+                LinearLayout permCard = createCard(0xFF141422, 0xFFF59E0B, 10);
                 permCard.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
 
                 TextView tv = new TextView(this);
@@ -811,12 +816,12 @@ public class MainActivity extends Activity {
     private View createCallLogItemView(final CallLogItem item) {
         final boolean isSelected = mCallLogSelectionMode && mSelectedCallLogIds.contains(item.id);
 
-        int bgColor = item.isScammer ? 0xFF450A0A : 0xFF1E293B;
-        int strokeColor = item.isScammer ? 0xFFDC2626 : 0xFF334155;
+        int bgColor = item.isScammer ? 0xFF450A0A : 0xFF141422;
+        int strokeColor = item.isScammer ? 0xFFFF3366 : 0xFF2A2A3A;
 
         if (mCallLogSelectionMode && isSelected) {
-            bgColor = 0xFF1E3A8A; // Deep blue highlight when selected
-            strokeColor = 0xFF38BDF8; // Bright sky stroke
+            bgColor = 0xFF141422;
+            strokeColor = 0xFF00D4FF;
         }
 
         // Direct horizontal layout without redundant nested contentRow
@@ -842,10 +847,10 @@ public class MainActivity extends Activity {
             tvIcon.setTextColor(0xFFEF4444); // Red missed
         } else if (item.type == CallLog.Calls.OUTGOING_TYPE) {
             tvIcon.setText("↗");
-            tvIcon.setTextColor(0xFF38BDF8); // Blue outgoing
+            tvIcon.setTextColor(0xFF00D4FF); // Neon Cyan outgoing
         } else {
             tvIcon.setText("↙");
-            tvIcon.setTextColor(0xFF34D399); // Green incoming
+            tvIcon.setTextColor(0xFF00FF88); // Acid Green incoming
         }
         tvIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         tvIcon.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1214,7 +1219,7 @@ public class MainActivity extends Activity {
     private ScrollView buildShieldView(final SharedPreferences prefs) {
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackgroundColor(0xFF0F172A);
+        scrollView.setBackgroundColor(0xFF0A0A0F);
         scrollView.setClipToPadding(false);
 
         LinearLayout root = new LinearLayout(this);
@@ -1242,7 +1247,7 @@ public class MainActivity extends Activity {
         root.addView(btnBackToCalls);
 
         // 1. Hero Protection Status Card (Clickable to view DB stats)
-        LinearLayout heroCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
+        LinearLayout heroCard = createCard(0xFF141422, 0xFF00D4FF, 12);
         heroCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         TextView tvHeroTitle = new TextView(this);
@@ -1277,7 +1282,7 @@ public class MainActivity extends Activity {
         root.addView(heroCard);
 
         // 2. Telegram OTA Threat Sync Card (@kantoiradar)
-        LinearLayout syncCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
+        LinearLayout syncCard = createCard(0xFF141422, 0xFF00D4FF, 12);
         syncCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(syncCard, 10);
 
@@ -1295,7 +1300,7 @@ public class MainActivity extends Activity {
         tvSyncDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
         syncCard.addView(tvSyncDesc);
 
-        final Button btnSync = createButton("🚀 KEMASKINI DARI SALURAN KANTOI SEKARANG", 0xFF0284C7, Color.WHITE);
+        final Button btnSync = createButton("🚀 KEMASKINI DARI SALURAN KANTOI SEKARANG", 0xFF00D4FF, Color.BLACK);
         btnSync.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -1328,7 +1333,7 @@ public class MainActivity extends Activity {
         root.addView(syncCard);
 
         // 2b. Kad Anjuran Lapor Scammer Komuniti (@crowdcallerbot)
-        LinearLayout reportBotCard = createCard(0xFF1E293B, 0xFF059669, 12);
+        LinearLayout reportBotCard = createCard(0xFF141422, 0xFF00FF88, 12);
         reportBotCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(reportBotCard, 10);
 
@@ -1346,7 +1351,7 @@ public class MainActivity extends Activity {
         tvBotDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
         reportBotCard.addView(tvBotDesc);
 
-        final Button btnLaunchBot = createButton("🚀 BUKA BILIK SIASATAN KANTOI DI TELEGRAM", 0xFF059669, Color.WHITE);
+        final Button btnLaunchBot = createButton("🚀 BUKA BILIK SIASATAN KANTOI DI TELEGRAM", 0xFF00FF88, Color.BLACK);
         btnLaunchBot.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -1365,7 +1370,7 @@ public class MainActivity extends Activity {
         root.addView(buildCounterStrikeSection(prefs));
 
         // 2c. Kad Gelembung Terapung 1-Ketikan (Idea 1: Floating Threat HUD)
-        LinearLayout hudCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
+        LinearLayout hudCard = createCard(0xFF141422, 0xFF00D4FF, 12);
         hudCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(hudCard, 10);
 
@@ -1430,7 +1435,7 @@ public class MainActivity extends Activity {
         root.addView(hudCard);
 
         // 3. Android Default Phone App (InCallService) & Screening Manager Card
-        LinearLayout callMgrCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
+        LinearLayout callMgrCard = createCard(0xFF141422, 0xFF00D4FF, 12);
         callMgrCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(callMgrCard, 12);
 
@@ -1494,7 +1499,7 @@ public class MainActivity extends Activity {
         setMarginTop(mTvScreeningStatus, 10);
         callMgrCard.addView(mTvScreeningStatus);
 
-        mBtnEnableScreening = createButton("🛡️ TETAPKAN PENYARING PANGGILAN (CALL SCREENING)", 0xFF334155, Color.WHITE);
+        mBtnEnableScreening = createButton("🛡️ TETAPKAN PENYARING PANGGILAN (CALL SCREENING)", 0xFF2A2A3A, Color.WHITE);
         setMarginTop(mBtnEnableScreening, 6);
         mBtnEnableScreening.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -1527,7 +1532,7 @@ public class MainActivity extends Activity {
         root.addView(callMgrCard);
 
         // 4. Mod Perlindungan Warga Emas (Senior Citizen Mode)
-        LinearLayout seniorCard = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout seniorCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
         seniorCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(seniorCard, 12);
 
@@ -1566,7 +1571,7 @@ public class MainActivity extends Activity {
         root.addView(seniorCard);
 
         // 5. Pengesan Akaun Keldai Papan Keratan (Clipboard Mule Sniffer)
-        LinearLayout clipCard = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout clipCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
         clipCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(clipCard, 12);
 
@@ -1608,7 +1613,7 @@ public class MainActivity extends Activity {
         root.addView(clipCard);
 
         // 6. Contact Whitelist & Threat Audit Card
-        LinearLayout contactsCard = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout contactsCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
         contactsCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(contactsCard, 12);
 
@@ -1637,7 +1642,7 @@ public class MainActivity extends Activity {
         root.addView(contactsCard);
 
         // 6b. Radar Ancaman WhatsApp (Disebalik Tabir)
-        LinearLayout waCard = createCard(0xFF1E293B, 0xFF25D366, 12);
+        LinearLayout waCard = createCard(0xFF141422, 0xFF25D366, 12);
         waCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(waCard, 12);
 
@@ -1680,7 +1685,7 @@ public class MainActivity extends Activity {
         updateWhatsAppCardStatus();
 
         // 7. SMS Scam & Phishing Shield Card
-        LinearLayout smsCard = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout smsCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
         smsCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(smsCard, 12);
 
@@ -1709,7 +1714,7 @@ public class MainActivity extends Activity {
         root.addView(smsCard);
 
         // 8. Direct Community Tools
-        LinearLayout toolsCard = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout toolsCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
         toolsCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(toolsCard, 12);
 
@@ -1766,7 +1771,7 @@ public class MainActivity extends Activity {
         root.addView(toolsCard);
 
         // 9. VirusTotal & APK Heuristic Engine Card
-        LinearLayout vtCard = createCard(0xFF0F172A, 0xFF0284C7, 12);
+        LinearLayout vtCard = createCard(0xFF0A0A0F, 0xFF0284C7, 12);
         vtCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(vtCard, 12);
 
@@ -1815,7 +1820,7 @@ public class MainActivity extends Activity {
         root.addView(vtCard);
 
         // 10. GUI Previews (Now includes Active Call Preview!)
-        LinearLayout guiPreviewCard = createCard(0xFF1E293B, 0xFF0284C7, 12);
+        LinearLayout guiPreviewCard = createCard(0xFF141422, 0xFF00D4FF, 12);
         guiPreviewCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(guiPreviewCard, 12);
 
@@ -1889,7 +1894,7 @@ public class MainActivity extends Activity {
         setMarginTop(tvFooter, 24);
         root.addView(tvFooter);
 
-        Button btnGithub = createButton("🌐 REPOSITORI GITHUB (KAND4/KANTOI)", 0xFF0F172A, 0xFF38BDF8);
+        Button btnGithub = createButton("🌐 REPOSITORI GITHUB (KAND4/KANTOI)", 0xFF0A0A0F, 0xFF38BDF8);
         setMarginTop(btnGithub, 8);
         btnGithub.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -1972,11 +1977,21 @@ public class MainActivity extends Activity {
     private Button createNavButton(String icon, String label) {
         Button btn = new Button(this);
         btn.setText(icon + "\n" + label);
-        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btn.setTextColor(0xFF94A3B8);
         btn.setTypeface(Typeface.DEFAULT_BOLD);
-        btn.setBackgroundColor(Color.TRANSPARENT);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dpToPx(48), 1.0f);
+        btn.setGravity(Gravity.CENTER);
+        btn.setLineSpacing(dpToPx(2), 1.0f);
+        btn.setPadding(0, dpToPx(4), 0, dpToPx(4));
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dpToPx(10));
+        bg.setColor(Color.TRANSPARENT);
+        btn.setBackground(bg);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dpToPx(50), 1.0f);
+        lp.leftMargin = dpToPx(2);
+        lp.rightMargin = dpToPx(2);
         btn.setLayoutParams(lp);
         return btn;
     }
@@ -2002,14 +2017,15 @@ public class MainActivity extends Activity {
     private void updateNavButtonState(Button btn, boolean selected) {
         if (btn == null) return;
         GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dpToPx(10));
         if (selected) {
             bg.setColor(0xFF141422);
-            bg.setCornerRadius(dpToPx(8));
             bg.setStroke(dpToPx(1), 0xFF00D4FF);
             btn.setBackground(bg);
-            btn.setTextColor(0xFF00D4FF); // Sky blue
+            btn.setTextColor(0xFF00D4FF);
         } else {
-            btn.setBackground(null);
+            bg.setColor(Color.TRANSPARENT);
+            btn.setBackground(bg);
             btn.setTextColor(0xFF94A3B8);
         }
     }
@@ -2093,7 +2109,7 @@ public class MainActivity extends Activity {
             });
             mSearchResultCard.addView(btnSemakMule);
 
-            Button btnProfile = createButton("👤 BUKA PROFIL KESELAMATAN NOMBOR", 0xFF334155, Color.WHITE);
+            Button btnProfile = createButton("👤 BUKA PROFIL KESELAMATAN NOMBOR", 0xFF2A2A3A, Color.WHITE);
             setMarginTop(btnProfile, 6);
             btnProfile.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -2196,7 +2212,7 @@ public class MainActivity extends Activity {
                 mTvScreeningStatus.setText("⚠️ BELUM AKTIF: Sila aktifkan penyaring panggilan");
                 mTvScreeningStatus.setTextColor(0xFFFBBF24);
                 mBtnEnableScreening.setText("🛡️ TETAPKAN PENYARING PANGGILAN (CALL SCREENING)");
-                updateButtonBg(mBtnEnableScreening, 0xFF334155);
+                updateButtonBg(mBtnEnableScreening, 0xFF2A2A3A);
             }
         } else {
             mTvScreeningStatus.setText("✅ AKTIF (Mod Latar Belakang Telefon)");
@@ -2662,7 +2678,7 @@ public class MainActivity extends Activity {
         // Auto Answer Toggle
         final Button btnAutoAnswer = createButton(
                 csEngine.isAutoAnswerEnabled() ? "⚡ AUTO-JAWAB & PERANGKAP: AKTIF" : "⚡ AUTO-JAWAB & PERANGKAP: BUKAN AKTIF",
-                csEngine.isAutoAnswerEnabled() ? 0xFF059669 : 0xFF334155,
+                csEngine.isAutoAnswerEnabled() ? 0xFF059669 : 0xFF2A2A3A,
                 Color.WHITE
         );
         setMarginTop(btnAutoAnswer, 10);
@@ -2673,7 +2689,7 @@ public class MainActivity extends Activity {
                 csEngine.setAutoAnswerEnabled(next);
                 btnAutoAnswer.setText(next ? "⚡ AUTO-JAWAB & PERANGKAP: AKTIF" : "⚡ AUTO-JAWAB & PERANGKAP: BUKAN AKTIF");
                 GradientDrawable g = new GradientDrawable();
-                g.setColor(next ? 0xFF059669 : 0xFF334155);
+                g.setColor(next ? 0xFF059669 : 0xFF2A2A3A);
                 g.setCornerRadius(dpToPx(8));
                 btnAutoAnswer.setBackground(g);
                 Toast.makeText(MainActivity.this, next ? "Auto-Jawab diaktifkan untuk scammer." : "Auto-Jawab dimatikan.", Toast.LENGTH_SHORT).show();
@@ -2690,7 +2706,7 @@ public class MainActivity extends Activity {
         setMarginTop(testBox, 14);
 
         GradientDrawable tbBg = new GradientDrawable();
-        tbBg.setColor(0xFF0F172A);
+        tbBg.setColor(0xFF0A0A0F);
         tbBg.setCornerRadius(dpToPx(12));
         tbBg.setStroke(dpToPx(1), 0xFF00FF88);
         testBox.setBackground(tbBg);
@@ -2726,9 +2742,9 @@ public class MainActivity extends Activity {
         etTestNum.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         etTestNum.setInputType(InputType.TYPE_CLASS_PHONE);
         GradientDrawable etBg = new GradientDrawable();
-        etBg.setColor(0xFF1E293B);
+        etBg.setColor(0xFF141422);
         etBg.setCornerRadius(dpToPx(8));
-        etBg.setStroke(dpToPx(1), 0xFF334155);
+        etBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         etTestNum.setBackground(etBg);
         etTestNum.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
         setMarginTop(etTestNum, 8);
@@ -2860,12 +2876,12 @@ public class MainActivity extends Activity {
         GradientDrawable g = new GradientDrawable();
         g.setCornerRadius(dpToPx(8));
         if (active) {
-            g.setColor(0xFF1E293B);
+            g.setColor(0xFF141422);
             g.setStroke(dpToPx(1), 0xFF00D4FF);
             btn.setTextColor(0xFF00D4FF);
         } else {
-            g.setColor(0xFF0F172A);
-            g.setStroke(dpToPx(1), 0xFF1E293B);
+            g.setColor(0xFF0A0A0F);
+            g.setStroke(dpToPx(1), 0xFF141422);
             btn.setTextColor(0xFF94A3B8);
         }
         btn.setBackground(g);
@@ -2887,12 +2903,12 @@ public class MainActivity extends Activity {
         GradientDrawable g = new GradientDrawable();
         g.setCornerRadius(dpToPx(6));
         if (active) {
-            g.setColor(0xFF1E293B);
+            g.setColor(0xFF141422);
             g.setStroke(dpToPx(1), 0xFF00FF88);
             btn.setTextColor(0xFF00FF88);
         } else {
-            g.setColor(0xFF0F172A);
-            g.setStroke(dpToPx(1), 0xFF1E293B);
+            g.setColor(0xFF0A0A0F);
+            g.setStroke(dpToPx(1), 0xFF141422);
             btn.setTextColor(0xFF94A3B8);
         }
         btn.setBackground(g);

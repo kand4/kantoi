@@ -505,7 +505,7 @@ public class KantoiVirusTotalEngine {
         LinearLayout infoCard = new LinearLayout(activity);
         infoCard.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable iBg = new GradientDrawable();
-        iBg.setColor(0xFF1E293B);
+        iBg.setColor(0xFF141422);
         iBg.setCornerRadius(dpToPx(activity, 10));
         infoCard.setBackground(iBg);
         infoCard.setPadding(dpToPx(activity, 14), dpToPx(activity, 10), dpToPx(activity, 14), dpToPx(activity, 10));
@@ -574,9 +574,9 @@ public class KantoiVirusTotalEngine {
         LinearLayout vtCard = new LinearLayout(activity);
         vtCard.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable vtBg = new GradientDrawable();
-        vtBg.setColor(0xFF0F172A);
+        vtBg.setColor(0xFF0A0A0F);
         vtBg.setCornerRadius(dpToPx(activity, 10));
-        vtBg.setStroke(dpToPx(activity, 1), 0xFF334155);
+        vtBg.setStroke(dpToPx(activity, 1), 0xFF2A2A3A);
         vtCard.setBackground(vtBg);
         vtCard.setPadding(dpToPx(activity, 14), dpToPx(activity, 10), dpToPx(activity, 14), dpToPx(activity, 10));
         LinearLayout.LayoutParams vtLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);

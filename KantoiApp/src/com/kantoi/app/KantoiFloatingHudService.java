@@ -220,7 +220,7 @@ public class KantoiFloatingHudService extends Service {
         mCardView.setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(14));
 
         GradientDrawable cardBg = new GradientDrawable();
-        cardBg.setColor(0xFF0F172A); // Dark Slate 900
+        cardBg.setColor(0xFF0A0A0F); // Dark Slate 900
         cardBg.setCornerRadius(dpToPx(16));
         cardBg.setStroke(dpToPx(2), 0xFF38BDF8); // Sky blue neon accent
         mCardView.setBackground(cardBg);
@@ -272,7 +272,7 @@ public class KantoiFloatingHudService extends Service {
         mEtTarget.setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8));
 
         GradientDrawable etBg = new GradientDrawable();
-        etBg.setColor(0xFF1E293B);
+        etBg.setColor(0xFF141422);
         etBg.setCornerRadius(dpToPx(8));
         etBg.setStroke(dpToPx(1), 0xFF475569);
         mEtTarget.setBackground(etBg);
@@ -401,7 +401,7 @@ public class KantoiFloatingHudService extends Service {
 
         mResultCard.setVisibility(View.VISIBLE);
         GradientDrawable loadingBg = new GradientDrawable();
-        loadingBg.setColor(0xFF1E293B);
+        loadingBg.setColor(0xFF141422);
         loadingBg.setCornerRadius(dpToPx(8));
         loadingBg.setStroke(dpToPx(1), 0xFF64748B);
         mResultCard.setBackground(loadingBg);

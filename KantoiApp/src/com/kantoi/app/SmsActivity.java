@@ -82,11 +82,11 @@ public class SmsActivity extends Activity {
 
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
-        mainLayout.setBackgroundColor(0xFF0F172A);
+        mainLayout.setBackgroundColor(0xFF0A0A0F);
 
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackgroundColor(0xFF0F172A); // Slate 900
+        scrollView.setBackgroundColor(0xFF0A0A0F); // Slate 900
         scrollView.setSmoothScrollingEnabled(true);
         scrollView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
         scrollView.setClipToPadding(false);
@@ -215,10 +215,10 @@ public class SmsActivity extends Activity {
         if (!mShowingComposeTab) {
             // Inbox active
             updateButtonBg(mBtnTabInbox, 0xFF0284C7, Color.WHITE);
-            updateButtonBg(mBtnTabCompose, 0xFF1E293B, 0xFF94A3B8);
+            updateButtonBg(mBtnTabCompose, 0xFF141422, 0xFF94A3B8);
         } else {
             // Compose active
-            updateButtonBg(mBtnTabInbox, 0xFF1E293B, 0xFF94A3B8);
+            updateButtonBg(mBtnTabInbox, 0xFF141422, 0xFF94A3B8);
             updateButtonBg(mBtnTabCompose, 0xFF0284C7, Color.WHITE);
         }
     }
@@ -227,7 +227,7 @@ public class SmsActivity extends Activity {
     private void buildInboxView() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
-                LinearLayout permCard = createCard(0xFF1E293B, 0xFFF59E0B, 12);
+                LinearLayout permCard = createCard(0xFF141422, 0xFFF59E0B, 12);
                 permCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
                 TextView tv = new TextView(this);
@@ -312,7 +312,7 @@ public class SmsActivity extends Activity {
         mSmsNormalHeaderRow.setOrientation(LinearLayout.VERTICAL);
         mSmsNormalHeaderRow.setVisibility(mSmsSelectionMode ? View.GONE : View.VISIBLE);
 
-        LinearLayout summaryCard = createCard(0xFF1E293B, scamCount > 0 ? 0xFFEF4444 : 0xFF059669, 10);
+        LinearLayout summaryCard = createCard(0xFF141422, scamCount > 0 ? 0xFFFF3366 : 0xFF00FF88, 10);
         summaryCard.setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10));
 
         LinearLayout cardHeader = new LinearLayout(this);
@@ -357,7 +357,7 @@ public class SmsActivity extends Activity {
         btnRefreshSms.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         btnRefreshSms.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable rfBg = new GradientDrawable();
-        rfBg.setColor(0xFF0F172A);
+        rfBg.setColor(0xFF141422); rfBg.setStroke(dpToPx(1), 0xFF00D4FF);
         rfBg.setCornerRadius(dpToPx(6));
         btnRefreshSms.setBackground(rfBg);
         btnRefreshSms.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
@@ -381,10 +381,10 @@ public class SmsActivity extends Activity {
         mSmsSelectionHeaderRow.setOrientation(LinearLayout.HORIZONTAL);
         mSmsSelectionHeaderRow.setGravity(Gravity.CENTER_VERTICAL);
         mSmsSelectionHeaderRow.setVisibility(mSmsSelectionMode ? View.VISIBLE : View.GONE);
-        mSmsSelectionHeaderRow.setBackgroundColor(0xFF1E293B);
+        mSmsSelectionHeaderRow.setBackgroundColor(0xFF141422);
         mSmsSelectionHeaderRow.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
         GradientDrawable barBg = new GradientDrawable();
-        barBg.setColor(0xFF1E293B);
+        barBg.setColor(0xFF141422);
         barBg.setCornerRadius(dpToPx(8));
         barBg.setStroke(dpToPx(1), 0xFF38BDF8);
         mSmsSelectionHeaderRow.setBackground(barBg);
@@ -395,7 +395,7 @@ public class SmsActivity extends Activity {
         mBtnSmsSelectAll.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         mBtnSmsSelectAll.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable saBg = new GradientDrawable();
-        saBg.setColor(0xFF0F172A);
+        saBg.setColor(0xFF141422);
         saBg.setCornerRadius(dpToPx(6));
         mBtnSmsSelectAll.setBackground(saBg);
         mBtnSmsSelectAll.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
@@ -441,7 +441,7 @@ public class SmsActivity extends Activity {
         btnCancelSms.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnCancelSms.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable canBg = new GradientDrawable();
-        canBg.setColor(0xFF0F172A);
+        canBg.setColor(0xFF141422);
         canBg.setCornerRadius(dpToPx(6));
         btnCancelSms.setBackground(canBg);
         btnCancelSms.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
@@ -618,7 +618,7 @@ public class SmsActivity extends Activity {
     private View createSmsItemView(final SmsItem item) {
         final boolean isSelected = mSmsSelectionMode && mSelectedSmsIds.contains(item.id);
 
-        int bgColor = item.isPhishingOrScam ? 0xFF450A0A : 0xFF1E293B;
+        int bgColor = item.isPhishingOrScam ? 0xFF450A0A : 0xFF141422;
         int strokeColor = item.isPhishingOrScam ? 0xFFDC2626 : 0xFF334155;
 
         if (mSmsSelectionMode && isSelected) {
@@ -886,7 +886,7 @@ public class SmsActivity extends Activity {
 
     // ==================== COMPOSE VIEW ====================
     private void buildComposeView() {
-        LinearLayout composeCard = createCard(0xFF1E293B, 0xFF334155, 12);
+        LinearLayout composeCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
         composeCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
         TextView tvTitle = new TextView(this);
@@ -912,7 +912,7 @@ public class SmsActivity extends Activity {
         mEtRecipient.setInputType(InputType.TYPE_CLASS_PHONE);
         mEtRecipient.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
         GradientDrawable rBg = new GradientDrawable();
-        rBg.setColor(0xFF0F172A);
+        rBg.setColor(0xFF0A0A0F); rBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         rBg.setCornerRadius(dpToPx(8));
         rBg.setStroke(dpToPx(1), 0xFF334155);
         mEtRecipient.setBackground(rBg);
@@ -954,7 +954,7 @@ public class SmsActivity extends Activity {
         mEtMessage.setGravity(Gravity.TOP);
         mEtMessage.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
         GradientDrawable mBg = new GradientDrawable();
-        mBg.setColor(0xFF0F172A);
+        mBg.setColor(0xFF0A0A0F); mBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         mBg.setCornerRadius(dpToPx(8));
         mBg.setStroke(dpToPx(1), 0xFF334155);
         mEtMessage.setBackground(mBg);

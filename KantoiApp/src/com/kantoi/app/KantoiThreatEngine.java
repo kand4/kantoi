@@ -825,7 +825,7 @@ public class KantoiThreatEngine {
             List<TextView> cardTextViews = new ArrayList<TextView>();
             collectTextViews(cardContainer, cardTextViews);
 
-            int cardBgColor = 0xFF0F172A; // Deep Slate 900
+            int cardBgColor = 0xFF0A0A0F; // Deep Slate 900
             int cardStrokeColor = 0xFF0284C7; // Sky Blue border
             String titleText = "\uD83D\uDEE1\uFE0F SEMAK / DAFTAR SCAMMER PDRM";
             String subText = "🛡️ " + String.format("%,d", engine.getThreatCount()) + " Rekod Scammer • Semak & Lapor";
@@ -2047,7 +2047,7 @@ public class KantoiThreatEngine {
 
                     LinearLayout root = new LinearLayout(activity);
                     root.setOrientation(LinearLayout.VERTICAL);
-                    root.setBackgroundColor(0xFF0F172A); // Dark Slate background
+                    root.setBackgroundColor(0xFF0A0A0F); // Dark Slate background
                     root.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
                     // 1. In-App Header Bar (Tiada bar URL langsung)
@@ -2055,7 +2055,7 @@ public class KantoiThreatEngine {
                     headerBar.setOrientation(LinearLayout.HORIZONTAL);
                     headerBar.setGravity(Gravity.CENTER_VERTICAL);
                     headerBar.setPadding(dpToPx(activity, 16), dpToPx(activity, 12), dpToPx(activity, 14), dpToPx(activity, 12));
-                    headerBar.setBackgroundColor(0xFF1E293B);
+                    headerBar.setBackgroundColor(0xFF141422);
 
                     LinearLayout titleBox = new LinearLayout(activity);
                     titleBox.setOrientation(LinearLayout.VERTICAL);
@@ -2197,7 +2197,7 @@ public class KantoiThreatEngine {
                     Window win = dialog.getWindow();
                     if (win != null) {
                         GradientDrawable dWinBg = new GradientDrawable();
-                        dWinBg.setColor(0xFF0F172A);
+                        dWinBg.setColor(0xFF0A0A0F);
                         dWinBg.setCornerRadius(dpToPx(activity, 14));
                         win.setBackgroundDrawable(dWinBg);
 
@@ -2270,7 +2270,7 @@ public class KantoiThreatEngine {
                     LinearLayout root = new LinearLayout(activity);
                     root.setOrientation(LinearLayout.VERTICAL);
                     root.setPadding(dpToPx(activity, 20), dpToPx(activity, 18), dpToPx(activity, 20), dpToPx(activity, 20));
-                    root.setBackgroundColor(0xFF0F172A); // Slate 900 Tactical
+                    root.setBackgroundColor(0xFF0A0A0F); // Slate 900 Tactical
 
                     // 1. Header Row
                     LinearLayout headerRow = new LinearLayout(activity);
@@ -2368,7 +2368,7 @@ public class KantoiThreatEngine {
                     setMarginTop(activity, cardOsint, 10);
 
                     GradientDrawable osintBg = new GradientDrawable();
-                    osintBg.setColor(0xFF1E293B); // Slate
+                    osintBg.setColor(0xFF141422); // Slate
                     osintBg.setCornerRadius(dpToPx(activity, 12));
                     osintBg.setStroke(dpToPx(activity, 1), 0xFF0284C7);
                     cardOsint.setBackground(osintBg);
@@ -2404,9 +2404,9 @@ public class KantoiThreatEngine {
                     setMarginTop(activity, cardChat, 10);
 
                     GradientDrawable chatBg = new GradientDrawable();
-                    chatBg.setColor(0xFF0F172A); // Dark Slate
+                    chatBg.setColor(0xFF0A0A0F); // Dark Slate
                     chatBg.setCornerRadius(dpToPx(activity, 12));
-                    chatBg.setStroke(dpToPx(activity, 1), 0xFF334155);
+                    chatBg.setStroke(dpToPx(activity, 1), 0xFF2A2A3A);
                     cardChat.setBackground(chatBg);
                     cardChat.setClickable(true);
 
@@ -2447,7 +2447,7 @@ public class KantoiThreatEngine {
                     Window win = dialog.getWindow();
                     if (win != null) {
                         GradientDrawable dWinBg = new GradientDrawable();
-                        dWinBg.setColor(0xFF0F172A);
+                        dWinBg.setColor(0xFF0A0A0F);
                         dWinBg.setCornerRadius(dpToPx(activity, 16));
                         win.setBackgroundDrawable(dWinBg);
 
@@ -2492,7 +2492,7 @@ public class KantoiThreatEngine {
 
                     LinearLayout root = new LinearLayout(activity);
                     root.setOrientation(LinearLayout.VERTICAL);
-                    root.setBackgroundColor(0xFF0F172A); // Deep Slate 900 Tactical
+                    root.setBackgroundColor(0xFF0A0A0F); // Deep Slate 900 Tactical
                     root.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
                     // 1. Tactical HUD Header Bar
@@ -2500,7 +2500,7 @@ public class KantoiThreatEngine {
                     headerBar.setOrientation(LinearLayout.HORIZONTAL);
                     headerBar.setGravity(Gravity.CENTER_VERTICAL);
                     headerBar.setPadding(dpToPx(activity, 16), dpToPx(activity, 12), dpToPx(activity, 16), dpToPx(activity, 10));
-                    headerBar.setBackgroundColor(0xFF1E293B);
+                    headerBar.setBackgroundColor(0xFF141422);
 
                     LinearLayout titleBox = new LinearLayout(activity);
                     titleBox.setOrientation(LinearLayout.VERTICAL);
@@ -2604,7 +2604,7 @@ public class KantoiThreatEngine {
                     final LinearLayout errorContainer = new LinearLayout(activity);
                     errorContainer.setOrientation(LinearLayout.VERTICAL);
                     errorContainer.setPadding(dpToPx(activity, 16), dpToPx(activity, 16), dpToPx(activity, 16), dpToPx(activity, 16));
-                    errorContainer.setBackgroundColor(0xFF1E293B);
+                    errorContainer.setBackgroundColor(0xFF141422);
                     errorContainer.setVisibility(View.GONE);
 
                     TextView tvErrNotice = new TextView(activity);
@@ -2733,14 +2733,14 @@ public class KantoiThreatEngine {
                     bottomBar.setOrientation(LinearLayout.HORIZONTAL);
                     bottomBar.setGravity(Gravity.CENTER_VERTICAL);
                     bottomBar.setPadding(dpToPx(activity, 12), dpToPx(activity, 8), dpToPx(activity, 12), dpToPx(activity, 8));
-                    bottomBar.setBackgroundColor(0xFF1E293B);
+                    bottomBar.setBackgroundColor(0xFF141422);
 
                     Button btnReload = new Button(activity);
                     btnReload.setText("🔄 SEMULA");
                     btnReload.setTextColor(0xFFE2E8F0);
                     btnReload.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
                     GradientDrawable rBg = new GradientDrawable();
-                    rBg.setColor(0xFF334155);
+                    rBg.setColor(0xFF2A2A3A);
                     rBg.setCornerRadius(dpToPx(activity, 6));
                     btnReload.setBackground(rBg);
                     LinearLayout.LayoutParams rP = new LinearLayout.LayoutParams(0, dpToPx(activity, 34), 1.0f);
@@ -2825,7 +2825,7 @@ public class KantoiThreatEngine {
                     Window win = dialog.getWindow();
                     if (win != null) {
                         GradientDrawable dWinBg = new GradientDrawable();
-                        dWinBg.setColor(0xFF0F172A);
+                        dWinBg.setColor(0xFF0A0A0F);
                         dWinBg.setCornerRadius(dpToPx(activity, 14));
                         win.setBackgroundDrawable(dWinBg);
 
@@ -2936,7 +2936,7 @@ public class KantoiThreatEngine {
             LinearLayout root = new LinearLayout(context);
             root.setOrientation(LinearLayout.VERTICAL);
             root.setPadding(dpToPx(context, 20), dpToPx(context, 22), dpToPx(context, 20), dpToPx(context, 20));
-            root.setBackgroundColor(0xFF0F172A);
+            root.setBackgroundColor(0xFF0A0A0F);
 
             TextView tvIcon = new TextView(context);
             tvIcon.setText("🎉 🛡️");
@@ -2992,7 +2992,7 @@ public class KantoiThreatEngine {
             Window win = sDialog.getWindow();
             if (win != null) {
                 GradientDrawable winBg = new GradientDrawable();
-                winBg.setColor(0xFF0F172A);
+                winBg.setColor(0xFF0A0A0F);
                 winBg.setCornerRadius(dpToPx(context, 16));
                 win.setBackgroundDrawable(winBg);
             }
@@ -3013,8 +3013,8 @@ public class KantoiThreatEngine {
                 chip.setTextColor(Color.WHITE);
                 chip.setTypeface(Typeface.DEFAULT_BOLD);
             } else {
-                bg.setColor(0xFF1E293B); // Slate 800
-                bg.setStroke(dpToPx(context, 1), 0xFF334155);
+                bg.setColor(0xFF141422); // Slate 800
+                bg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
                 chip.setTextColor(0xFFCBD5E1);
                 chip.setTypeface(Typeface.DEFAULT);
             }
@@ -3041,7 +3041,7 @@ public class KantoiThreatEngine {
             final LinearLayout root = new LinearLayout(context);
             root.setOrientation(LinearLayout.VERTICAL);
             root.setPadding(dpToPx(context, 16), dpToPx(context, 16), dpToPx(context, 16), dpToPx(context, 20));
-            root.setBackgroundColor(0xFF0F172A);
+            root.setBackgroundColor(0xFF0A0A0F);
 
             // 1. Header Card (Luxurious Slate / Crimson Theme)
             LinearLayout headerCard = new LinearLayout(context);
@@ -3132,9 +3132,9 @@ public class KantoiThreatEngine {
             etPhone.setInputType(InputType.TYPE_CLASS_PHONE);
             etPhone.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
             GradientDrawable inputBg = new GradientDrawable();
-            inputBg.setColor(0xFF1E293B);
+            inputBg.setColor(0xFF141422);
             inputBg.setCornerRadius(dpToPx(context, 8));
-            inputBg.setStroke(dpToPx(context, 1), 0xFF334155);
+            inputBg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
             etPhone.setBackground(inputBg);
             root.addView(etPhone);
 
@@ -3229,9 +3229,9 @@ public class KantoiThreatEngine {
             etSuspect.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             etSuspect.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
             GradientDrawable suspectBg = new GradientDrawable();
-            suspectBg.setColor(0xFF1E293B);
+            suspectBg.setColor(0xFF141422);
             suspectBg.setCornerRadius(dpToPx(context, 8));
-            suspectBg.setStroke(dpToPx(context, 1), 0xFF334155);
+            suspectBg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
             etSuspect.setBackground(suspectBg);
             root.addView(etSuspect);
 
@@ -3253,9 +3253,9 @@ public class KantoiThreatEngine {
             etBank.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             etBank.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
             GradientDrawable bankBg = new GradientDrawable();
-            bankBg.setColor(0xFF1E293B);
+            bankBg.setColor(0xFF141422);
             bankBg.setCornerRadius(dpToPx(context, 8));
-            bankBg.setStroke(dpToPx(context, 1), 0xFF334155);
+            bankBg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
             etBank.setBackground(bankBg);
             root.addView(etBank);
 
@@ -3287,9 +3287,9 @@ public class KantoiThreatEngine {
             etNotes.setGravity(Gravity.TOP | Gravity.START);
             etNotes.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
             GradientDrawable notesBg = new GradientDrawable();
-            notesBg.setColor(0xFF1E293B);
+            notesBg.setColor(0xFF141422);
             notesBg.setCornerRadius(dpToPx(context, 8));
-            notesBg.setStroke(dpToPx(context, 1), 0xFF334155);
+            notesBg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
             etNotes.setBackground(notesBg);
             root.addView(etNotes);
 
@@ -3313,9 +3313,9 @@ public class KantoiThreatEngine {
             resultCard.setOrientation(LinearLayout.VERTICAL);
             resultCard.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
             final GradientDrawable resBg = new GradientDrawable();
-            resBg.setColor(0xFF1E293B);
+            resBg.setColor(0xFF141422);
             resBg.setCornerRadius(dpToPx(context, 8));
-            resBg.setStroke(dpToPx(context, 1), 0xFF334155);
+            resBg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
             resultCard.setBackground(resBg);
             LinearLayout.LayoutParams resParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             resParams.setMargins(0, dpToPx(context, 8), 0, 0);
@@ -3360,7 +3360,7 @@ public class KantoiThreatEngine {
                     }
                     tvResult.setText("⏳ Sedang menyemak rekod dengan pelayan SemakMule PDRM...");
                     tvResult.setTextColor(0xFF80D8FF);
-                    resBg.setColor(0xFF1E293B);
+                    resBg.setColor(0xFF141422);
                     resBg.setStroke(dpToPx(context, 1), 0xFF0284C7);
 
                     new Thread(new Runnable() {
@@ -3391,7 +3391,7 @@ public class KantoiThreatEngine {
                                         tvResult.setText("✅ TIADA REKOD DI SEMAKMULE\n• Belum pernah dilaporkan di SemakMule PDRM. Anda boleh teruskan laporan.");
                                         tvResult.setTextColor(0xFF86EFAC);
                                     } else {
-                                        resBg.setColor(0xFF334155);
+                                        resBg.setColor(0xFF2A2A3A);
                                         resBg.setStroke(dpToPx(context, 1), 0xFF64748B);
                                         tvResult.setText("⚠️ Sambungan ke SemakMule terhad. Laporan tetap boleh dihantar.");
                                         tvResult.setTextColor(0xFFCBD5E1);
@@ -3503,7 +3503,7 @@ public class KantoiThreatEngine {
                 btnDelete.setTextColor(Color.WHITE);
                 btnDelete.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
                 GradientDrawable delBg = new GradientDrawable();
-                delBg.setColor(0xFF334155);
+                delBg.setColor(0xFF2A2A3A);
                 delBg.setCornerRadius(dpToPx(context, 8));
                 delBg.setStroke(dpToPx(context, 1), 0xFF475569);
                 btnDelete.setBackground(delBg);
@@ -3550,7 +3550,7 @@ public class KantoiThreatEngine {
             tgPrompt.setOrientation(LinearLayout.VERTICAL);
             tgPrompt.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
             GradientDrawable tgBg = new GradientDrawable();
-            tgBg.setColor(0xFF1E293B);
+            tgBg.setColor(0xFF141422);
             tgBg.setCornerRadius(dpToPx(context, 8));
             tgBg.setStroke(dpToPx(context, 1), 0xFF0284C7);
             tgPrompt.setBackground(tgBg);
@@ -3595,7 +3595,7 @@ public class KantoiThreatEngine {
             btnCancel.setTextColor(0xFF94A3B8);
             btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
             GradientDrawable cancelBg = new GradientDrawable();
-            cancelBg.setColor(0xFF1E293B);
+            cancelBg.setColor(0xFF141422);
             cancelBg.setCornerRadius(dpToPx(context, 8));
             btnCancel.setBackground(cancelBg);
             LinearLayout.LayoutParams cancelParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(context, 44));
@@ -3618,7 +3618,7 @@ public class KantoiThreatEngine {
             Window win = dialog.getWindow();
             if (win != null) {
                 GradientDrawable dWinBg = new GradientDrawable();
-                dWinBg.setColor(0xFF0F172A);
+                dWinBg.setColor(0xFF0A0A0F);
                 dWinBg.setCornerRadius(dpToPx(context, 16));
                 win.setBackgroundDrawable(dWinBg);
 
@@ -3651,7 +3651,7 @@ public class KantoiThreatEngine {
             final LinearLayout root = new LinearLayout(context);
             root.setOrientation(LinearLayout.VERTICAL);
             root.setPadding(dpToPx(context, 16), dpToPx(context, 16), dpToPx(context, 16), dpToPx(context, 20));
-            root.setBackgroundColor(0xFF0F172A);
+            root.setBackgroundColor(0xFF0A0A0F);
 
             // 1. Header Card
             LinearLayout headerCard = new LinearLayout(context);
@@ -3720,9 +3720,9 @@ public class KantoiThreatEngine {
             etPhone.setInputType(InputType.TYPE_CLASS_PHONE);
             etPhone.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
             GradientDrawable inputBg = new GradientDrawable();
-            inputBg.setColor(0xFF1E293B);
+            inputBg.setColor(0xFF141422);
             inputBg.setCornerRadius(dpToPx(context, 8));
-            inputBg.setStroke(dpToPx(context, 1), 0xFF334155);
+            inputBg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
             etPhone.setBackground(inputBg);
             root.addView(etPhone);
 
@@ -3751,9 +3751,9 @@ public class KantoiThreatEngine {
             etName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
             etName.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
             GradientDrawable nameBg = new GradientDrawable();
-            nameBg.setColor(0xFF1E293B);
+            nameBg.setColor(0xFF141422);
             nameBg.setCornerRadius(dpToPx(context, 8));
-            nameBg.setStroke(dpToPx(context, 1), 0xFF334155);
+            nameBg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
             etName.setBackground(nameBg);
             root.addView(etName);
 
@@ -3824,9 +3824,9 @@ public class KantoiThreatEngine {
             etNotes.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             etNotes.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
             GradientDrawable notesBg = new GradientDrawable();
-            notesBg.setColor(0xFF1E293B);
+            notesBg.setColor(0xFF141422);
             notesBg.setCornerRadius(dpToPx(context, 8));
-            notesBg.setStroke(dpToPx(context, 1), 0xFF334155);
+            notesBg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
             etNotes.setBackground(notesBg);
             root.addView(etNotes);
 
@@ -3946,7 +3946,7 @@ public class KantoiThreatEngine {
             btnCancel.setTextColor(0xFF94A3B8);
             btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
             GradientDrawable cancelBg = new GradientDrawable();
-            cancelBg.setColor(0xFF1E293B);
+            cancelBg.setColor(0xFF141422);
             cancelBg.setCornerRadius(dpToPx(context, 8));
             btnCancel.setBackground(cancelBg);
             LinearLayout.LayoutParams cancelParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(context, 44));
@@ -3969,7 +3969,7 @@ public class KantoiThreatEngine {
             Window win = dialog.getWindow();
             if (win != null) {
                 GradientDrawable dWinBg = new GradientDrawable();
-                dWinBg.setColor(0xFF0F172A);
+                dWinBg.setColor(0xFF0A0A0F);
                 dWinBg.setCornerRadius(dpToPx(context, 16));
                 win.setBackgroundDrawable(dWinBg);
 
@@ -3996,8 +3996,8 @@ public class KantoiThreatEngine {
                 btn.setTextColor(Color.WHITE);
                 btn.setTypeface(Typeface.DEFAULT_BOLD);
             } else {
-                gd.setColor(0xFF1E293B);
-                gd.setStroke(dpToPx(context, 1), 0xFF334155);
+                gd.setColor(0xFF141422);
+                gd.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
                 btn.setTextColor(0xFF94A3B8);
                 btn.setTypeface(Typeface.DEFAULT);
             }
