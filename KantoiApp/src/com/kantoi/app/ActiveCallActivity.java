@@ -33,9 +33,11 @@ import android.widget.Toast;
  */
 public class ActiveCallActivity extends Activity {
     public static final String EXTRA_PHONE_NUMBER = "extra_phone_number";
+    public static final String EXTRA_LAUNCH_COUNTER_STRIKE = "extra_launch_counter_strike";
     public static final String ACTION_CALL_ENDED = "com.kantoi.app.ACTION_CALL_ENDED";
 
     private String mPhoneNumber = "";
+    private boolean mLaunchCounterStrike = false;
     private KantoiThreatEngine mEngine;
     private KantoiThreatEngine.ScammerThreat mThreat;
     private boolean mIsSafeContact = false;
@@ -49,6 +51,11 @@ public class ActiveCallActivity extends Activity {
     private Button mBtnSpeaker;
     private LinearLayout mDtmfKeypadContainer;
     private Chronometer mChronometer;
+
+    private TextView mTvCsTactic;
+    private TextView mTvCsSpeech;
+    private Button mBtnCsToggleTactic;
+    private Button mBtnCsStop;
 
     private final BroadcastReceiver mCallEndReceiver = new BroadcastReceiver() {
         @Override
@@ -68,6 +75,7 @@ public class ActiveCallActivity extends Activity {
         Intent intent = getIntent();
         if (intent != null) {
             mPhoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER);
+            mLaunchCounterStrike = intent.getBooleanExtra(EXTRA_LAUNCH_COUNTER_STRIKE, false);
         }
         if (mPhoneNumber == null || mPhoneNumber.trim().isEmpty()) {
             mPhoneNumber = "0112345678";
@@ -103,6 +111,9 @@ public class ActiveCallActivity extends Activity {
         super.onDestroy();
         try {
             unregisterReceiver(mCallEndReceiver);
+        } catch (Throwable ignored) {}
+        try {
+            KantoiCounterStrikeEngine.getInstance(this).stopTts();
         } catch (Throwable ignored) {}
     }
 
@@ -309,6 +320,12 @@ public class ActiveCallActivity extends Activity {
             threatBadge.setLayoutParams(pillLp);
 
             root.addView(threatBadge);
+        }
+
+        // Counter-Strike Command Panel if threat or launched
+        if (mThreat != null || mLaunchCounterStrike) {
+            View csPanel = buildCounterStrikeLivePanel(cleanLocal);
+            root.addView(csPanel);
         }
 
         // Spacer Middle
@@ -545,6 +562,155 @@ public class ActiveCallActivity extends Activity {
             lp.topMargin = dpToPx(dp);
             v.setLayoutParams(lp);
         }
+    }
+
+    private View buildCounterStrikeLivePanel(final String cleanLocal) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+        setMarginTop(card, 12);
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF141422);
+        bg.setCornerRadius(dpToPx(14));
+        bg.setStroke(dpToPx(2), 0xFF00D4FF);
+        card.setBackground(bg);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText("⚡ KANTOI COUNTER-STRIKE COMMAND CENTER");
+        tvTitle.setTextColor(0xFF00D4FF);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        card.addView(tvTitle);
+
+        mTvCsTactic = new TextView(this);
+        mTvCsTactic.setText("Memulakan enjin tindak balas siber...");
+        mTvCsTactic.setTextColor(0xFF00FF88);
+        mTvCsTactic.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        mTvCsTactic.setTypeface(Typeface.DEFAULT_BOLD);
+        setMarginTop(mTvCsTactic, 4);
+        card.addView(mTvCsTactic);
+
+        // Speech bubble
+        LinearLayout bubble = new LinearLayout(this);
+        bubble.setOrientation(LinearLayout.VERTICAL);
+        bubble.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+        setMarginTop(bubble, 8);
+        GradientDrawable bBg = new GradientDrawable();
+        bBg.setColor(0xFF0A0A0F);
+        bBg.setCornerRadius(dpToPx(10));
+        bBg.setStroke(dpToPx(1), 0xFF2A2A3A);
+        bubble.setBackground(bBg);
+
+        mTvCsSpeech = new TextView(this);
+        mTvCsSpeech.setText("🎙️ Menyambung talian suara ke scammer...");
+        mTvCsSpeech.setTextColor(0xFFCBD5E1);
+        mTvCsSpeech.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        bubble.addView(mTvCsSpeech);
+        card.addView(bubble);
+
+        // Controls Row
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        setMarginTop(ctrlRow, 10);
+
+        mBtnCsToggleTactic = new Button(this);
+        mBtnCsToggleTactic.setText("🎲 TUKAR TAKTIK");
+        mBtnCsToggleTactic.setTextColor(0xFF00D4FF);
+        mBtnCsToggleTactic.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        mBtnCsToggleTactic.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable togBg = new GradientDrawable();
+        togBg.setColor(0xFF1E293B);
+        togBg.setCornerRadius(dpToPx(8));
+        togBg.setStroke(dpToPx(1), 0xFF00D4FF);
+        mBtnCsToggleTactic.setBackground(togBg);
+        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, dpToPx(38), 1.0f);
+        tLp.rightMargin = dpToPx(6);
+        mBtnCsToggleTactic.setLayoutParams(tLp);
+        mBtnCsToggleTactic.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                KantoiCounterStrikeEngine eng = KantoiCounterStrikeEngine.getInstance(ActiveCallActivity.this);
+                int currentMode = eng.getMode();
+                int nextMode = (currentMode == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM) ?
+                        KantoiCounterStrikeEngine.MODE_TACTIC_B_HONEYPOT : KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM;
+                eng.setMode(nextMode);
+                eng.stopTts();
+                startCounterStrikeExecution(cleanLocal);
+            }
+        });
+        ctrlRow.addView(mBtnCsToggleTactic);
+
+        mBtnCsStop = new Button(this);
+        mBtnCsStop.setText("⏹️ HENTIKAN SUARA");
+        mBtnCsStop.setTextColor(0xFFFF3366);
+        mBtnCsStop.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        mBtnCsStop.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable stopBg = new GradientDrawable();
+        stopBg.setColor(0xFF1E293B);
+        stopBg.setCornerRadius(dpToPx(8));
+        stopBg.setStroke(dpToPx(1), 0xFFFF3366);
+        mBtnCsStop.setBackground(stopBg);
+        LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(0, dpToPx(38), 1.0f);
+        mBtnCsStop.setLayoutParams(sLp);
+        mBtnCsStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                KantoiCounterStrikeEngine.getInstance(ActiveCallActivity.this).stopTts();
+                if (mTvCsSpeech != null) {
+                    mTvCsSpeech.setText("⏹️ Suara dihentikan. Mikrofon kini terus ke pemanggil.");
+                }
+            }
+        });
+        ctrlRow.addView(mBtnCsStop);
+
+        card.addView(ctrlRow);
+
+        // Auto trigger execution
+        startCounterStrikeExecution(cleanLocal);
+
+        return card;
+    }
+
+    private void startCounterStrikeExecution(String cleanLocal) {
+        KantoiCounterStrikeEngine engine = KantoiCounterStrikeEngine.getInstance(this);
+        engine.executeCounterStrike(cleanLocal, mThreat, new KantoiCounterStrikeEngine.CounterStrikeListener() {
+            @Override
+            public void onTacticStarted(final int tactic, final String tacticName) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mTvCsTactic != null) {
+                            mTvCsTactic.setText(tacticName);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onSpeechSpoken(final String text, final int sequenceIndex, final int totalSequences) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mTvCsSpeech != null) {
+                            mTvCsSpeech.setText("💬 [" + sequenceIndex + "/" + totalSequences + "] \"" + text + "\"");
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onTacticFinished() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mTvCsSpeech != null) {
+                            mTvCsSpeech.setText("✅ Tindak balas selesai. Scammer telah dilayan & bukti direkod.");
+                        }
+                    }
+                });
+            }
+        });
     }
 
     private int dpToPx(int dp) {

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.kantoi.app"
-    android:versionCode="11500"
-    android:versionName="1.15.0">
+    android:versionCode="11600"
+    android:versionName="1.16.0">
 
     <uses-sdk
         android:minSdkVersion="26"
@@ -27,6 +27,7 @@
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <!-- OEM Launcher Badge Permissions (Samsung, Xiaomi, Huawei, Oppo, Vivo, Sony, HTC, Apex) -->

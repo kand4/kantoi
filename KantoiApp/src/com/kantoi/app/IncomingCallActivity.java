@@ -234,8 +234,20 @@ public class IncomingCallActivity extends Activity {
         tvRingText.setTextColor(Color.WHITE);
 
         if (mThreat != null) {
-            tvRingIcon.setText("🚨");
-            tvRingText.setText("AMARAN SCAMMER • SEDANG BERDERING");
+            if ("SPOOFED_INBOUND_HOTLINE".equals(mThreat.riskTag)) {
+                tvRingIcon.setText("🛑");
+                tvRingText.setText("100% PANGGILAN PALSU • HOTLINE DISPOOF");
+                ringBg.setColor(0xFF450A0A);
+                ringBg.setStroke(dpToPx(2), 0xFFFF3366);
+            } else if ("TEST_SIMULATION".equals(mThreat.riskTag)) {
+                tvRingIcon.setText("🧪");
+                tvRingText.setText("MOD UJIAN SIMULASI • COUNTER-STRIKE");
+                ringBg.setColor(0xFF0A2518);
+                ringBg.setStroke(dpToPx(2), 0xFF00FF88);
+            } else {
+                tvRingIcon.setText("🚨");
+                tvRingText.setText("AMARAN SCAMMER • SEDANG BERDERING");
+            }
         } else if (mIsSafeContact) {
             tvRingIcon.setText("🟢");
             tvRingText.setText("KENALAN SAH • SEDANG BERDERING");
@@ -520,8 +532,41 @@ public class IncomingCallActivity extends Activity {
         spacerControls.setLayoutParams(spCtrlLp);
         mContentContainer.addView(spacerControls);
 
-        // 5. SPECIAL SCAMMER QUICK ACTION: "TOLAK & SEKAT SERTA-MERTA"
+        // 5. SPECIAL SCAMMER QUICK ACTION: "COUNTER-STRIKE TRAP" & "TOLAK & SEKAT SERTA-MERTA"
         if (mThreat != null) {
+            Button btnCounterStrike = new Button(this);
+            btnCounterStrike.setText("⚡ LANCARKAN COUNTER-STRIKE (PERANGKAP AI)");
+            btnCounterStrike.setTextColor(Color.WHITE);
+            btnCounterStrike.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            btnCounterStrike.setTypeface(Typeface.DEFAULT_BOLD);
+            GradientDrawable csBg = new GradientDrawable();
+            csBg.setColor(0xFF141422);
+            csBg.setCornerRadius(dpToPx(12));
+            csBg.setStroke(dpToPx(2), 0xFF00D4FF);
+            btnCounterStrike.setBackground(csBg);
+            LinearLayout.LayoutParams csLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(50));
+            csLp.bottomMargin = dpToPx(8);
+            btnCounterStrike.setLayoutParams(csLp);
+            btnCounterStrike.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    handleCounterStrike(cleanLocal);
+                }
+            });
+            mContentContainer.addView(btnCounterStrike);
+
+            KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
+            if (csEngine.isEnabled() && csEngine.isAutoAnswerEnabled()) {
+                mHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!isFinishing()) {
+                            handleCounterStrike(cleanLocal);
+                        }
+                    }
+                }, 1800);
+            }
+
             Button btnRejectAndBlock = new Button(this);
             btnRejectAndBlock.setText("🚫 TOLAK & SEKAT SCAMMER SERTA-MERTA");
             btnRejectAndBlock.setTextColor(Color.WHITE);
@@ -744,6 +789,17 @@ public class IncomingCallActivity extends Activity {
         Intent after = new Intent(this, AfterCallActivity.class);
         after.putExtra(AfterCallActivity.EXTRA_PHONE_NUMBER, localPhone);
         startActivity(after);
+        finish();
+    }
+
+    private void handleCounterStrike(String localPhone) {
+        KantoiInCallService.answerCall();
+        KantoiInCallService.setSpeaker(true);
+
+        Intent activeIntent = new Intent(this, ActiveCallActivity.class);
+        activeIntent.putExtra(ActiveCallActivity.EXTRA_PHONE_NUMBER, localPhone);
+        activeIntent.putExtra(ActiveCallActivity.EXTRA_LAUNCH_COUNTER_STRIKE, true);
+        startActivity(activeIntent);
         finish();
     }
 
