@@ -2777,76 +2777,37 @@ public class MainActivity extends Activity {
         modeRow.setOrientation(LinearLayout.VERTICAL);
         setMarginTop(modeRow, 6);
 
-        final Button btnModeHybrid = createCsOptionButton("🎲 Hibrid Pintar & Rawak (Cadangan)", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
-        final Button btnModeA = createCsOptionButton("🚨 Taktik A: Amaran Siber PDRM & Siren", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
-        final Button btnModeB = createCsOptionButton("👴 Taktik B: AI Voice Honeypot (Atuk/Mak Cik)", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_B_HONEYPOT);
-        final Button btnModeC = createCsOptionButton("📡 Taktik C: Senyap & Rekod Forensik Sahaja", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
+        final Button btnModeA = createCsOptionButton("🚨 Taktik A: Amaran Rasmi Siber PDRM & Siren (Disyorkan)", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
+        final Button btnModeB = createCsOptionButton("🔊 Taktik B: Siren Frekuensi Tinggi Pemutus Talian", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC);
+        final Button btnModeC = createCsOptionButton("📡 Taktik C: Sekatan Senyap & Telemetri Forensik", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
+        final Button btnModeHybrid = createCsOptionButton("🎲 Hibrid Pintar & Rawak (Taktik A & B)", csEngine.getMode() == KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
 
         final View.OnClickListener modeListener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (v == btnModeHybrid) csEngine.setMode(KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
-                else if (v == btnModeA) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
-                else if (v == btnModeB) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_B_HONEYPOT);
+                if (v == btnModeA) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
+                else if (v == btnModeB) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC);
                 else if (v == btnModeC) csEngine.setMode(KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
+                else if (v == btnModeHybrid) csEngine.setMode(KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
 
                 int mode = csEngine.getMode();
-                updateCsOptionButton(btnModeHybrid, mode == KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
                 updateCsOptionButton(btnModeA, mode == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM);
-                updateCsOptionButton(btnModeB, mode == KantoiCounterStrikeEngine.MODE_TACTIC_B_HONEYPOT);
+                updateCsOptionButton(btnModeB, mode == KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC);
                 updateCsOptionButton(btnModeC, mode == KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT);
+                updateCsOptionButton(btnModeHybrid, mode == KantoiCounterStrikeEngine.MODE_HYBRID_RANDOM);
             }
         };
 
-        btnModeHybrid.setOnClickListener(modeListener);
         btnModeA.setOnClickListener(modeListener);
         btnModeB.setOnClickListener(modeListener);
         btnModeC.setOnClickListener(modeListener);
+        btnModeHybrid.setOnClickListener(modeListener);
 
-        modeRow.addView(btnModeHybrid);
         modeRow.addView(btnModeA);
         modeRow.addView(btnModeB);
         modeRow.addView(btnModeC);
+        modeRow.addView(btnModeHybrid);
         card.addView(modeRow);
-
-        // Persona selector
-        TextView tvPersonaLabel = new TextView(this);
-        tvPersonaLabel.setText("PERSONA SUARA HONEYPOT:");
-        tvPersonaLabel.setTextColor(0xFF94A3B8);
-        tvPersonaLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        tvPersonaLabel.setTypeface(Typeface.DEFAULT_BOLD);
-        setMarginTop(tvPersonaLabel, 10);
-        card.addView(tvPersonaLabel);
-
-        final LinearLayout personaRow = new LinearLayout(this);
-        personaRow.setOrientation(LinearLayout.HORIZONTAL);
-        setMarginTop(personaRow, 4);
-
-        final Button btnP0 = createCsSmallButton("👴 Atuk", csEngine.getPersona() == KantoiCounterStrikeEngine.PERSONA_ATUK_PEKAK);
-        final Button btnP1 = createCsSmallButton("👵 Mak Cik", csEngine.getPersona() == KantoiCounterStrikeEngine.PERSONA_MAK_CIK_BLUR);
-        final Button btnP2 = createCsSmallButton("🏪 Runcit", csEngine.getPersona() == KantoiCounterStrikeEngine.PERSONA_ABANG_RUNCIT);
-
-        final View.OnClickListener pListener = new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (v == btnP0) csEngine.setPersona(KantoiCounterStrikeEngine.PERSONA_ATUK_PEKAK);
-                else if (v == btnP1) csEngine.setPersona(KantoiCounterStrikeEngine.PERSONA_MAK_CIK_BLUR);
-                else if (v == btnP2) csEngine.setPersona(KantoiCounterStrikeEngine.PERSONA_ABANG_RUNCIT);
-
-                int p = csEngine.getPersona();
-                updateCsSmallButton(btnP0, p == KantoiCounterStrikeEngine.PERSONA_ATUK_PEKAK);
-                updateCsSmallButton(btnP1, p == KantoiCounterStrikeEngine.PERSONA_MAK_CIK_BLUR);
-                updateCsSmallButton(btnP2, p == KantoiCounterStrikeEngine.PERSONA_ABANG_RUNCIT);
-            }
-        };
-        btnP0.setOnClickListener(pListener);
-        btnP1.setOnClickListener(pListener);
-        btnP2.setOnClickListener(pListener);
-
-        personaRow.addView(btnP0);
-        personaRow.addView(btnP1);
-        personaRow.addView(btnP2);
-        card.addView(personaRow);
 
         // Auto Answer Toggle
         final Button btnAutoAnswer = createButton(

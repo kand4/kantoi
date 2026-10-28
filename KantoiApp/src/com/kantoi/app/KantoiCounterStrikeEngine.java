@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.speech.tts.TextToSpeech;
@@ -22,9 +23,9 @@ import java.util.Random;
 
 /**
  * KantoiCounterStrikeEngine:
- * Enjin Tindak Balas Hibrid & Rawak terhadap Scammer & Panggilan Spoofed:
- * - Taktik A: PDRM Psychological Trap (Siren & Amaran Rasmi Siber PDRM)
- * - Taktik B: AI Voice Honeypot (Persona Atuk Pekak / Mak Cik Blur pembakar masa & kos VoIP)
+ * Enjin Tindak Balas Hibrid & Pertahanan Siber terhadap Scammer & Panggilan Spoofed:
+ * - Taktik A: PDRM Psychological Cyber Trap (Siren & Amaran Rasmi Siber PDRM Seksyen 420)
+ * - Taktik B: Siren Frekuensi Tinggi Pemutus Talian (Acoustic Eardrum Disruption untuk Scammer ber-headset)
  * - Taktik C: Silent Forensic Telemetry Relay (Ekstrak & Simpan Log Bukti Digital Masa Nyata)
  * - Mod Ujian Simulasi (Sandbox): Ujian selamat menggunakan nombor rakan
  */
@@ -34,19 +35,17 @@ public class KantoiCounterStrikeEngine {
 
     public static final String KEY_ENABLED = "cs_enabled";
     public static final String KEY_MODE = "cs_mode";
-    public static final String KEY_PERSONA = "cs_persona";
     public static final String KEY_AUTO_ANSWER = "cs_auto_answer";
     public static final String KEY_TEST_NUMBER = "cs_test_number";
     public static final String KEY_TELEMETRY_LOGS = "cs_telemetry_logs";
 
-    public static final int MODE_HYBRID_RANDOM = 0; // Hibrid Pintar & Rawak (Cadangan)
-    public static final int MODE_TACTIC_A_PDRM = 1;  // Taktik A: Amaran Siber PDRM & Siren
-    public static final int MODE_TACTIC_B_HONEYPOT = 2; // Taktik B: AI Voice Honeypot
-    public static final int MODE_TACTIC_C_SILENT = 3;   // Taktik C: Senyap & Rekod Forensik
+    public static final int MODE_HYBRID_RANDOM = 0;   // Hibrid Pintar (Taktik A & B)
+    public static final int MODE_TACTIC_A_PDRM = 1;    // Taktik A: Amaran Rasmi Siber PDRM & Siren (Disyorkan)
+    public static final int MODE_TACTIC_B_ACOUSTIC = 2;// Taktik B: Siren Frekuensi Tinggi Pemutus Talian
+    public static final int MODE_TACTIC_C_SILENT = 3;  // Taktik C: Senyap & Rekod Forensik
 
-    public static final int PERSONA_ATUK_PEKAK = 0;
-    public static final int PERSONA_MAK_CIK_BLUR = 1;
-    public static final int PERSONA_ABANG_RUNCIT = 2;
+    // Backward-compatibility alias
+    public static final int MODE_TACTIC_B_HONEYPOT = MODE_TACTIC_B_ACOUSTIC;
 
     private static volatile KantoiCounterStrikeEngine sInstance;
     private final Context mContext;
@@ -104,8 +103,8 @@ public class KantoiCounterStrikeEngine {
                                 mTts.setLanguage(Locale.getDefault());
                             }
                         }
-                        mTts.setPitch(1.0f);
-                        mTts.setSpeechRate(0.95f);
+                        mTts.setPitch(0.92f);      // Nada autoriti, tegas, dan dalam
+                        mTts.setSpeechRate(0.85f); // Kelajuan teratur & jelas supaya perkataan tidak terpotong
                         mTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                             @Override
                             public void onStart(String utteranceId) {
@@ -143,20 +142,17 @@ public class KantoiCounterStrikeEngine {
     }
 
     public int getMode() {
-        return mPrefs.getInt(KEY_MODE, MODE_HYBRID_RANDOM);
+        return mPrefs.getInt(KEY_MODE, MODE_TACTIC_A_PDRM);
     }
 
     public void setMode(int mode) {
         mPrefs.edit().putInt(KEY_MODE, mode).apply();
     }
 
-    public int getPersona() {
-        return mPrefs.getInt(KEY_PERSONA, PERSONA_ATUK_PEKAK);
-    }
-
-    public void setPersona(int persona) {
-        mPrefs.edit().putInt(KEY_PERSONA, persona).apply();
-    }
+    // Deprecated Persona methods maintained as stubs for backward-compatibility
+    public int getPersona() { return 0; }
+    public void setPersona(int persona) {}
+    public String getPersonaName(int persona) { return "Mod Rasmi Siber"; }
 
     public boolean isAutoAnswerEnabled() {
         return mPrefs.getBoolean(KEY_AUTO_ANSWER, false);
@@ -172,8 +168,6 @@ public class KantoiCounterStrikeEngine {
 
     /**
      * Daftarkan nombor rakan untuk Ujian Simulasi (Sandbox).
-     * Nombor ini akan dimasukkan sebagai sasaran ancaman dengan tag TEST_SIMULATION
-     * supaya KANTOI memintasnya walaupun nombor rakan tersimpan dalam buku kenalan telefon.
      */
     public synchronized boolean registerTestNumber(String rawPhone) {
         if (rawPhone == null || rawPhone.trim().isEmpty()) return false;
@@ -225,19 +219,45 @@ public class KantoiCounterStrikeEngine {
     public int resolveTacticForThreat(KantoiThreatEngine.ScammerThreat threat) {
         int configuredMode = getMode();
         if (configuredMode == MODE_TACTIC_A_PDRM) return MODE_TACTIC_A_PDRM;
-        if (configuredMode == MODE_TACTIC_B_HONEYPOT) return MODE_TACTIC_B_HONEYPOT;
+        if (configuredMode == MODE_TACTIC_B_ACOUSTIC) return MODE_TACTIC_B_ACOUSTIC;
         if (configuredMode == MODE_TACTIC_C_SILENT) return MODE_TACTIC_C_SILENT;
 
-        // MODE_HYBRID_RANDOM (Logik Pintar & Dadu Digital)
+        // MODE_HYBRID_RANDOM (80% Taktik A Amaran Rasmi, 20% Taktik B Pemutus Talian)
         if (threat != null) {
-            // Jika scammer menyamar Hotline Rasmi (Inbound-Only): 85% peluang Taktik A (PDRM Audio Trap)
             if ("SPOOFED_INBOUND_HOTLINE".equals(threat.riskTag)) {
-                return (mRandom.nextInt(100) < 85) ? MODE_TACTIC_A_PDRM : MODE_TACTIC_B_HONEYPOT;
+                return MODE_TACTIC_A_PDRM; // Hotline dispoof sentiasa dikenakan Taktik A
             }
-            // Jika nombor ujian atau penipuan biasa: 50% A, 50% B
-            return (mRandom.nextInt(100) < 50) ? MODE_TACTIC_A_PDRM : MODE_TACTIC_B_HONEYPOT;
+            return (mRandom.nextInt(100) < 75) ? MODE_TACTIC_A_PDRM : MODE_TACTIC_B_ACOUSTIC;
         }
         return MODE_TACTIC_A_PDRM;
+    }
+
+    /**
+     * KUNCI AUDIO UTAMA:
+     * Menghidupkan pembesar suara telefon (Speakerphone) dan menetapkan kelantangan MAKSIMUM.
+     * Ini membolehkan isyarat audio TTS & Siren memancar keluar dari corong pembesar suara
+     * dan ditangkap secara terus oleh mikrofon peranti untuk disalurkan ke talian pemanggil (scammer).
+     */
+    public void prepareAudioForBroadcast() {
+        try {
+            // 1. Arahkan servis panggilan rasmi (InCallService) ke SPEAKER
+            KantoiInCallService.setSpeaker(true);
+
+            // 2. Paksa perkakasan AudioManager peranti ke Speakerphone & Volum 100%
+            AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) {
+                am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                am.setSpeakerphoneOn(true);
+
+                int maxVoice = am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL);
+                am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVoice, 0);
+
+                int maxMusic = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                am.setStreamVolume(AudioManager.STREAM_MUSIC, maxMusic, 0);
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "prepareAudioForBroadcast error: " + t.getMessage());
+        }
     }
 
     /**
@@ -250,7 +270,7 @@ public class KantoiCounterStrikeEngine {
 
         Log.i(TAG, "⚡ MELANCARKAN COUNTER-STRIKE! Taktik: " + tacticName + " pada sasaran: " + phone);
 
-        // 1. TONGGAK C: Rekod Telemetri Forensik Senyap (Sentiasa Aktif 100%)
+        // Rekod Telemetri Forensik Senyap (Sentiasa Aktif 100%)
         recordTelemetryIncident(phone, (threat != null ? threat.suspectName : "Suspek Scammer"), (threat != null ? threat.riskTag : "THREAT"), tacticName);
 
         if (listener != null) {
@@ -262,22 +282,25 @@ public class KantoiCounterStrikeEngine {
             return;
         }
 
+        // Pastikan laluan audio bersedia ke speaker sebelum memainkan sebarang bunyi
+        prepareAudioForBroadcast();
+
         if (tactic == MODE_TACTIC_A_PDRM) {
             executeTacticA_PdrmTrap(listener);
-        } else if (tactic == MODE_TACTIC_B_HONEYPOT) {
-            executeTacticB_Honeypot(listener);
+        } else if (tactic == MODE_TACTIC_B_ACOUSTIC) {
+            executeTacticB_AcousticDisruption(listener);
         }
     }
 
     private void executeTacticA_PdrmTrap(final CounterStrikeListener listener) {
-        // Mainkan siren / radar tone permulaan
+        // 1. Siren permulaan (DTMF Telco Burst + Loud Siren)
         playRadarToneSequence();
 
         final String warningScript =
-                "AMARAN KESELAMATAN KANTOI: Panggilan ini telah dipintas oleh sistem pertahanan siber KANTOI. " +
-                "Nombor ini disahkan memalsukan identiti rasmi atau disenaraihitamkan. " +
-                "Alamat isyarat panggilan dan audio anda kini sedang direkodkan untuk siasatan jenayah siber PDRM " +
-                "di bawah Seksyen 420 Kanun Keseksaan. Talian anda kini sedang dijejak.";
+                "PERHATIAN: Panggilan ini telah dipintas oleh sistem pertahanan siber KANTOI. " +
+                "Nombor ini disahkan memalsukan identiti rasmi dan berada dalam senarai hitam penipuan siber. " +
+                "Rakaman audio dan telemetri pemanggil kini sedang disalurkan terus kepada Bahagian Siasatan Jenayah Siber JSJK PDRM " +
+                "di bawah Seksyen 420 Kanun Keseksaan. Talian anda kini sedang dijejak dan disekat.";
 
         mHandler.postDelayed(new Runnable() {
             @Override
@@ -293,76 +316,72 @@ public class KantoiCounterStrikeEngine {
                     listener.onSpeechSpoken(warningScript, 1, 1);
                 }
             }
-        }, 800);
+        }, 1200);
     }
 
-    private void executeTacticB_Honeypot(final CounterStrikeListener listener) {
-        int persona = getPersona();
-        final List<String> dialogs = getDialogsForPersona(persona);
+    /**
+     * Taktik B: Siren Frekuensi Tinggi Pemutus Talian.
+     * Menggantikan watak Atuk/Nenek yang robotik dengan siri letusan nada frekuensi tinggi
+     * (DTMF rangkaian + Dual-Tone Siren) yang menembusi fon kepala (headset) scammer,
+     * memaksa mereka menanggalkan headset dan memutuskan panggilan dengan serta-merta.
+     */
+    private void executeTacticB_AcousticDisruption(final CounterStrikeListener listener) {
+        prepareAudioForBroadcast();
 
-        runDialogSequence(dialogs, 0, listener);
-    }
-
-    private void runDialogSequence(final List<String> dialogs, final int index, final CounterStrikeListener listener) {
-        if (index >= dialogs.size()) {
-            if (listener != null) listener.onTacticFinished();
-            return;
+        final String statusMsg = "⚡ MEMANJANGKAN SIREN FREKUENSI TINGGI (GANGGUAN FON KEPALA SCAMMER)...";
+        if (listener != null) {
+            listener.onSpeechSpoken(statusMsg, 1, 1);
         }
 
-        final String line = dialogs.get(index);
-        speakText(line, index + 1, dialogs.size(), new Runnable() {
+        new Thread(new Runnable() {
             @Override
             public void run() {
-                // Jeda masa (scammer mendengar atau bercakap) sebelum watak membalas semula
-                long pauseDelay = 3500L + (mRandom.nextInt(2000));
-                mHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        runDialogSequence(dialogs, index + 1, listener);
+                ToneGenerator toneGen = null;
+                try {
+                    toneGen = new ToneGenerator(AudioManager.STREAM_VOICE_CALL, 100);
+                    char[] dtmfSequence = new char[]{'1', '9', '#', '0', '*'};
+                    for (int i = 0; i < 5; i++) {
+                        // Letuskan nada DTMF terus ke suis telekomunikasi
+                        KantoiInCallService.playDtmfToneBurst(dtmfSequence[i % dtmfSequence.length], 200);
+                        toneGen.startTone(ToneGenerator.TONE_DTMF_D, 220);
+                        Thread.sleep(260);
+                        toneGen.startTone(ToneGenerator.TONE_SUP_RINGTONE, 220);
+                        Thread.sleep(260);
                     }
-                }, pauseDelay);
+                } catch (Throwable ignored) {
+                } finally {
+                    if (toneGen != null) {
+                        try {
+                            toneGen.release();
+                        } catch (Throwable ignored) {}
+                    }
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (listener != null) listener.onTacticFinished();
+                        }
+                    });
+                }
             }
-        });
-
-        if (listener != null) {
-            listener.onSpeechSpoken(line, index + 1, dialogs.size());
-        }
-    }
-
-    private List<String> getDialogsForPersona(int persona) {
-        List<String> list = new ArrayList<String>();
-        if (persona == PERSONA_MAK_CIK_BLUR) {
-            list.add("Helo? Ya siapa ni ya? LHDN ke? Mak cik tengah goreng pisang kat dapur ni ha...");
-            list.add("Sekejap ya encik, api dapur tengah marak... encik kata akaun mak cik kena beku ke tadi? Kenapa beku, letak dalam peti ais ke?");
-            list.add("Akaun yang mana satu ya encik? Buku akaun hijau ke buku akaun merah? Mak cik simpan bawah bantal bilik tidur...");
-            list.add("Apa dia encik? Kena transfer duit jaminan? Boleh bayar guna baucar pasar malam tak? Cucu mak cik ada bagi baucar semalam...");
-            list.add("Encik jangan marah-marah, mak cik dah tua... telinga mak cik ni kadang-kadang dengar kadang-kadang tak dengar...");
-        } else if (persona == PERSONA_ABANG_RUNCIT) {
-            list.add("Helo kawan! Ini kedai runcit Ah Chai... lu mau order beras ke minyak masak?");
-            list.add("Aiyaa, apa saman polis trafik? Ini nombor motor delivery la bos, mana ada saman punya!");
-            list.add("Lu cakap kuat sikit, lori ais baru sampai ini macam bising la kawan!");
-            list.add("Mau transfer duit mana ada duit kawan! Hari-hari orang beli telur hutang, lu mau tolong kutip hutang ke?");
-        } else {
-            // PERSONA_ATUK_PEKAK (Default)
-            list.add("Helo? Ya siapa tu? Maybank ke? Cucu atuk beli keropok lekor ke apa tadi?");
-            list.add("Aduh sekejap ya cu, cakap kuat sikit... Atuk nak pergi cari cermin mata atas peti ais sekejap... tunggu ya cu...");
-            list.add("Apa dia cu? Waran tangkap mahkamah? Siapa nak tangkap atuk ni? Atuk bayar zakat tiap-tiap tahun kat surau!");
-            list.add("Nombor TAC apa cu? Sekejap atuk cari pen... eh mana pen atuk ni... tunggu sekejap ya cu jangan letak telefon...");
-            list.add("Helo cu? Masih ada kat situ ke? Pen atuk tak ada dakwat la cu, atuk pergi cari pensel kejap ya...");
-        }
-        return list;
+        }).start();
     }
 
     private void speakText(String text, int seq, int total, final Runnable onDone) {
+        prepareAudioForBroadcast();
+
         if (mTtsReady && mTts != null) {
             try {
-                mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "cs_utt_" + System.currentTimeMillis());
+                Bundle params = new Bundle();
+                params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_VOICE_CALL);
+                params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f);
+                mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "cs_pdrm_" + System.currentTimeMillis());
             } catch (Throwable t) {
                 Log.e(TAG, "TTS speak error: " + t.getMessage());
             }
         }
-        // Anggarkan masa bercakap berasaskan kepanjangan ayat (purata ~70ms per aksara)
-        long duration = Math.max(2200L, text.length() * 65L);
+
+        // Anggarkan masa bercakap berasaskan kepanjangan ayat (purata ~75ms per aksara)
+        long duration = Math.max(3000L, (long) (text.length() * 75L));
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -372,17 +391,23 @@ public class KantoiCounterStrikeEngine {
     }
 
     private void playRadarToneSequence() {
+        prepareAudioForBroadcast();
+
         new Thread(new Runnable() {
             @Override
             public void run() {
                 ToneGenerator toneGen = null;
                 try {
-                    toneGen = new ToneGenerator(AudioManager.STREAM_VOICE_CALL, 90);
+                    // Letuskan isyarat nada DTMF terus ke talian telco
+                    KantoiInCallService.playDtmfToneBurst('*', 250);
+
+                    toneGen = new ToneGenerator(AudioManager.STREAM_VOICE_CALL, 100);
                     for (int i = 0; i < 3; i++) {
-                        toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 120);
-                        Thread.sleep(200);
+                        toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 180);
+                        Thread.sleep(280);
                     }
-                    toneGen.startTone(ToneGenerator.TONE_CDMA_ALERT_NETWORK_LITE, 400);
+                    toneGen.startTone(ToneGenerator.TONE_PROP_PROMPT, 450);
+                    Thread.sleep(500);
                 } catch (Throwable ignored) {
                 } finally {
                     if (toneGen != null) {
@@ -397,18 +422,10 @@ public class KantoiCounterStrikeEngine {
 
     public String getTacticName(int tactic) {
         switch (tactic) {
-            case MODE_TACTIC_A_PDRM: return "🚨 Taktik A: Amaran Siber PDRM";
-            case MODE_TACTIC_B_HONEYPOT: return "👴 Taktik B: AI Voice Honeypot";
+            case MODE_TACTIC_A_PDRM: return "🚨 Taktik A: Amaran Rasmi Siber PDRM";
+            case MODE_TACTIC_B_ACOUSTIC: return "🔊 Taktik B: Siren Pemutus Talian";
             case MODE_TACTIC_C_SILENT: return "📡 Taktik C: Telemetri Senyap";
-            default: return "🎲 Hibrid Pintar & Rawak";
-        }
-    }
-
-    public String getPersonaName(int persona) {
-        switch (persona) {
-            case PERSONA_MAK_CIK_BLUR: return "Mak Cik Blur Goreng Pisang";
-            case PERSONA_ABANG_RUNCIT: return "Abang Kedai Runcit Salah Nombor";
-            default: return "Atuk Pekak Cari Cermin Mata";
+            default: return "🎲 Hibrid Pintar (Taktik A & B)";
         }
     }
 

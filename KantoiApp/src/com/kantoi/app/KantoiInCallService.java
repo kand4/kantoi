@@ -132,6 +132,24 @@ public class KantoiInCallService extends InCallService {
         }
     }
 
+    public static void playDtmfToneBurst(final char digit, final long durationMs) {
+        if (sCurrentCall != null) {
+            try {
+                sCurrentCall.playDtmfTone(digit);
+                new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            if (sCurrentCall != null) sCurrentCall.stopDtmfTone();
+                        } catch (Throwable ignored) {}
+                    }
+                }, durationMs);
+            } catch (Throwable t) {
+                Log.e(TAG, "Error playing DTMF burst: " + t.getMessage());
+            }
+        }
+    }
+
     @Override
     public void onCallAdded(final Call call) {
         super.onCallAdded(call);

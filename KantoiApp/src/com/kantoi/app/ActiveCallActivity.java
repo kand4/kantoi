@@ -632,8 +632,14 @@ public class ActiveCallActivity extends Activity {
             public void onClick(View v) {
                 KantoiCounterStrikeEngine eng = KantoiCounterStrikeEngine.getInstance(ActiveCallActivity.this);
                 int currentMode = eng.getMode();
-                int nextMode = (currentMode == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM) ?
-                        KantoiCounterStrikeEngine.MODE_TACTIC_B_HONEYPOT : KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM;
+                int nextMode;
+                if (currentMode == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM) {
+                    nextMode = KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC;
+                } else if (currentMode == KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC) {
+                    nextMode = KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT;
+                } else {
+                    nextMode = KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM;
+                }
                 eng.setMode(nextMode);
                 eng.stopTts();
                 startCounterStrikeExecution(cleanLocal);
@@ -673,6 +679,9 @@ public class ActiveCallActivity extends Activity {
     }
 
     private void startCounterStrikeExecution(String cleanLocal) {
+        mIsSpeakerOn = true;
+        updateControlHighlight(mBtnSpeaker, true);
+        KantoiInCallService.setSpeaker(true);
         KantoiCounterStrikeEngine engine = KantoiCounterStrikeEngine.getInstance(this);
         engine.executeCounterStrike(cleanLocal, mThreat, new KantoiCounterStrikeEngine.CounterStrikeListener() {
             @Override
