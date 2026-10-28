@@ -189,7 +189,7 @@ public class KantoiInCallService extends InCallService {
 
         // Jika panggilan sedang berdering (INCOMING / RINGING)
         if (call.getState() == Call.STATE_RINGING) {
-            handleIncomingCall(rawNumber);
+            handleIncomingCall(call, rawNumber);
         } else if (call.getState() == Call.STATE_DIALING || call.getState() == Call.STATE_CONNECTING || call.getState() == Call.STATE_ACTIVE) {
             launchActiveCallActivity(rawNumber);
         }
@@ -229,12 +229,47 @@ public class KantoiInCallService extends InCallService {
         } catch (Throwable ignored) {}
     }
 
-    private void handleIncomingCall(String rawNumber) {
+    private void handleIncomingCall(final Call call, final String rawNumber) {
+        final String cleanLocal = KantoiThreatEngine.normalizeToLocal(rawNumber);
+        KantoiThreatEngine engine = KantoiThreatEngine.getInstance(this);
+        final KantoiThreatEngine.ScammerThreat threat = engine.checkThreat(cleanLocal);
+        boolean isSafe = engine.isSafeContact(cleanLocal);
+        final KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
+
+        // STANDARD INDUSTRI: Sekatan 0-Saat (Zero-Ring Drop) terhadap Scammer
+        if (threat != null && !isSafe && csEngine.isZeroRingBlockEnabled()) {
+            Log.w(TAG, "🛡️ ZERO-RING DEFENSE: Menolak panggilan scammer serta-merta tanpa dering: " + rawNumber);
+            try {
+                if (call != null) {
+                    call.reject(false, null);
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Ralat rejectCall pada zero-ring defense: " + t.getMessage());
+            }
+
+            // Hantar SMS Counter-Strike jika diaktifkan
+            if (csEngine.isSmsCounterStrikeEnabled()) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        csEngine.sendCounterStrikeSms(cleanLocal, threat.suspectName);
+                    }
+                }).start();
+            }
+
+            // Rekod log telemetri forensik
+            csEngine.recordTelemetryIncident(cleanLocal, threat.suspectName, threat.riskTag,
+                    csEngine.isSmsCounterStrikeEnabled() ? "SEKATAN_0_SAAT_SMS" : "SEKATAN_0_SAAT");
+
+            // Tampilkan notifikasi amaran sekatan pintar
+            showZeroRingBlockedNotification(cleanLocal, threat);
+            return;
+        }
+
         // 1. Tampilkan notifikasi panggilan masuk berkeutamaan tinggi (fullScreenIntent)
-        // Ini memastikan skrin amaran KANTOI muncul serta-merta walaupun skrin terkunci!
         showIncomingCallNotification(rawNumber);
 
-        // 2. Lancarkan aktiviti IncomingCallActivity secara terus
+        // 2. Lancarkan aktiviti IncomingCallActivity secara terus jika sekatan 0-saat tidak aktif
         try {
             Intent inCallIntent = new Intent(this, IncomingCallActivity.class);
             inCallIntent.putExtra(IncomingCallActivity.EXTRA_PHONE_NUMBER, rawNumber);
@@ -243,9 +278,35 @@ public class KantoiInCallService extends InCallService {
         } catch (Throwable t) {
             Log.e(TAG, "Gagal melancarkan IncomingCallActivity terus: " + t.getMessage());
         }
+    }
 
-        // Panggilan masuk dikendalikan sepenuhnya secara profesional oleh IncomingCallActivity
-        // Tanpa paparan overlay WindowManager yang bertindih
+    private void showZeroRingBlockedNotification(String phoneNumber, KantoiThreatEngine.ScammerThreat threat) {
+        try {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            String title = "🛡️ Panggilan Scammer Ditolak Serta-Merta (0-Saat)";
+            String text = (threat.suspectName != null ? threat.suspectName : "Suspek Penipuan")
+                    + " (" + KantoiThreatEngine.formatPhoneNumber(phoneNumber) + ") • Talian diputuskan automatik";
+
+            Notification.Builder builder;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                builder = new Notification.Builder(this, CALL_CHANNEL_ID);
+            } else {
+                builder = new Notification.Builder(this);
+                builder.setPriority(Notification.PRIORITY_HIGH);
+            }
+
+            builder.setSmallIcon(R.drawable.ic_launcher)
+                   .setContentTitle(title)
+                   .setContentText(text)
+                   .setColor(0xFFEF4444)
+                   .setAutoCancel(true);
+
+            nm.notify(CALL_NOTIFICATION_ID + 10, builder.build());
+        } catch (Throwable t) {
+            Log.e(TAG, "Ralat showZeroRingBlockedNotification: " + t.getMessage());
+        }
     }
 
     private void launchAfterCallActivity(String phoneNumber) {

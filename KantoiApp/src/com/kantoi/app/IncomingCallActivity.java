@@ -532,10 +532,10 @@ public class IncomingCallActivity extends Activity {
         spacerControls.setLayoutParams(spCtrlLp);
         mContentContainer.addView(spacerControls);
 
-        // 5. SPECIAL SCAMMER QUICK ACTION: "COUNTER-STRIKE TRAP" & "TOLAK & SEKAT SERTA-MERTA"
+        // 5. SPECIAL SCAMMER QUICK ACTION: "SMS COUNTER-STRIKE (PDRM)" & "TOLAK & SEKAT"
         if (mThreat != null) {
             Button btnCounterStrike = new Button(this);
-            btnCounterStrike.setText("⚡ LANCARKAN COUNTER-STRIKE (PERANGKAP AI)");
+            btnCounterStrike.setText("⚡ HANTAR SMS AMARAN PDRM & SEKAT TALIAN");
             btnCounterStrike.setTextColor(Color.WHITE);
             btnCounterStrike.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
             btnCounterStrike.setTypeface(Typeface.DEFAULT_BOLD);
@@ -554,18 +554,6 @@ public class IncomingCallActivity extends Activity {
                 }
             });
             mContentContainer.addView(btnCounterStrike);
-
-            KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
-            if (csEngine.isEnabled() && csEngine.isAutoAnswerEnabled()) {
-                mHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (!isFinishing()) {
-                            handleCounterStrike(cleanLocal);
-                        }
-                    }
-                }, 1800);
-            }
 
             Button btnRejectAndBlock = new Button(this);
             btnRejectAndBlock.setText("🚫 TOLAK & SEKAT SCAMMER SERTA-MERTA");
@@ -793,13 +781,12 @@ public class IncomingCallActivity extends Activity {
     }
 
     private void handleCounterStrike(String localPhone) {
-        KantoiInCallService.answerCall();
-        KantoiInCallService.setSpeaker(true);
-
-        Intent activeIntent = new Intent(this, ActiveCallActivity.class);
-        activeIntent.putExtra(ActiveCallActivity.EXTRA_PHONE_NUMBER, localPhone);
-        activeIntent.putExtra(ActiveCallActivity.EXTRA_LAUNCH_COUNTER_STRIKE, true);
-        startActivity(activeIntent);
+        KantoiInCallService.rejectCall();
+        KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
+        csEngine.sendCounterStrikeSms(localPhone, mThreat != null ? mThreat.suspectName : "Suspek Scammer");
+        csEngine.recordTelemetryIncident(localPhone, mThreat != null ? mThreat.suspectName : "Suspek Scammer", 
+                mThreat != null ? mThreat.riskTag : "THREAT", "SMS_AMARAN_MANUAL");
+        Toast.makeText(this, "SMS Amaran Siber Seksyen 420 PDRM telah dihantar ke pemanggil.", Toast.LENGTH_LONG).show();
         finish();
     }
 
