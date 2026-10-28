@@ -1191,7 +1191,7 @@ public class ChangelogActivity extends Activity {
             "🔒 • 100% Bebas Iklan, 100% Milik Tempatan, Tanpa Langganan Berbayar, Tanpa Sedutan Data Kenalan (Zero Cloud Upload).\n" +
             "📞 • Integrasi CallScreeningService rasmi Android 10+ (Mod Auto-Sekat / Dering Amaran).\n" +
             "🔍 • Semakan pantas nombor telefon offline 0ms.\n" +
-            "🌐 • Carian Peribadi Google CSE Dalam Aplikasi (cx=53a0041f2f24f4e3b).\n" +
+            "🌐 • Carian Pantas Risikan Forum & Media Sosial Tempatan.\n" +
             "🏛️ • Integrasi Langsung Portal SemakMule CCID PDRM.\n" +
             "➕ • Modul Lapor & Daftar Scammer Baharu Komuniti."
         );
