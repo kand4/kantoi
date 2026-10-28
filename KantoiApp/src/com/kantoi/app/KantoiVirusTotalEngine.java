@@ -13,6 +13,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
@@ -459,13 +460,35 @@ public class KantoiVirusTotalEngine {
         if (activity == null || activity.isFinishing()) return;
 
         AlertDialog.Builder b = new AlertDialog.Builder(activity);
-        b.setTitle("🛡️ LAPORAN IMBASAN APK KANTOI");
 
         ScrollView sv = new ScrollView(activity);
+        sv.setFillViewport(true);
+        sv.setVerticalScrollBarEnabled(false);
+
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = dpToPx(activity, 16);
         root.setPadding(pad, pad, pad, pad);
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setColor(0xFF0A0A0F); // Void Black
+        rootBg.setCornerRadius(dpToPx(activity, 16));
+        rootBg.setStroke(dpToPx(activity, 2), 0xFF00D4FF);
+        root.setBackground(rootBg);
+
+        // Top Header
+        LinearLayout topHdr = new LinearLayout(activity);
+        topHdr.setOrientation(LinearLayout.VERTICAL);
+        topHdr.setGravity(Gravity.CENTER);
+        topHdr.setPadding(0, 0, 0, dpToPx(activity, 10));
+
+        TextView tvHdr = new TextView(activity);
+        tvHdr.setText("🛡️ LAPORAN IMBASAN APK KANTOI");
+        tvHdr.setTextColor(Color.WHITE);
+        tvHdr.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        tvHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        topHdr.addView(tvHdr);
+        root.addView(topHdr);
 
         // 1. Kad Status Risiko Utama
         LinearLayout verdictCard = new LinearLayout(activity);
@@ -695,8 +718,35 @@ public class KantoiVirusTotalEngine {
 
         sv.addView(root);
         b.setView(sv);
-        b.setPositiveButton("TUTUP", null);
-        b.show();
+
+        final AlertDialog dialog = b.create();
+
+        Button btnClose = new Button(activity);
+        btnClose.setText("✕ TUTUP LAPORAN");
+        btnClose.setTextColor(0xFF94A3B8);
+        btnClose.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btnClose.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable cBg = new GradientDrawable();
+        cBg.setColor(0xFF141422);
+        cBg.setCornerRadius(dpToPx(activity, 8));
+        cBg.setStroke(dpToPx(activity, 1), 0xFF2A2A3A);
+        btnClose.setBackground(cBg);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 42));
+        clp.topMargin = dpToPx(activity, 10);
+        btnClose.setLayoutParams(clp);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+        root.addView(btnClose);
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().setDimAmount(0.75f);
+        }
+        dialog.show();
     }
 
     public static void showUrlScanDialog(final Activity activity) {
@@ -707,17 +757,32 @@ public class KantoiVirusTotalEngine {
         if (activity == null || activity.isFinishing()) return;
 
         AlertDialog.Builder b = new AlertDialog.Builder(activity);
-        b.setTitle("🔗 PENGIMBAS PAUTAN VIRUSTOTAL");
 
         LinearLayout layout = new LinearLayout(activity);
         layout.setOrientation(LinearLayout.VERTICAL);
-        int pad = dpToPx(activity, 16);
-        layout.setPadding(pad, pad, pad, pad);
+        layout.setPadding(dpToPx(activity, 18), dpToPx(activity, 20), dpToPx(activity, 18), dpToPx(activity, 20));
+
+        GradientDrawable lBg = new GradientDrawable();
+        lBg.setColor(0xFF0A0A0F); // Void Black
+        lBg.setCornerRadius(dpToPx(activity, 16));
+        lBg.setStroke(dpToPx(activity, 2), 0xFF00D4FF);
+        layout.setBackground(lBg);
+
+        // Header
+        TextView tvTitle = new TextView(activity);
+        tvTitle.setText("🔗 PENGIMBAS PAUTAN VIRUSTOTAL");
+        tvTitle.setTextColor(Color.WHITE);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        tvTitle.setGravity(Gravity.CENTER);
+        layout.addView(tvTitle);
 
         TextView tvHint = new TextView(activity);
-        tvHint.setText("Masukkan atau tampal pautan yang mencurigakan (cth: pautan daripada WhatsApp, SMS, atau Facebook):");
+        tvHint.setText("Tampal pautan mencurigakan (cth: daripada WhatsApp, SMS, atau FB) untuk analisis perisian hasad & pancingan data:");
         tvHint.setTextColor(0xFF94A3B8);
-        tvHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tvHint.setLineSpacing(dpToPx(activity, 2), 1.0f);
+        tvHint.setPadding(0, dpToPx(activity, 6), 0, dpToPx(activity, 10));
         layout.addView(tvHint);
 
         final EditText etUrl = new EditText(activity);
@@ -728,16 +793,36 @@ public class KantoiVirusTotalEngine {
         if (initialUrl != null && !initialUrl.trim().isEmpty()) {
             etUrl.setText(initialUrl.trim());
         }
+        GradientDrawable etBg = new GradientDrawable();
+        etBg.setColor(0xFF141422);
+        etBg.setCornerRadius(dpToPx(activity, 8));
+        etBg.setStroke(dpToPx(activity, 1), 0xFF2A2A3A);
+        etUrl.setBackground(etBg);
+        etUrl.setPadding(dpToPx(activity, 12), dpToPx(activity, 10), dpToPx(activity, 12), dpToPx(activity, 10));
         LinearLayout.LayoutParams etLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        etLp.topMargin = dpToPx(activity, 8);
+        etLp.topMargin = dpToPx(activity, 4);
+        etLp.bottomMargin = dpToPx(activity, 12);
         etUrl.setLayoutParams(etLp);
         layout.addView(etUrl);
 
         b.setView(layout);
+        final AlertDialog dialog = b.create();
 
-        b.setPositiveButton("🔍 IMBAS PAUTAN", new DialogInterface.OnClickListener() {
+        // Submit Button
+        Button btnScan = new Button(activity);
+        btnScan.setText("🔍 IMBAS PAUTAN SEKARANG");
+        btnScan.setTextColor(Color.BLACK);
+        btnScan.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        btnScan.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable scBg = new GradientDrawable();
+        scBg.setColor(0xFF00D4FF);
+        scBg.setCornerRadius(dpToPx(activity, 8));
+        btnScan.setBackground(scBg);
+        LinearLayout.LayoutParams sLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 44));
+        btnScan.setLayoutParams(sLp);
+        btnScan.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(DialogInterface d, int which) {
+            public void onClick(View v) {
                 final String target = etUrl.getText().toString().trim();
                 if (target.isEmpty()) {
                     Toast.makeText(activity, "Sila masukkan pautan URL terlebih dahulu.", Toast.LENGTH_SHORT).show();
@@ -749,6 +834,7 @@ public class KantoiVirusTotalEngine {
                     return;
                 }
 
+                dialog.dismiss();
                 Toast.makeText(activity, "Sedang menyemak reputasi pautan di VirusTotal...", Toast.LENGTH_SHORT).show();
                 queryVirusTotalUrlAsync(activity, target, new VtUrlCallback() {
                     @Override
@@ -756,43 +842,122 @@ public class KantoiVirusTotalEngine {
                         if (activity.isFinishing()) return;
 
                         AlertDialog.Builder resB = new AlertDialog.Builder(activity);
-                        resB.setTitle("🌐 KEPUTUSAN SEMAKAN PAUTAN");
+                        LinearLayout resRoot = new LinearLayout(activity);
+                        resRoot.setOrientation(LinearLayout.VERTICAL);
+                        resRoot.setPadding(dpToPx(activity, 18), dpToPx(activity, 20), dpToPx(activity, 18), dpToPx(activity, 20));
 
-                        StringBuilder msg = new StringBuilder();
-                        msg.append("Pautan: ").append(url).append("\n\n");
+                        GradientDrawable rBg = new GradientDrawable();
+                        rBg.setColor(0xFF0A0A0F);
+                        rBg.setCornerRadius(dpToPx(activity, 16));
+                        rBg.setStroke(dpToPx(activity, 2), mal > 0 ? 0xFFFF3366 : 0xFF00FF88);
+                        resRoot.setBackground(rBg);
 
+                        TextView tvResTitle = new TextView(activity);
+                        tvResTitle.setText("🌐 KEPUTUSAN SEMAKAN PAUTAN");
+                        tvResTitle.setTextColor(Color.WHITE);
+                        tvResTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+                        tvResTitle.setTypeface(Typeface.DEFAULT_BOLD);
+                        resRoot.addView(tvResTitle);
+
+                        TextView tvUrlText = new TextView(activity);
+                        tvUrlText.setText("Pautan: " + url);
+                        tvUrlText.setTextColor(0xFF94A3B8);
+                        tvUrlText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                        tvUrlText.setPadding(0, dpToPx(activity, 4), 0, dpToPx(activity, 8));
+                        resRoot.addView(tvUrlText);
+
+                        LinearLayout resCard = new LinearLayout(activity);
+                        resCard.setOrientation(LinearLayout.VERTICAL);
+                        resCard.setPadding(dpToPx(activity, 12), dpToPx(activity, 10), dpToPx(activity, 12), dpToPx(activity, 10));
+                        GradientDrawable rcBg = new GradientDrawable();
+                        rcBg.setColor(mal > 0 ? 0xFF450A0A : 0xFF141422);
+                        rcBg.setCornerRadius(dpToPx(activity, 10));
+                        rcBg.setStroke(dpToPx(activity, 1), mal > 0 ? 0xFFFF3366 : 0xFF00FF88);
+                        resCard.setBackground(rcBg);
+
+                        TextView tvVerdict = new TextView(activity);
                         if (err != null) {
-                            msg.append("Status: ").append(err).append("\n");
-                            msg.append("Anda boleh membuat semakan manual percuma di portal VirusTotal Web.");
+                            tvVerdict.setText("Status: " + err + "\nAnda boleh membuat semakan manual percuma di portal VirusTotal Web.");
+                            tvVerdict.setTextColor(0xFFCBD5E1);
                         } else if (found) {
                             if (mal > 0) {
-                                msg.append("🚨 AMARAN BAHAYA: Pautan ini disahkan MALICIOUS/PHISHING oleh ").append(mal).append(" enjin keselamatan!\n\nJANGAN BUKA PAUTAN INI.");
+                                tvVerdict.setText("🚨 AMARAN BAHAYA: Pautan ini disahkan MALICIOUS/PHISHING oleh " + mal + " enjin keselamatan!\n\nJANGAN BUKA PAUTAN INI.");
+                                tvVerdict.setTextColor(0xFFFECDD3);
                             } else {
-                                msg.append("✅ BERSIH: Tiada enjin keselamatan yang mengesan pautan ini sebagai berbahaya (0 Malicious).");
+                                tvVerdict.setText("✅ BERSIH: Tiada enjin keselamatan yang mengesan pautan ini sebagai berbahaya (0 Malicious).");
+                                tvVerdict.setTextColor(0xFF00FF88);
                             }
                         } else {
-                            msg.append("ℹ️ Pautan ini belum mempunyai rekod sedia ada di pangkalan data VirusTotal.");
+                            tvVerdict.setText("ℹ️ Pautan ini belum mempunyai rekod sedia ada di pangkalan data VirusTotal.");
+                            tvVerdict.setTextColor(0xFFCBD5E1);
                         }
+                        tvVerdict.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                        tvVerdict.setLineSpacing(dpToPx(activity, 2), 1.0f);
+                        resCard.addView(tvVerdict);
+                        resRoot.addView(resCard);
 
-                        resB.setMessage(msg.toString());
-                        resB.setPositiveButton("Buka Di Pelayar Web (VT)", new DialogInterface.OnClickListener() {
+                        resB.setView(resRoot);
+                        final AlertDialog resDialog = resB.create();
+
+                        Button btnCloseRes = new Button(activity);
+                        btnCloseRes.setText("✕ TUTUP");
+                        btnCloseRes.setTextColor(0xFF94A3B8);
+                        btnCloseRes.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                        btnCloseRes.setTypeface(Typeface.DEFAULT_BOLD);
+                        GradientDrawable crBg = new GradientDrawable();
+                        crBg.setColor(0xFF141422);
+                        crBg.setCornerRadius(dpToPx(activity, 8));
+                        crBg.setStroke(dpToPx(activity, 1), 0xFF2A2A3A);
+                        btnCloseRes.setBackground(crBg);
+                        LinearLayout.LayoutParams crLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 42));
+                        crLp.topMargin = dpToPx(activity, 10);
+                        btnCloseRes.setLayoutParams(crLp);
+                        btnCloseRes.setOnClickListener(new View.OnClickListener() {
                             @Override
-                            public void onClick(DialogInterface di, int w) {
-                                try {
-                                    Intent it = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.virustotal.com/gui/home/url"));
-                                    activity.startActivity(it);
-                                } catch (Throwable ignored) {}
+                            public void onClick(View v) {
+                                resDialog.dismiss();
                             }
                         });
-                        resB.setNegativeButton("TUTUP", null);
-                        resB.show();
+                        resRoot.addView(btnCloseRes);
+
+                        if (resDialog.getWindow() != null) {
+                            resDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                            resDialog.getWindow().setDimAmount(0.75f);
+                        }
+                        resDialog.show();
                     }
                 });
             }
         });
+        layout.addView(btnScan);
 
-        b.setNegativeButton("BATAL", null);
-        b.show();
+        // Cancel Button
+        Button btnCancel = new Button(activity);
+        btnCancel.setText("✕ BATAL");
+        btnCancel.setTextColor(0xFF94A3B8);
+        btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btnCancel.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable cBg = new GradientDrawable();
+        cBg.setColor(0xFF141422);
+        cBg.setCornerRadius(dpToPx(activity, 8));
+        cBg.setStroke(dpToPx(activity, 1), 0xFF2A2A3A);
+        btnCancel.setBackground(cBg);
+        LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 42));
+        cLp.topMargin = dpToPx(activity, 8);
+        btnCancel.setLayoutParams(cLp);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+        layout.addView(btnCancel);
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().setDimAmount(0.75f);
+        }
+        dialog.show();
     }
 
     public static void showApiKeySettingsDialog(final Activity activity) {

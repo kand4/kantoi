@@ -25,6 +25,7 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -1285,67 +1286,342 @@ public class KantoiThreatEngine {
 
     private static void openSemakMuleAction(final Activity activity, final KantoiThreatEngine engine, final String targetPhone) {
         if (activity == null || activity.isFinishing()) return;
-        AlertDialog.Builder b = new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert);
-        b.setTitle("🛡️ HAB KESELAMATAN & RISIKAN PANTAS");
         final String phoneTarget = (targetPhone != null && !targetPhone.isEmpty()) ? targetPhone : ((sCurrentViewingPhone != null) ? sCurrentViewingPhone : "");
 
-        String[] options = new String[] {
-            "🛡️ Buka Pusat Pertahanan KANTOI (Pangkalan Data & Enjin)",
-            "🏛️ Buka Portal Rasmi SemakMule CCID PDRM",
-            "🔍 Semak / Lapor Nombor dalam KANTOI",
-            "🔗 Imbas Pautan / URL Suspek (VirusTotal)",
-            "📁 Imbas Fail APK Trojan (Heuristik + VirusTotal)"
-        };
+        AlertDialog.Builder b = new AlertDialog.Builder(activity);
 
-        b.setItems(options, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which) {
-                    case 0:
-                        if (activity instanceof MainActivity) {
-                            ((MainActivity) activity).selectTab(1);
-                        } else {
-                            Intent it = new Intent(activity, MainActivity.class);
-                            it.putExtra("select_tab", 1);
-                            it.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                            activity.startActivity(it);
-                        }
-                        break;
-                    case 1:
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        scroll.setVerticalScrollBarEnabled(false);
+
+        LinearLayout root = new LinearLayout(activity);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dpToPx(activity, 18), dpToPx(activity, 20), dpToPx(activity, 18), dpToPx(activity, 20));
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setColor(0xFF0A0A0F); // Deep Void Black (#0A0A0F)
+        rootBg.setCornerRadius(dpToPx(activity, 16));
+        rootBg.setStroke(dpToPx(activity, 2), 0xFF00D4FF); // Neon Cyan Tactical Border (#00D4FF)
+        root.setBackground(rootBg);
+
+        // 1. Top HUD Pill Badge
+        LinearLayout topPill = new LinearLayout(activity);
+        topPill.setOrientation(LinearLayout.HORIZONTAL);
+        topPill.setGravity(Gravity.CENTER);
+        topPill.setPadding(dpToPx(activity, 10), dpToPx(activity, 4), dpToPx(activity, 10), dpToPx(activity, 4));
+        GradientDrawable tpBg = new GradientDrawable();
+        tpBg.setColor(0xFF141422);
+        tpBg.setCornerRadius(dpToPx(activity, 6));
+        tpBg.setStroke(dpToPx(activity, 1), 0xFF00D4FF);
+        topPill.setBackground(tpBg);
+        LinearLayout.LayoutParams tpLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tpLp.gravity = Gravity.CENTER_HORIZONTAL;
+        topPill.setLayoutParams(tpLp);
+
+        TextView tvPill = new TextView(activity);
+        tvPill.setText("⚡ KANTOI CYBER HUD • RISIKAN PANTAS");
+        tvPill.setTextColor(0xFF00D4FF);
+        tvPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        tvPill.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        topPill.addView(tvPill);
+        root.addView(topPill);
+
+        // 2. Main Heading
+        TextView tvTitle = new TextView(activity);
+        tvTitle.setText("🛡️ HAB KESELAMATAN & RISIKAN PANTAS");
+        tvTitle.setTextColor(0xFFF8FAFC);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        tvTitle.setGravity(Gravity.CENTER);
+        tvTitle.setPadding(0, dpToPx(activity, 10), 0, dpToPx(activity, 4));
+        root.addView(tvTitle);
+
+        // 3. Subtitle / Target info
+        TextView tvSub = new TextView(activity);
+        if (!phoneTarget.isEmpty()) {
+            tvSub.setText("Sasaran: [" + formatPhoneNumber(phoneTarget) + "]\nPilih modul risikan taktikal untuk tindakan segera:");
+        } else {
+            tvSub.setText("Pusat kawalan risikan pantas & perisai ancaman siber peranti.\nPilih modul taktikal untuk tindakan segera:");
+        }
+        tvSub.setTextColor(0xFF94A3B8);
+        tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tvSub.setGravity(Gravity.CENTER);
+        tvSub.setLineSpacing(dpToPx(activity, 2), 1.0f);
+        tvSub.setPadding(0, 0, 0, dpToPx(activity, 12));
+        root.addView(tvSub);
+
+        // Sleek horizontal divider
+        View divider = new View(activity);
+        divider.setBackgroundColor(0xFF2A2A3A);
+        LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 1));
+        dLp.bottomMargin = dpToPx(activity, 12);
+        divider.setLayoutParams(dLp);
+        root.addView(divider);
+
+        final AlertDialog[] dialogHolder = new AlertDialog[1];
+
+        // Tile 1: Pusat Pertahanan KANTOI
+        root.addView(createTacticalHubTile(
+            activity, dialogHolder,
+            "🛡️", "Pusat Pertahanan KANTOI",
+            "Pangkalan data 6,163 rekod & konfigurasi perisai",
+            "ENGINE", 0xFF00D4FF,
+            new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (activity instanceof MainActivity) {
+                        ((MainActivity) activity).selectTab(1);
+                    } else {
+                        Intent it = new Intent(activity, MainActivity.class);
+                        it.putExtra("select_tab", 1);
+                        it.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                        activity.startActivity(it);
+                    }
+                }
+            }
+        ));
+
+        // Tile 2: Portal Rasmi SemakMule CCID PDRM
+        root.addView(createTacticalHubTile(
+            activity, dialogHolder,
+            "🏛️", "Portal Rasmi SemakMule CCID PDRM",
+            "Semakan rekod jenayah komersial polis diraja malaysia",
+            "PDRM", 0xFF38BDF8,
+            new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        Intent bIt = new Intent(Intent.ACTION_VIEW, Uri.parse("https://semakmule.rmp.gov.my/"));
+                        activity.startActivity(bIt);
+                    } catch (Throwable t) {
+                        Toast.makeText(activity, "Gagal membuka pelayar: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        ));
+
+        // Tile 3: Semak / Lapor Nombor Scammer
+        root.addView(createTacticalHubTile(
+            activity, dialogHolder,
+            "🚨", "Semak / Lapor Nombor Scammer",
+            "Lapor nombor suspek ke bilik risikan komuniti KANTOI",
+            "INTEL", 0xFFFF3366,
+            new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    engine.showRegisterScammerDialog(activity, phoneTarget);
+                }
+            }
+        ));
+
+        // Tile 4: Imbas Pautan / URL Suspek (VirusTotal)
+        root.addView(createTacticalHubTile(
+            activity, dialogHolder,
+            "🔗", "Imbas Pautan / URL Suspek",
+            "Analisis pautan pancingan data (phishing) via VirusTotal",
+            "VT SCAN", 0xFFF59E0B,
+            new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    KantoiVirusTotalEngine.showUrlScanDialog(activity);
+                }
+            }
+        ));
+
+        // Tile 5: Imbas Fail APK Trojan (Heuristik + VirusTotal)
+        root.addView(createTacticalHubTile(
+            activity, dialogHolder,
+            "📁", "Imbas Fail APK Trojan Peranti",
+            "Pengesanan perisian hasad (trojan pencuri OTP / spyware)",
+            "MALWARE", 0xFF00FF88,
+            new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (activity instanceof MainActivity) {
+                        ((MainActivity) activity).launchApkPicker();
+                    } else {
                         try {
-                            Intent bIt = new Intent(Intent.ACTION_VIEW, Uri.parse("https://semakmule.rmp.gov.my/"));
-                            activity.startActivity(bIt);
+                            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                            intent.setType("*/*");
+                            String[] mimeTypes = {"application/vnd.android.package-archive", "application/octet-stream"};
+                            intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+                            intent.addCategory(Intent.CATEGORY_OPENABLE);
+                            activity.startActivity(intent);
                         } catch (Throwable t) {
-                            Toast.makeText(activity, "Gagal membuka pelayar: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(activity, "Buka tab Pertahanan di skrin utama untuk imbas fail APK.", Toast.LENGTH_SHORT).show();
                         }
-                        break;
-                    case 2:
-                        engine.showRegisterScammerDialog(activity, phoneTarget);
-                        break;
-                    case 3:
-                        KantoiVirusTotalEngine.showUrlScanDialog(activity);
-                        break;
-                    case 4:
-                        if (activity instanceof MainActivity) {
-                            ((MainActivity) activity).launchApkPicker();
-                        } else {
-                            try {
-                                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                                intent.setType("*/*");
-                                String[] mimeTypes = {"application/vnd.android.package-archive", "application/octet-stream"};
-                                intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
-                                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                                activity.startActivity(intent);
-                            } catch (Throwable t) {
-                                Toast.makeText(activity, "Buka tab Pertahanan di skrin utama untuk imbas fail APK.", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                        break;
+                    }
+                }
+            }
+        ));
+
+        // Butang Tutup Panel (HUD Tactical Close Button)
+        Button btnClose = new Button(activity);
+        btnClose.setText("✕ TUTUP PANEL");
+        btnClose.setTextColor(0xFF94A3B8);
+        btnClose.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btnClose.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable cBg = new GradientDrawable();
+        cBg.setColor(0xFF141422);
+        cBg.setCornerRadius(dpToPx(activity, 8));
+        cBg.setStroke(dpToPx(activity, 1), 0xFF2A2A3A);
+        btnClose.setBackground(cBg);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 44));
+        clp.topMargin = dpToPx(activity, 6);
+        btnClose.setLayoutParams(clp);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (dialogHolder[0] != null && dialogHolder[0].isShowing()) {
+                    dialogHolder[0].dismiss();
                 }
             }
         });
-        b.setNegativeButton("TUTUP", null);
-        b.show();
+        root.addView(btnClose);
+
+        scroll.addView(root);
+        b.setView(scroll);
+
+        final AlertDialog dialog = b.create();
+        dialogHolder[0] = dialog;
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().setDimAmount(0.75f);
+        }
+        dialog.show();
+    }
+
+    private static LinearLayout createTacticalHubTile(
+            final Context context,
+            final AlertDialog[] dialogHolder,
+            final String icon,
+            final String title,
+            final String desc,
+            final String badgeText,
+            final int accentColor,
+            final View.OnClickListener onClick
+    ) {
+        final LinearLayout card = new LinearLayout(context);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
+
+        final GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF141422); // Card Void (#141422)
+        bg.setCornerRadius(dpToPx(context, 10));
+        bg.setStroke(dpToPx(context, 1), 0xFF2A2A3A); // Tactical Dark Border
+        card.setBackground(bg);
+
+        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        cardLp.bottomMargin = dpToPx(context, 8);
+        card.setLayoutParams(cardLp);
+
+        // Left Icon Box with Accent Border
+        LinearLayout iconBox = new LinearLayout(context);
+        iconBox.setGravity(Gravity.CENTER);
+        int boxSize = dpToPx(context, 40);
+        LinearLayout.LayoutParams ibLp = new LinearLayout.LayoutParams(boxSize, boxSize);
+        iconBox.setLayoutParams(ibLp);
+
+        GradientDrawable ibBg = new GradientDrawable();
+        ibBg.setColor(0xFF1C1C2E);
+        ibBg.setCornerRadius(dpToPx(context, 8));
+        ibBg.setStroke(dpToPx(context, 1), accentColor);
+        iconBox.setBackground(ibBg);
+
+        TextView tvIcon = new TextView(context);
+        tvIcon.setText(icon);
+        tvIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        tvIcon.setGravity(Gravity.CENTER);
+        iconBox.addView(tvIcon);
+        card.addView(iconBox);
+
+        // Center Content Box (Title + Description)
+        LinearLayout textBox = new LinearLayout(context);
+        textBox.setOrientation(LinearLayout.VERTICAL);
+        textBox.setPadding(dpToPx(context, 12), 0, dpToPx(context, 8), 0);
+        LinearLayout.LayoutParams tbLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        textBox.setLayoutParams(tbLp);
+
+        TextView tvTitle = new TextView(context);
+        tvTitle.setText(title);
+        tvTitle.setTextColor(0xFFF8FAFC);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        textBox.addView(tvTitle);
+
+        TextView tvDesc = new TextView(context);
+        tvDesc.setText(desc);
+        tvDesc.setTextColor(0xFF94A3B8);
+        tvDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        tvDesc.setPadding(0, dpToPx(context, 2), 0, 0);
+        textBox.addView(tvDesc);
+        card.addView(textBox);
+
+        // Right Mini Badge + Arrow
+        LinearLayout rightCol = new LinearLayout(context);
+        rightCol.setOrientation(LinearLayout.HORIZONTAL);
+        rightCol.setGravity(Gravity.CENTER_VERTICAL);
+
+        if (badgeText != null && !badgeText.isEmpty()) {
+            TextView tvBadge = new TextView(context);
+            tvBadge.setText(badgeText);
+            tvBadge.setTextColor(accentColor);
+            tvBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+            tvBadge.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            tvBadge.setPadding(dpToPx(context, 5), dpToPx(context, 2), dpToPx(context, 5), dpToPx(context, 2));
+            GradientDrawable bBg = new GradientDrawable();
+            bBg.setColor(0x22000000);
+            bBg.setCornerRadius(dpToPx(context, 4));
+            bBg.setStroke(dpToPx(context, 1), accentColor);
+            tvBadge.setBackground(bBg);
+            rightCol.addView(tvBadge);
+        }
+
+        TextView tvArrow = new TextView(context);
+        tvArrow.setText(" ▶");
+        tvArrow.setTextColor(accentColor);
+        tvArrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        tvArrow.setTypeface(Typeface.DEFAULT_BOLD);
+        rightCol.addView(tvArrow);
+
+        card.addView(rightCol);
+
+        // Touch Feedback
+        card.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        bg.setColor(0xFF1E1E36);
+                        bg.setStroke(dpToPx(context, 1), accentColor);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        bg.setColor(0xFF141422);
+                        bg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
+                        break;
+                }
+                return false;
+            }
+        });
+
+        card.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (dialogHolder != null && dialogHolder[0] != null && dialogHolder[0].isShowing()) {
+                    dialogHolder[0].dismiss();
+                }
+                if (onClick != null) {
+                    onClick.onClick(v);
+                }
+            }
+        });
+
+        return card;
     }
 
     private static int dpToPx(Context context, int dp) {
@@ -1961,28 +2237,176 @@ public class KantoiThreatEngine {
     public static void showDatabaseInfoDialog(final Context context) {
         if (context == null) return;
         try {
-            AlertDialog.Builder b = new AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Dialog_Alert);
-            b.setTitle("\uD83D\uDEE1\uFE0F STATUS PANGKALAN DATA RISIKAN");
-
             KantoiThreatEngine engine = getInstance(context);
-            int total = (engine != null) ? engine.getThreatCount() : 3729;
-            String msg = "Jumlah Perlindungan Aktif: " + String.format("%,d", total) + " Rekod\n\n"
-                    + "Pecahan Sumber Risikan Komuniti:\n"
-                    + "• \uD83D\uDD34 Forum Lowyat: 1,500 kes scammer\n"
-                    + "• \uD83D\uDFE0 Forum CariGold: 554 kes penipuan\n"
-                    + "• \uD83D\uDD35 Risikan Telegram (OCR): 1,675 kes & 495 akaun bank keldai\n"
-                    + "• \uD83D\uDFE2 JSJK CCID SemakMule: Carian Langsung & Portal Rasmi PDRM\n"
-                    + "• \uD83C\uDF10 Google CSE: Enjin Carian Pertikaian Media Sosial\n\n"
-                    + "\u2139\uFE0F Pangkalan data disimpan 100% pada peranti anda (offline) bagi memastikan perlindungan serta-merta semasa panggilan masuk tanpa memerlukan internet.";
+            int total = (engine != null) ? engine.getThreatCount() : 6163;
 
-            b.setMessage(msg);
-            b.setPositiveButton("FAHAM", new DialogInterface.OnClickListener() {
+            AlertDialog.Builder b = new AlertDialog.Builder(context);
+
+            ScrollView scroll = new ScrollView(context);
+            scroll.setFillViewport(true);
+            scroll.setVerticalScrollBarEnabled(false);
+
+            LinearLayout root = new LinearLayout(context);
+            root.setOrientation(LinearLayout.VERTICAL);
+            root.setPadding(dpToPx(context, 18), dpToPx(context, 20), dpToPx(context, 18), dpToPx(context, 20));
+
+            GradientDrawable rootBg = new GradientDrawable();
+            rootBg.setColor(0xFF0A0A0F); // Deep Void Black (#0A0A0F)
+            rootBg.setCornerRadius(dpToPx(context, 16));
+            rootBg.setStroke(dpToPx(context, 2), 0xFF00D4FF); // Neon Cyan Tactical Border (#00D4FF)
+            root.setBackground(rootBg);
+
+            // Top HUD Pill
+            LinearLayout topPill = new LinearLayout(context);
+            topPill.setOrientation(LinearLayout.HORIZONTAL);
+            topPill.setGravity(Gravity.CENTER);
+            topPill.setPadding(dpToPx(context, 10), dpToPx(context, 4), dpToPx(context, 10), dpToPx(context, 4));
+            GradientDrawable tpBg = new GradientDrawable();
+            tpBg.setColor(0xFF141422);
+            tpBg.setCornerRadius(dpToPx(context, 6));
+            tpBg.setStroke(dpToPx(context, 1), 0xFF00FF88);
+            topPill.setBackground(tpBg);
+            LinearLayout.LayoutParams tpLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            tpLp.gravity = Gravity.CENTER_HORIZONTAL;
+            topPill.setLayoutParams(tpLp);
+
+            TextView tvPill = new TextView(context);
+            tvPill.setText("⚡ DATABASE FORENSICS • 100% OFFLINE");
+            tvPill.setTextColor(0xFF00FF88);
+            tvPill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            tvPill.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            topPill.addView(tvPill);
+            root.addView(topPill);
+
+            // Title
+            TextView tvTitle = new TextView(context);
+            tvTitle.setText("🛡️ STATUS PANGKALAN DATA RISIKAN");
+            tvTitle.setTextColor(0xFFF8FAFC);
+            tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            tvTitle.setGravity(Gravity.CENTER);
+            tvTitle.setPadding(0, dpToPx(context, 10), 0, dpToPx(context, 4));
+            root.addView(tvTitle);
+
+            TextView tvSub = new TextView(context);
+            tvSub.setText("Perisai siber berautonomi tinggi untuk perlindungan panggilan & SMS.");
+            tvSub.setTextColor(0xFF94A3B8);
+            tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            tvSub.setGravity(Gravity.CENTER);
+            tvSub.setPadding(0, 0, 0, dpToPx(context, 12));
+            root.addView(tvSub);
+
+            // Hero Metric Card
+            LinearLayout heroCard = new LinearLayout(context);
+            heroCard.setOrientation(LinearLayout.VERTICAL);
+            heroCard.setGravity(Gravity.CENTER);
+            heroCard.setPadding(dpToPx(context, 14), dpToPx(context, 12), dpToPx(context, 14), dpToPx(context, 12));
+            GradientDrawable hcBg = new GradientDrawable();
+            hcBg.setColor(0xFF141422);
+            hcBg.setCornerRadius(dpToPx(context, 10));
+            hcBg.setStroke(dpToPx(context, 1), 0xFF00FF88);
+            heroCard.setBackground(hcBg);
+            LinearLayout.LayoutParams hcLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            hcLp.bottomMargin = dpToPx(context, 10);
+            heroCard.setLayoutParams(hcLp);
+
+            TextView tvCount = new TextView(context);
+            tvCount.setText(String.format("%,d", total));
+            tvCount.setTextColor(0xFF00FF88);
+            tvCount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
+            tvCount.setTypeface(Typeface.DEFAULT_BOLD);
+            heroCard.addView(tvCount);
+
+            TextView tvCountLabel = new TextView(context);
+            tvCountLabel.setText("JUMLAH REKOD ANCAMAN AKTIF DALAM PERANTI");
+            tvCountLabel.setTextColor(0xFFCBD5E1);
+            tvCountLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            tvCountLabel.setTypeface(Typeface.DEFAULT_BOLD);
+            heroCard.addView(tvCountLabel);
+            root.addView(heroCard);
+
+            // Breakdown List Card
+            LinearLayout listCard = new LinearLayout(context);
+            listCard.setOrientation(LinearLayout.VERTICAL);
+            listCard.setPadding(dpToPx(context, 12), dpToPx(context, 10), dpToPx(context, 12), dpToPx(context, 10));
+            GradientDrawable lcBg = new GradientDrawable();
+            lcBg.setColor(0xFF141422);
+            lcBg.setCornerRadius(dpToPx(context, 10));
+            lcBg.setStroke(dpToPx(context, 1), 0xFF2A2A3A);
+            listCard.setBackground(lcBg);
+            LinearLayout.LayoutParams lcLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lcLp.bottomMargin = dpToPx(context, 10);
+            listCard.setLayoutParams(lcLp);
+
+            String[] sources = new String[]{
+                "🔴 Forum Lowyat: 1,500 kes scammer disahkan",
+                "🟡 Forum CariGold: 554 kes penipuan kewangan",
+                "🔵 Risikan Telegram OCR: 1,675 kes & 495 akaun bank keldai",
+                "🛑 Perisai Inbound-Only: 39 Hotline Bank & Agensi (Anti-Spoof)",
+                "🟢 JSJK CCID SemakMule: Pangkalan Data Rasmi PDRM",
+                "🌐 Google CSE: Enjin Carian Pertikaian Komuniti"
+            };
+
+            for (String src : sources) {
+                TextView tvSrc = new TextView(context);
+                tvSrc.setText(src);
+                tvSrc.setTextColor(0xFFE2E8F0);
+                tvSrc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                tvSrc.setPadding(0, dpToPx(context, 3), 0, dpToPx(context, 3));
+                listCard.addView(tvSrc);
+            }
+            root.addView(listCard);
+
+            // Offline Guarantee Pill
+            LinearLayout pillOff = new LinearLayout(context);
+            pillOff.setOrientation(LinearLayout.HORIZONTAL);
+            pillOff.setPadding(dpToPx(context, 10), dpToPx(context, 8), dpToPx(context, 10), dpToPx(context, 8));
+            GradientDrawable poBg = new GradientDrawable();
+            poBg.setColor(0xFF141422);
+            poBg.setCornerRadius(dpToPx(context, 8));
+            poBg.setStroke(dpToPx(context, 1), 0xFF00D4FF);
+            pillOff.setBackground(poBg);
+            LinearLayout.LayoutParams poLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            poLp.bottomMargin = dpToPx(context, 12);
+            pillOff.setLayoutParams(poLp);
+
+            TextView tvOff = new TextView(context);
+            tvOff.setText("🔒 Pangkalan data disimpan 100% secara luar talian (offline) pada peranti anda bagi menjamin pengesanan serta-merta semasa panggilan masuk.");
+            tvOff.setTextColor(0xFF00D4FF);
+            tvOff.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            tvOff.setLineSpacing(dpToPx(context, 2), 1.0f);
+            pillOff.addView(tvOff);
+            root.addView(pillOff);
+
+            scroll.addView(root);
+            b.setView(scroll);
+
+            final AlertDialog dialog = b.create();
+
+            Button btnDone = new Button(context);
+            btnDone.setText("👍 FAHAM & SELESAI");
+            btnDone.setTextColor(Color.BLACK);
+            btnDone.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            btnDone.setTypeface(Typeface.DEFAULT_BOLD);
+            GradientDrawable dBg = new GradientDrawable();
+            dBg.setColor(0xFF00D4FF);
+            dBg.setCornerRadius(dpToPx(context, 8));
+            btnDone.setBackground(dBg);
+            LinearLayout.LayoutParams dbLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(context, 44));
+            btnDone.setLayoutParams(dbLp);
+            btnDone.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(DialogInterface d, int which) {
-                    d.dismiss();
+                public void onClick(View v) {
+                    dialog.dismiss();
                 }
             });
-            b.show();
+            root.addView(btnDone);
+
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                dialog.getWindow().setDimAmount(0.75f);
+            }
+            dialog.show();
         } catch (Throwable t) {
             Log.e(TAG, "showDatabaseInfoDialog error: " + t.getMessage(), t);
         }
@@ -3613,6 +4037,10 @@ public class KantoiThreatEngine {
             scrollView.addView(root);
             dialog.setView(scrollView);
             dialog.setCanceledOnTouchOutside(true);
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                dialog.getWindow().setDimAmount(0.75f);
+            }
             dialog.show();
 
             Window win = dialog.getWindow();
@@ -3964,6 +4392,10 @@ public class KantoiThreatEngine {
             scrollView.addView(root);
             dialog.setView(scrollView);
             dialog.setCanceledOnTouchOutside(true);
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                dialog.getWindow().setDimAmount(0.75f);
+            }
             dialog.show();
 
             Window win = dialog.getWindow();
@@ -4289,10 +4721,15 @@ public class KantoiThreatEngine {
         if (context instanceof Activity && ((Activity) context).isFinishing()) return;
 
         try {
-            AlertDialog.Builder builder = new AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Dialog_Alert);
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
 
             ScrollView scrollView = new ScrollView(context);
-            scrollView.setBackgroundColor(0xFF121212);
+            scrollView.setFillViewport(true);
+            GradientDrawable svBg = new GradientDrawable();
+            svBg.setColor(0xFF0A0A0F);
+            svBg.setCornerRadius(dpToPx(context, 16));
+            svBg.setStroke(dpToPx(context, 2), 0xFFFF3366);
+            scrollView.setBackground(svBg);
             scrollView.setPadding(dpToPx(context, 16), dpToPx(context, 16), dpToPx(context, 16), dpToPx(context, 16));
 
             LinearLayout rootLayout = new LinearLayout(context);
@@ -4637,6 +5074,10 @@ public class KantoiThreatEngine {
 
             dialog.setView(scrollView);
             dialog.setCanceledOnTouchOutside(true);
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                dialog.getWindow().setDimAmount(0.75f);
+            }
             dialog.show();
         } catch (Throwable t) {
             Log.e(TAG, "showThreatDialog error: " + t.getMessage(), t);
@@ -5636,18 +6077,55 @@ public class KantoiThreatEngine {
         if (activity == null || activity.isFinishing()) return;
         try {
             AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            boolean isClean = (result.threatsFound.isEmpty());
+            final boolean isClean = (result.threatsFound.isEmpty());
 
-            builder.setTitle(isClean ? "\uD83D\uDEE1\uFE0F BUKU TELEFON ANDA BERSIH!" : "\uD83D\uDEA8 AMARAN: KENALAN SCAMMER DITEMUI!");
+            ScrollView scroll = new ScrollView(activity);
+            scroll.setFillViewport(true);
+            scroll.setVerticalScrollBarEnabled(false);
 
-            StringBuilder sb = new StringBuilder();
+            LinearLayout root = new LinearLayout(activity);
+            root.setOrientation(LinearLayout.VERTICAL);
+            root.setPadding(dpToPx(activity, 18), dpToPx(activity, 20), dpToPx(activity, 18), dpToPx(activity, 20));
+
+            GradientDrawable rootBg = new GradientDrawable();
+            rootBg.setColor(0xFF0A0A0F); // Void Black
+            rootBg.setCornerRadius(dpToPx(activity, 16));
+            rootBg.setStroke(dpToPx(activity, 2), isClean ? 0xFF00FF88 : 0xFFFF3366);
+            root.setBackground(rootBg);
+
+            // Title
+            TextView tvTitle = new TextView(activity);
+            tvTitle.setText(isClean ? "🛡️ BUKU TELEFON ANDA BERSIH!" : "🚨 AMARAN: KENALAN SCAMMER DITEMUI!");
+            tvTitle.setTextColor(isClean ? 0xFF00FF88 : 0xFFFCA5A5);
+            tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            tvTitle.setGravity(Gravity.CENTER);
+            root.addView(tvTitle);
+
+            // Status Card
+            LinearLayout card = new LinearLayout(activity);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dpToPx(activity, 14), dpToPx(activity, 12), dpToPx(activity, 14), dpToPx(activity, 12));
+            GradientDrawable cBg = new GradientDrawable();
+            cBg.setColor(isClean ? 0xFF141422 : 0xFF450A0A);
+            cBg.setCornerRadius(dpToPx(activity, 10));
+            cBg.setStroke(dpToPx(activity, 1), isClean ? 0xFF00FF88 : 0xFFFF3366);
+            card.setBackground(cBg);
+            LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            cLp.topMargin = dpToPx(activity, 12);
+            cLp.bottomMargin = dpToPx(activity, 12);
+            card.setLayoutParams(cLp);
+
+            TextView tvBody = new TextView(activity);
             if (isClean) {
-                sb.append("✅ Sebanyak ").append(result.totalScanned).append(" kenalan telah diimbas.\n\n");
-                sb.append("Tiada sebarang nombor scammer atau akaun keldai ditemui dalam buku telefon anda.\n\n");
-                sb.append("Semua kenalan ini kini dilindungi di bawah Senarai Putih (Safe Whitelist) KANTOI.");
+                tvBody.setText("✅ Sebanyak " + result.totalScanned + " kenalan telah diimbas secara mendalam.\n\n"
+                        + "Tiada sebarang nombor scammer atau akaun keldai ditemui dalam buku telefon anda.\n\n"
+                        + "Semua kenalan ini dilindungi di bawah Senarai Putih (Safe Whitelist) KANTOI.");
+                tvBody.setTextColor(0xFFE2E8F0);
             } else {
-                sb.append("⚠️ KANTOI mengesan ").append(result.threatsFound.size())
-                  .append(" nombor dalam senarai kenalan anda yang berpadanan dengan rekod scammer disahkan:\n\n");
+                StringBuilder sb = new StringBuilder();
+                sb.append("⚠️ Mengesan ").append(result.threatsFound.size())
+                  .append(" nombor dalam kenalan yang sepadan dengan rekod scammer disahkan PDRM:\n\n");
                 for (int i = 0; i < result.threatsFound.size(); i++) {
                     ContactThreatMatch m = result.threatsFound.get(i);
                     sb.append(i + 1).append(". ").append(m.contactName).append(" (").append(m.contactNumber).append(")\n");
@@ -5658,20 +6136,67 @@ public class KantoiThreatEngine {
                     }
                     sb.append("\n");
                 }
-                sb.append("Nasihat: Sila berhati-hati atau padamkan nombor di atas daripada senarai kenalan anda.");
+                sb.append("Nasihat: Padamkan nombor di atas daripada senarai kenalan anda.");
+                tvBody.setText(sb.toString());
+                tvBody.setTextColor(0xFFFECDD3);
             }
+            tvBody.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            tvBody.setLineSpacing(dpToPx(activity, 2), 1.0f);
+            card.addView(tvBody);
+            root.addView(card);
 
-            builder.setMessage(sb.toString());
-            builder.setPositiveButton("TUTUP", null);
+            scroll.addView(root);
+            builder.setView(scroll);
+            final AlertDialog dialog = builder.create();
+
             if (!isClean && !result.threatsFound.isEmpty()) {
-                builder.setNeutralButton("BUKA DOSSIER SUSPEK", new DialogInterface.OnClickListener() {
+                Button btnDossier = new Button(activity);
+                btnDossier.setText("🚨 BUKA DOSSIER SUSPEK");
+                btnDossier.setTextColor(Color.WHITE);
+                btnDossier.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+                btnDossier.setTypeface(Typeface.DEFAULT_BOLD);
+                GradientDrawable dBg = new GradientDrawable();
+                dBg.setColor(0xFFDC2626);
+                dBg.setCornerRadius(dpToPx(activity, 8));
+                btnDossier.setBackground(dBg);
+                LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 44));
+                dLp.bottomMargin = dpToPx(activity, 8);
+                btnDossier.setLayoutParams(dLp);
+                btnDossier.setOnClickListener(new View.OnClickListener() {
                     @Override
-                    public void onClick(DialogInterface dialog, int which) {
+                    public void onClick(View v) {
+                        dialog.dismiss();
                         KantoiThreatEngine.getInstance(activity).showThreatDialog(activity, result.threatsFound.get(0).threat);
                     }
                 });
+                root.addView(btnDossier);
             }
-            builder.show();
+
+            Button btnClose = new Button(activity);
+            btnClose.setText("✕ TUTUP");
+            btnClose.setTextColor(0xFF94A3B8);
+            btnClose.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            btnClose.setTypeface(Typeface.DEFAULT_BOLD);
+            GradientDrawable clBg = new GradientDrawable();
+            clBg.setColor(0xFF141422);
+            clBg.setCornerRadius(dpToPx(activity, 8));
+            clBg.setStroke(dpToPx(activity, 1), 0xFF2A2A3A);
+            btnClose.setBackground(clBg);
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 42));
+            btnClose.setLayoutParams(clp);
+            btnClose.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    dialog.dismiss();
+                }
+            });
+            root.addView(btnClose);
+
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                dialog.getWindow().setDimAmount(0.75f);
+            }
+            dialog.show();
         } catch (Throwable t) {
             Log.e(TAG, "showContactAuditDialog error: " + t.getMessage(), t);
         }
