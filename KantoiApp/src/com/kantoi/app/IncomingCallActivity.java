@@ -532,29 +532,8 @@ public class IncomingCallActivity extends Activity {
         spacerControls.setLayoutParams(spCtrlLp);
         mContentContainer.addView(spacerControls);
 
-        // 5. SPECIAL SCAMMER QUICK ACTION: "SMS COUNTER-STRIKE (PDRM)" & "TOLAK & SEKAT"
+        // 5. TINDAKAN PANTAS: SEKAT & PUTUSKAN TALIAN SERTA-MERTA
         if (mThreat != null) {
-            Button btnCounterStrike = new Button(this);
-            btnCounterStrike.setText("⚡ HANTAR SMS AMARAN PDRM & SEKAT TALIAN");
-            btnCounterStrike.setTextColor(Color.WHITE);
-            btnCounterStrike.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            btnCounterStrike.setTypeface(Typeface.DEFAULT_BOLD);
-            GradientDrawable csBg = new GradientDrawable();
-            csBg.setColor(0xFF141422);
-            csBg.setCornerRadius(dpToPx(12));
-            csBg.setStroke(dpToPx(2), 0xFF00D4FF);
-            btnCounterStrike.setBackground(csBg);
-            LinearLayout.LayoutParams csLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(50));
-            csLp.bottomMargin = dpToPx(8);
-            btnCounterStrike.setLayoutParams(csLp);
-            btnCounterStrike.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    handleCounterStrike(cleanLocal);
-                }
-            });
-            mContentContainer.addView(btnCounterStrike);
-
             Button btnRejectAndBlock = new Button(this);
             btnRejectAndBlock.setText("🚫 TOLAK & SEKAT SCAMMER SERTA-MERTA");
             btnRejectAndBlock.setTextColor(Color.WHITE);
@@ -780,15 +759,7 @@ public class IncomingCallActivity extends Activity {
         finish();
     }
 
-    private void handleCounterStrike(String localPhone) {
-        KantoiInCallService.rejectCall();
-        KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
-        csEngine.sendCounterStrikeSms(localPhone, mThreat != null ? mThreat.suspectName : "Suspek Scammer");
-        csEngine.recordTelemetryIncident(localPhone, mThreat != null ? mThreat.suspectName : "Suspek Scammer", 
-                mThreat != null ? mThreat.riskTag : "THREAT", "SMS_AMARAN_MANUAL");
-        Toast.makeText(this, "SMS Amaran Siber Seksyen 420 PDRM telah dihantar ke pemanggil.", Toast.LENGTH_LONG).show();
-        finish();
-    }
+
 
     private void handleAnswerCall(String localPhone) {
         boolean answered = KantoiInCallService.answerCall();

@@ -247,19 +247,8 @@ public class KantoiInCallService extends InCallService {
                 Log.e(TAG, "Ralat rejectCall pada zero-ring defense: " + t.getMessage());
             }
 
-            // Hantar SMS Counter-Strike jika diaktifkan
-            if (csEngine.isSmsCounterStrikeEnabled()) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        csEngine.sendCounterStrikeSms(cleanLocal, threat.suspectName);
-                    }
-                }).start();
-            }
-
-            // Rekod log telemetri forensik
-            csEngine.recordTelemetryIncident(cleanLocal, threat.suspectName, threat.riskTag,
-                    csEngine.isSmsCounterStrikeEnabled() ? "SEKATAN_0_SAAT_SMS" : "SEKATAN_0_SAAT");
+            // Rekod log telemetri forensik tempatan (100% sifar kos & kebal eksploitasi)
+            csEngine.recordTelemetryIncident(cleanLocal, threat.suspectName, threat.riskTag, "SEKATAN_0_SAAT");
 
             // Tampilkan notifikasi amaran sekatan pintar
             showZeroRingBlockedNotification(cleanLocal, threat);
