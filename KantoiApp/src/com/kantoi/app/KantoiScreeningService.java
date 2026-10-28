@@ -58,19 +58,7 @@ public class KantoiScreeningService extends CallScreeningService {
                     respondBlock(callDetails);
                     engine.showScammerCallNotification(this, rawNumber, threat, true);
 
-                    final String fNum = rawNumber;
-                    final String fSuspect = threat.suspectName;
-                    if (csEngine.isSmsCounterStrikeEnabled()) {
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                csEngine.sendCounterStrikeSms(fNum, fSuspect);
-                            }
-                        }).start();
-                    }
-
-                    csEngine.recordTelemetryIncident(rawNumber, threat.suspectName, threat.riskTag,
-                            csEngine.isSmsCounterStrikeEnabled() ? "SEKATAN_SCREENING_0_SAAT_SMS" : "SEKATAN_SCREENING_0_SAAT");
+                    csEngine.recordTelemetryIncident(rawNumber, threat.suspectName, threat.riskTag, "SEKATAN_SCREENING_0_SAAT");
                     Log.i(TAG, "Call auto-blocked successfully for scammer: " + rawNumber);
                 } else {
                     respondAllow(callDetails);

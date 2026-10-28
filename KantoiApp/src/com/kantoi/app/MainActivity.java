@@ -2693,15 +2693,15 @@ public class MainActivity extends Activity {
         card.addView(tvTitle);
 
         TextView tvDesc = new TextView(this);
-        tvDesc.setText("Pintasan siber automatik mengikut piawaian telekomunikasi antarabangsa. Menggabungkan sekatan kelajuan 0-saat (zero-ring drop) bagi mematikan bot pendail scammer, disokong oleh SMS Amaran Forensik Seksyen 420 PDRM terus ke peranti pemanggil.");
+        tvDesc.setText("Pintasan siber automatik mengikut piawaian telekomunikasi antarabangsa. Menggabungkan sekatan kelajuan 0-saat (zero-ring drop) bagi mematikan bot pendail scammer tanpa sebarang kos, bebas caj SMS, dan sifar risiko bil telefon.");
         tvDesc.setTextColor(0xFFCBD5E1);
         tvDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         tvDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
         card.addView(tvDesc);
 
-        // 1. KAWALAN UTAMA 1: SEKATAN 0-SAAT (ZERO-RING DROP)
+        // 1. KAWALAN UTAMA: SEKATAN 0-SAAT (ZERO-RING DROP - 100% PERCUMA)
         final Button btnZeroRing = createButton(
-                csEngine.isZeroRingBlockEnabled() ? "🛡️ SEKATAN 0-SAAT (ZERO-RING): AKTIF" : "🛡️ SEKATAN 0-SAAT: TIDAK AKTIF",
+                csEngine.isZeroRingBlockEnabled() ? "🛡️ SEKATAN KELAJUAN 0-SAAT (ZERO-RING): AKTIF" : "🛡️ SEKATAN KELAJUAN 0-SAAT: TIDAK AKTIF",
                 csEngine.isZeroRingBlockEnabled() ? 0xFF059669 : 0xFF2A2A3A,
                 Color.WHITE
         );
@@ -2711,7 +2711,7 @@ public class MainActivity extends Activity {
             public void onClick(View v) {
                 boolean next = !csEngine.isZeroRingBlockEnabled();
                 csEngine.setZeroRingBlockEnabled(next);
-                btnZeroRing.setText(next ? "🛡️ SEKATAN 0-SAAT (ZERO-RING): AKTIF" : "🛡️ SEKATAN 0-SAAT: TIDAK AKTIF");
+                btnZeroRing.setText(next ? "🛡️ SEKATAN KELAJUAN 0-SAAT (ZERO-RING): AKTIF" : "🛡️ SEKATAN KELAJUAN 0-SAAT: TIDAK AKTIF");
                 GradientDrawable g = new GradientDrawable();
                 g.setColor(next ? 0xFF059669 : 0xFF2A2A3A);
                 g.setCornerRadius(dpToPx(8));
@@ -2722,49 +2722,14 @@ public class MainActivity extends Activity {
         card.addView(btnZeroRing);
 
         TextView tvZeroHint = new TextView(this);
-        tvZeroHint.setText("Panggilan scammer ditolak serta-merta sebelum telefon sempat berdering. Pendail automatik scammer merekodkan talian ini sebagai talian mati / tidak aktif.");
+        tvZeroHint.setText("Panggilan scammer ditolak serta-merta sebelum telefon sempat berdering. 100% percuma (RM0.00), kebal daripada eksploitasi scammer, dan melindungi daripada bot pendail sindiket.");
         tvZeroHint.setTextColor(0xFF94A3B8);
         tvZeroHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        tvZeroHint.setPadding(0, dpToPx(3), 0, dpToPx(6));
+        tvZeroHint.setPadding(0, dpToPx(3), 0, dpToPx(8));
         card.addView(tvZeroHint);
 
-        // 2. KAWALAN UTAMA 2: SMS COUNTER-STRIKE (AMARAN PDRM)
-        final Button btnSmsStrike = createButton(
-                csEngine.isSmsCounterStrikeEnabled() ? "✉️ SMS COUNTER-STRIKE (PDRM): AKTIF" : "✉️ SMS COUNTER-STRIKE (PDRM): TIDAK AKTIF",
-                csEngine.isSmsCounterStrikeEnabled() ? 0xFF0284C7 : 0xFF2A2A3A,
-                Color.WHITE
-        );
-        setMarginTop(btnSmsStrike, 6);
-        btnSmsStrike.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                boolean next = !csEngine.isSmsCounterStrikeEnabled();
-                csEngine.setSmsCounterStrikeEnabled(next);
-                btnSmsStrike.setText(next ? "✉️ SMS COUNTER-STRIKE (PDRM): AKTIF" : "✉️ SMS COUNTER-STRIKE (PDRM): TIDAK AKTIF");
-                GradientDrawable g = new GradientDrawable();
-                g.setColor(next ? 0xFF0284C7 : 0xFF2A2A3A);
-                g.setCornerRadius(dpToPx(8));
-                btnSmsStrike.setBackground(g);
-
-                if (next && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if (checkCallingOrSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(new String[]{Manifest.permission.SEND_SMS}, 771);
-                    }
-                }
-                Toast.makeText(MainActivity.this, next ? "SMS Amaran Siber diaktifkan." : "SMS Amaran Siber dimatikan.", Toast.LENGTH_SHORT).show();
-            }
-        });
-        card.addView(btnSmsStrike);
-
-        TextView tvSmsHint = new TextView(this);
-        tvSmsHint.setText("Menghantar SMS berkanun Seksyen 420 PDRM secara automatik ke peranti pemanggil sebaik sahaja panggilan disekat. SMS dijamin 100% sampai ke peranti scammer.");
-        tvSmsHint.setTextColor(0xFF94A3B8);
-        tvSmsHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        tvSmsHint.setPadding(0, dpToPx(3), 0, dpToPx(8));
-        card.addView(tvSmsHint);
-
-        // 3. Butang Ujian Bunyi Amaran & Siren Terus
-        final Button btnTestAudio = createButton("🔊 UJI AMARAN AUDIO SEKARANG (TEST SOUND)", 0xFF141422, 0xFF00FF88);
+        // 2. Butang Ujian Bunyi Amaran & Siren Terus
+        final Button btnTestAudio = createButton("🔊 UJI AMARAN AUDIO LOKAL (TEST SOUND)", 0xFF141422, 0xFF00FF88);
         setMarginTop(btnTestAudio, 4);
         btnTestAudio.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -2797,7 +2762,7 @@ public class MainActivity extends Activity {
         testBox.addView(tvTestTitle);
 
         TextView tvTestDesc = new TextView(this);
-        tvTestDesc.setText("Ingin menguji sendiri fungsi ini? Masukkan nombor telefon rakan anda di bawah. Apabila rakan mendail anda, panggilan mereka akan disekat serta-merta dalam 0-saat (zero-ring), dan peranti rakan anda akan menerima SMS Amaran Siber KANTOI!");
+        tvTestDesc.setText("Ingin menguji sendiri fungsi ini? Masukkan nombor telefon rakan anda di bawah. Apabila rakan mendail anda, panggilan mereka akan disekat serta-merta dalam 0-saat (zero-ring drop) tanpa sempat berdering pada telefon anda!");
         tvTestDesc.setTextColor(0xFFE2E8F0);
         tvTestDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         setMarginTop(tvTestDesc, 4);
