@@ -181,9 +181,9 @@ public class ActiveCallActivity extends Activity {
         timerCard.setLayoutParams(timerCardLp);
 
         GradientDrawable timerBg = new GradientDrawable();
-        timerBg.setColor(0xFF0F172A);
+        timerBg.setColor(0xFF141422);
         timerBg.setCornerRadius(dpToPx(14));
-        timerBg.setStroke(dpToPx(1), 0xFF1E293B);
+        timerBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         timerCard.setBackground(timerBg);
 
         mChronometer = new Chronometer(this);
@@ -247,7 +247,7 @@ public class ActiveCallActivity extends Activity {
             tvAvatarIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 44);
             tvAvatarIcon.setTypeface(Typeface.DEFAULT_BOLD);
         } else {
-            avBg.setColor(0xFF1E293B);
+            avBg.setColor(0xFF141422);
             avBg.setStroke(dpToPx(3), 0xFF0284C7);
             tvAvatarIcon.setText("👤");
             tvAvatarIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 44);
@@ -339,9 +339,9 @@ public class ActiveCallActivity extends Activity {
         controlsCard.setOrientation(LinearLayout.VERTICAL);
         controlsCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         GradientDrawable ctrlCardBg = new GradientDrawable();
-        ctrlCardBg.setColor(0xFF0F172A);
+        ctrlCardBg.setColor(0xFF141422);
         ctrlCardBg.setCornerRadius(dpToPx(16));
-        ctrlCardBg.setStroke(dpToPx(1), 0xFF1E293B);
+        ctrlCardBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         controlsCard.setBackground(ctrlCardBg);
 
         LinearLayout controlsRow = new LinearLayout(this);
@@ -463,7 +463,7 @@ public class ActiveCallActivity extends Activity {
         btn.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable bg = new GradientDrawable();
         bg.setShape(GradientDrawable.OVAL);
-        bg.setColor(0xFF1E293B);
+        bg.setColor(0xFF141422);
         bg.setStroke(dpToPx(1), 0xFF334155);
         btn.setBackground(bg);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dpToPx(68), dpToPx(68));
@@ -475,7 +475,7 @@ public class ActiveCallActivity extends Activity {
     private void updateControlHighlight(Button btn, boolean active) {
         GradientDrawable bg = (GradientDrawable) btn.getBackground();
         if (bg != null) {
-            bg.setColor(active ? 0xFF0284C7 : 0xFF1E293B);
+            bg.setColor(active ? 0xFF00D4FF : 0xFF141422);
             bg.setStroke(dpToPx(2), active ? 0xFF38BDF8 : 0xFF334155);
         }
     }
@@ -494,7 +494,7 @@ public class ActiveCallActivity extends Activity {
         GradientDrawable padBg = new GradientDrawable();
         padBg.setColor(0xFF070B14);
         padBg.setCornerRadius(dpToPx(14));
-        padBg.setStroke(dpToPx(1), 0xFF1E293B);
+        padBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         keypad.setBackground(padBg);
         keypad.setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14));
 
@@ -526,7 +526,7 @@ public class ActiveCallActivity extends Activity {
                 btn.setGravity(Gravity.CENTER);
 
                 GradientDrawable bBg = new GradientDrawable();
-                bBg.setColor(0xFF1E293B); // Slate-800
+                bBg.setColor(0xFF141422); // Slate-800
                 bBg.setCornerRadius(dpToPx(12));
                 bBg.setStroke(dpToPx(1), 0xFF334155); // Slate-700
                 btn.setBackground(bBg);
@@ -620,7 +620,7 @@ public class ActiveCallActivity extends Activity {
         mBtnCsToggleTactic.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         mBtnCsToggleTactic.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable togBg = new GradientDrawable();
-        togBg.setColor(0xFF1E293B);
+        togBg.setColor(0xFF141422);
         togBg.setCornerRadius(dpToPx(8));
         togBg.setStroke(dpToPx(1), 0xFF00D4FF);
         mBtnCsToggleTactic.setBackground(togBg);
@@ -647,7 +647,7 @@ public class ActiveCallActivity extends Activity {
         mBtnCsStop.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         mBtnCsStop.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable stopBg = new GradientDrawable();
-        stopBg.setColor(0xFF1E293B);
+        stopBg.setColor(0xFF141422);
         stopBg.setCornerRadius(dpToPx(8));
         stopBg.setStroke(dpToPx(1), 0xFFFF3366);
         mBtnCsStop.setBackground(stopBg);

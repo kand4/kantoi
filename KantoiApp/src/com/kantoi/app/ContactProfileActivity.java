@@ -91,9 +91,9 @@ public class ContactProfileActivity extends Activity {
         btnBack.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnBack.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable backBg = new GradientDrawable();
-        backBg.setColor(0xFF1E293B);
+        backBg.setColor(0xFF141422);
         backBg.setCornerRadius(dpToPx(6));
-        backBg.setStroke(dpToPx(1), 0xFF334155);
+        backBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         btnBack.setBackground(backBg);
         btnBack.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -118,7 +118,7 @@ public class ContactProfileActivity extends Activity {
         btnShare.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         btnShare.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable shareBg = new GradientDrawable();
-        shareBg.setColor(0xFF0F172A);
+        shareBg.setColor(0xFF0A0A0F);
         shareBg.setCornerRadius(dpToPx(6));
         shareBg.setStroke(dpToPx(1), 0xFF0284C7);
         btnShare.setBackground(shareBg);
@@ -141,7 +141,7 @@ public class ContactProfileActivity extends Activity {
             heroBorderColor = 0xFF10B981;
         }
 
-        LinearLayout heroCard = createCard(0xFF0F172A, heroBorderColor, 14);
+        LinearLayout heroCard = createCard(0xFF0A0A0F, heroBorderColor, 14);
         heroCard.setGravity(Gravity.CENTER_HORIZONTAL);
         heroCard.setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20));
 
@@ -172,7 +172,7 @@ public class ContactProfileActivity extends Activity {
             tvAvIcon.setTextColor(0xFF34D399);
             tvAvIcon.setTypeface(Typeface.DEFAULT_BOLD);
         } else {
-            avBg.setColor(0xFF1E293B);
+            avBg.setColor(0xFF141422);
             avBg.setStroke(dpToPx(3), 0xFF0284C7);
             tvAvIcon.setText("👤");
         }
@@ -265,7 +265,7 @@ public class ContactProfileActivity extends Activity {
             tvPill.setText("✓ KENALAN BUKU TELEFON (DISAHKAN SELAMAT)");
             tvPill.setTextColor(Color.WHITE);
         } else {
-            pillBg.setColor(0xFF1E293B);
+            pillBg.setColor(0xFF141422);
             pillBg.setStroke(dpToPx(1), 0xFF38BDF8);
             tvPill.setText("ℹ️ NOMBOR ASING (TIADA REKOD SCAMMER)");
             tvPill.setTextColor(0xFF38BDF8);
@@ -337,7 +337,7 @@ public class ContactProfileActivity extends Activity {
         root.addView(commRow);
 
         // 4. PDRM SemakMule CCID Intelligence & Direct Check (Elevated Prominently to Top Position)
-        LinearLayout smCardTop = createCard(0xFF0F172A, 0xFF0284C7, 12);
+        LinearLayout smCardTop = createCard(0xFF0A0A0F, 0xFF0284C7, 12);
         smCardTop.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(smCardTop, 12);
 
@@ -375,7 +375,7 @@ public class ContactProfileActivity extends Activity {
         root.addView(smCardTop);
 
         // 5. Dossier Risikan & Rekod Ancaman (Full Threat Intelligence Table)
-        LinearLayout dossierCard = createCard(0xFF0F172A, 0xFF334155, 12);
+        LinearLayout dossierCard = createCard(0xFF0A0A0F, 0xFF2A2A3A, 12);
         dossierCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(dossierCard, 14);
 
@@ -408,7 +408,7 @@ public class ContactProfileActivity extends Activity {
         root.addView(dossierCard);
 
         // 6. Matriks Risikan Siber & OSINT (WhatsApp DP CheckLeaked, Google CSE)
-        LinearLayout smCard = createCard(0xFF0F172A, 0xFF334155, 12);
+        LinearLayout smCard = createCard(0xFF0A0A0F, 0xFF2A2A3A, 12);
         smCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(smCard, 12);
 
@@ -476,7 +476,7 @@ public class ContactProfileActivity extends Activity {
         root.addView(smCard);
 
         // 6. Security Management Controls (Rakan Selamat, Scammer, Simpan Kenalan)
-        LinearLayout actionsCard = createCard(0xFF0F172A, 0xFF334155, 12);
+        LinearLayout actionsCard = createCard(0xFF0A0A0F, 0xFF2A2A3A, 12);
         actionsCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
         setMarginTop(actionsCard, 12);
 
@@ -500,7 +500,7 @@ public class ContactProfileActivity extends Activity {
             });
             actionsCard.addView(btnUpdateScam);
 
-            Button btnDeleteScam = createActionButton("🗑️ PADAM DARI REKOD SCAMMER", 0xFF334155, Color.WHITE);
+            Button btnDeleteScam = createActionButton("🗑️ PADAM DARI REKOD SCAMMER", 0xFF2A2A3A, Color.WHITE);
             updateButtonStroke(btnDeleteScam, 0xFF64748B);
             setMarginTop(btnDeleteScam, 10);
             btnDeleteScam.setOnClickListener(new View.OnClickListener() {
@@ -549,7 +549,7 @@ public class ContactProfileActivity extends Activity {
             });
             actionsCard.addView(btnUpdateSafe);
 
-            Button btnDeleteSafe = createActionButton("🗑️ PADAM DARI RAKAN SELAMAT", 0xFF334155, Color.WHITE);
+            Button btnDeleteSafe = createActionButton("🗑️ PADAM DARI RAKAN SELAMAT", 0xFF2A2A3A, Color.WHITE);
             updateButtonStroke(btnDeleteSafe, 0xFF64748B);
             setMarginTop(btnDeleteSafe, 10);
             btnDeleteSafe.setOnClickListener(new View.OnClickListener() {
@@ -611,8 +611,8 @@ public class ContactProfileActivity extends Activity {
         }
 
         // Button 3: Simpan ke Contacts
-        Button btnSave = createActionButton("👤 EKSPORT KE BUKU TELEFON ANDROID", 0xFF1E293B, Color.WHITE);
-        updateButtonStroke(btnSave, 0xFF334155);
+        Button btnSave = createActionButton("👤 EKSPORT KE BUKU TELEFON ANDROID", 0xFF141422, Color.WHITE);
+        updateButtonStroke(btnSave, 0xFF2A2A3A);
         setMarginTop(btnSave, 10);
         btnSave.setOnClickListener(new View.OnClickListener() {
             @Override

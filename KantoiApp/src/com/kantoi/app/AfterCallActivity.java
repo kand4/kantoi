@@ -88,7 +88,7 @@ public class AfterCallActivity extends Activity {
         card.setPadding(dpToPx(18), dpToPx(16), dpToPx(18), dpToPx(18));
 
         GradientDrawable cardBg = new GradientDrawable();
-        cardBg.setColor(0xFF0F172A); // Slate 900
+        cardBg.setColor(0xFF0A0A0F); // Slate 900
         cardBg.setCornerRadius(dpToPx(16));
         cardBg.setStroke(dpToPx(2), mThreat != null ? 0xFFEF4444 : (mIsSafeContact ? 0xFF10B981 : 0xFF0284C7));
         card.setBackground(cardBg);
@@ -113,7 +113,7 @@ public class AfterCallActivity extends Activity {
         btnCloseX.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         btnCloseX.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable closeBg = new GradientDrawable();
-        closeBg.setColor(0xFF1E293B);
+        closeBg.setColor(0xFF141422); closeBg.setStroke(dpToPx(1), 0xFF2A2A3A);
         closeBg.setCornerRadius(dpToPx(16));
         closeBg.setStroke(dpToPx(1), 0xFF334155);
         btnCloseX.setBackground(closeBg);
@@ -157,7 +157,7 @@ public class AfterCallActivity extends Activity {
             tvAvIcon.setTextColor(0xFF34D399);
             tvAvIcon.setTypeface(Typeface.DEFAULT_BOLD);
         } else {
-            avBg.setColor(0xFF1E293B);
+            avBg.setColor(0xFF141422);
             avBg.setStroke(dpToPx(2), 0xFF0284C7);
             tvAvIcon.setText("👤");
         }
@@ -220,7 +220,7 @@ public class AfterCallActivity extends Activity {
             tvBoxText.setText("✓ Panggilan selamat daripada kenalan buku telefon anda.");
             tvBoxText.setTextColor(0xFFD1FAE5);
         } else {
-            boxBg.setColor(0xFF1E293B);
+            boxBg.setColor(0xFF141422); boxBg.setStroke(dpToPx(1), 0xFF2A2A3A);
             boxBg.setStroke(dpToPx(1), 0xFF334155);
             tvBoxText.setText("ℹ️ Nombor tiada dalam pangkalan data. Jika ada transaksi mencurigakan, buat semakan di SemakMule atau Google CSE di bawah.");
             tvBoxText.setTextColor(0xFFE2E8F0);
@@ -356,7 +356,7 @@ public class AfterCallActivity extends Activity {
         btnDone.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         btnDone.setTypeface(Typeface.DEFAULT_BOLD);
         GradientDrawable doneBg = new GradientDrawable();
-        doneBg.setColor(0xFF1E293B);
+        doneBg.setColor(0xFF141422); doneBg.setStroke(dpToPx(1), 0xFF00D4FF);
         doneBg.setCornerRadius(dpToPx(12));
         doneBg.setStroke(dpToPx(1), 0xFF475569);
         btnDone.setBackground(doneBg);

@@ -372,7 +372,7 @@ public class IncomingCallActivity extends Activity {
             threatCard.addView(tvSafeDesc);
 
         } else {
-            cardBg.setColor(0xFF0F172A);
+            cardBg.setColor(0xFF0A0A0F);
             cardBg.setStroke(dpToPx(1), 0xFF0284C7);
             threatCard.setBackground(cardBg);
 
@@ -466,7 +466,7 @@ public class IncomingCallActivity extends Activity {
             tvAvatarIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 44);
             tvAvatarIcon.setTypeface(Typeface.DEFAULT_BOLD);
         } else {
-            coreBg.setColor(0xFF1E293B);
+            coreBg.setColor(0xFF141422);
             coreBg.setStroke(dpToPx(3), 0xFF0284C7);
             tvAvatarIcon.setText("👤");
             tvAvatarIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 44);
@@ -730,7 +730,7 @@ public class IncomingCallActivity extends Activity {
             bg.setColor(0xFF0284C7);
             bg.setStroke(dpToPx(1), 0xFF38BDF8);
         } else {
-            bg.setColor(0xFF1E293B);
+            bg.setColor(0xFF141422);
             bg.setStroke(dpToPx(1), 0xFF334155);
         }
         btn.setBackground(bg);
