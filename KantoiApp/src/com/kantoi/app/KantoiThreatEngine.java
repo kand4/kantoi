@@ -5829,9 +5829,9 @@ public class KantoiThreatEngine {
         if (digits.length() < 3) return false;
         String norm = normalizeToLocal(rawNumber);
 
-        // Jangan anggap selamat jika nombor ini adalah Inbound Hotline yang dispoof atau Sasaran Ujian Simulasi
+        // Jangan anggap selamat jika nombor ini adalah ancaman (cth: disenaraihitam, dispoof, atau sasaran ujian)
         ScammerThreat threat = checkThreat(rawNumber);
-        if (threat != null && ("TEST_SIMULATION".equals(threat.riskTag) || "SPOOFED_INBOUND_HOTLINE".equals(threat.riskTag))) {
+        if (threat != null) {
             return false;
         }
 
@@ -5853,7 +5853,7 @@ public class KantoiThreatEngine {
         String norm = normalizeToLocal(rawNumber);
 
         ScammerThreat threat = checkThreat(rawNumber);
-        if (threat != null && ("TEST_SIMULATION".equals(threat.riskTag) || "SPOOFED_INBOUND_HOTLINE".equals(threat.riskTag))) {
+        if (threat != null) {
             return false;
         }
 

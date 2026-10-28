@@ -2766,6 +2766,18 @@ public class MainActivity extends Activity {
         });
         card.addView(btnAutoAnswer);
 
+        // Butang Ujian Audio Amaran Siber & Siren
+        final Button btnTestAudio = createButton("🔊 UJI AMARAN AUDIO SEKARANG (TEST SOUND)", 0xFF141422, 0xFF00FF88);
+        setMarginTop(btnTestAudio, 8);
+        btnTestAudio.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(MainActivity.this, "Memainkan ujian siren & amaran siber PDRM...", Toast.LENGTH_SHORT).show();
+                csEngine.testAudioWarning(MainActivity.this);
+            }
+        });
+        card.addView(btnTestAudio);
+
         // ==========================================
         // 🧪 MOD UJIAN SIMULASI (SANDBOX NOMBOR KAWAN)
         // ==========================================
