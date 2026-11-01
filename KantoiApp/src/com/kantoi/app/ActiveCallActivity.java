@@ -633,22 +633,17 @@ public class ActiveCallActivity extends Activity {
                 KantoiCounterStrikeEngine eng = KantoiCounterStrikeEngine.getInstance(ActiveCallActivity.this);
                 int currentMode = eng.getMode();
                 int nextMode;
-                if (currentMode == KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM) {
-                    nextMode = KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC;
-                } else if (currentMode == KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC) {
-                    nextMode = KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT;
-                } else {
-                    nextMode = KantoiCounterStrikeEngine.MODE_TACTIC_A_PDRM;
-                }
+                nextMode = (currentMode == KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC)
+                        ? KantoiCounterStrikeEngine.MODE_TACTIC_C_SILENT
+                        : KantoiCounterStrikeEngine.MODE_TACTIC_B_ACOUSTIC;
                 eng.setMode(nextMode);
-                eng.stopTts();
                 startCounterStrikeExecution(cleanLocal);
             }
         });
         ctrlRow.addView(mBtnCsToggleTactic);
 
         mBtnCsStop = new Button(this);
-        mBtnCsStop.setText("⏹️ HENTIKAN SUARA");
+        mBtnCsStop.setText("⏹️ HENTIKAN NADA");
         mBtnCsStop.setTextColor(0xFFFF3366);
         mBtnCsStop.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         mBtnCsStop.setTypeface(Typeface.DEFAULT_BOLD);
@@ -664,7 +659,7 @@ public class ActiveCallActivity extends Activity {
             public void onClick(View v) {
                 KantoiCounterStrikeEngine.getInstance(ActiveCallActivity.this).stopTts();
                 if (mTvCsSpeech != null) {
-                    mTvCsSpeech.setText("⏹️ Suara dihentikan. Mikrofon kini terus ke pemanggil.");
+                    mTvCsSpeech.setText("⏹️ Tindak balas dihentikan. Mikrofon kini terus ke pemanggil.");
                 }
             }
         });

@@ -1,7 +1,7 @@
 # 🛡️ KANTOI: Sistem Pertahanan Siber, Pengenal Pemanggil & Anti-Trojan Android
 
 <p align="center">
-  <a href="https://github.com/kand4/kantoi/releases/latest"><img src="https://img.shields.io/badge/📥_Muat_Turun_APK-v1.16.0_Release-success?style=for-the-badge&logo=android&logoColor=white" height="36"/></a>
+  <a href="https://github.com/kand4/kantoi/releases/latest"><img src="https://img.shields.io/badge/📥_Muat_Turun_APK-v1.16.1_Release-success?style=for-the-badge&logo=android&logoColor=white" height="36"/></a>
   &nbsp;&nbsp;
   <a href="https://t.me/crowdcaller"><img src="https://img.shields.io/badge/💬_Saluran_Telegram-@crowdcaller-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" height="36"/></a>
   &nbsp;&nbsp;
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kand4/kantoi/releases"><img src="https://img.shields.io/badge/Versi-v1.16.0-cyan?style=flat-square&logo=android" /></a>
+  <a href="https://github.com/kand4/kantoi/releases"><img src="https://img.shields.io/badge/Versi-v1.16.1-cyan?style=flat-square&logo=android" /></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-8.0_hingga_12L_(API_26--32)-sky?style=flat-square&logo=android" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/Lesen-GPL--3.0-blue?style=flat-square" /></a>
 </p>
@@ -22,7 +22,7 @@
 
 ### 1. 📞 Pengenal Pemanggil & Penapis Spam Masa Nyata (Real-Time Caller ID)
 
-### 0. ⚡ Perisai Anti-Spoofing Hotline Inbound-Only & Matriks Counter-Strike (v1.16.0)
+### 0. ⚡ Perisai Anti-Spoofing Hotline Inbound-Only & Matriks Counter-Strike (v1.16.1)
 - **Perisai Anti-Spoofing Hotline Rasmi:** Pangkalan data luar talian mengandungi 39 nombor talian rasmi PDRM Bukit Aman (`03-22662222`), NSRC (`997`), SKMM, LHDN, Mahkamah Persekutuan, serta bank-bank utama (Maybank, CIMB, Public Bank, RHB, HLB, dll). Sebarang panggilan masuk daripada nombor ini dikesan sebagai **100% Panggilan Palsu / Spoofed** kerana agensi rasmi tidak pernah membuat panggilan keluar menggunakan talian khidmat pelanggan.
 - **Matriks Counter-Strike Siber Hibrid & Rawak (Taktik A, B, C):**
   - **Taktik A (PDRM Audio Shock Trap):** Siren amaran polis & mesej audio rasmi Jenayah Siber Seksyen 420 Kanun Keseksaan untuk mengejutkan dan menakut-nakutkan scammer.
@@ -127,7 +127,7 @@ Projek ini menyokong kompilasi berdiri sendiri (*standalone automated build pipe
    ```
 3. Fail APK yang telah siap ditandatangani akan dijana di direktori utama:
    ```
-   Kantoi_v1.16.0_Release_signed.apk
+   Kantoi_v1.16.1_Release_signed.apk
    ```
 
 ---

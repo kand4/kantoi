@@ -4,11 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.speech.tts.TextToSpeech;
-import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -19,15 +16,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Random;
 
 /**
- * KantoiCounterStrikeEngine:
- * Enjin Tindak Balas Hibrid & Pertahanan Siber terhadap Scammer & Panggilan Spoofed:
- * - Taktik A: PDRM Psychological Cyber Trap (Siren & Amaran Rasmi Siber PDRM Seksyen 420)
- * - Taktik B: Siren Frekuensi Tinggi Pemutus Talian (Acoustic Eardrum Disruption untuk Scammer ber-headset)
- * - Taktik C: Silent Forensic Telemetry Relay (Ekstrak & Simpan Log Bukti Digital Masa Nyata)
- * - Mod Ujian Simulasi (Sandbox): Ujian selamat menggunakan nombor rakan
+ * KantoiCounterStrikeEngine (v1.16.1):
+ * Enjin Tindak Balas & Pertahanan Siber Bersih:
+ * - Taktik 1 (MODE_TACTIC_B_ACOUSTIC): Letusan Nada DTMF Rangkaian (Call.playDtmfTone) yang sampai
+ *   terus ke fon telinga scammer melalui modem telco tanpa sekatan pembatal gema (AEC).
+ * - Taktik 2 (MODE_TACTIC_C_SILENT): Telemetri Forensik Senyap (100% rakaman cap jari digital & draf laporan rasmi).
+ * - Mod Ujian Simulasi (Sandbox): Ujian pemintasan nombor rakan secara selamat.
  */
 public class KantoiCounterStrikeEngine {
     private static final String TAG = "KantoiCounterStrike";
@@ -40,23 +36,20 @@ public class KantoiCounterStrikeEngine {
     public static final String KEY_TELEMETRY_LOGS = "cs_telemetry_logs";
     public static final String KEY_ZERO_RING_BLOCK = "cs_zero_ring_block";
 
-    public static final int MODE_HYBRID_RANDOM = 0;   // Hibrid Pintar (Taktik A & B)
-    public static final int MODE_TACTIC_A_PDRM = 1;    // Taktik A: Amaran Rasmi Siber PDRM & Siren (Disyorkan)
-    public static final int MODE_TACTIC_B_ACOUSTIC = 2;// Taktik B: Siren Frekuensi Tinggi Pemutus Talian
-    public static final int MODE_TACTIC_C_SILENT = 3;  // Taktik C: Senyap & Rekod Forensik
+    // Mod Taktikal Standard (v1.16.1)
+    public static final int MODE_HYBRID_RANDOM = 0;    // Lalai: DTMF Acoustic Disruption
+    public static final int MODE_TACTIC_A_PDRM = 1;     // Dialias ke Taktik B (DTMF) untuk keserasian tetapan lama
+    public static final int MODE_TACTIC_B_ACOUSTIC = 2; // Taktik Utama: Letusan Nada DTMF Pemutus Talian
+    public static final int MODE_TACTIC_C_SILENT = 3;   // Taktik Senyap: Telemetri Forensik & Rekod Senyap
 
-    // Backward-compatibility alias
+    // Alias keserasian
     public static final int MODE_TACTIC_B_HONEYPOT = MODE_TACTIC_B_ACOUSTIC;
 
     private static volatile KantoiCounterStrikeEngine sInstance;
     private final Context mContext;
     private final SharedPreferences mPrefs;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private final Random mRandom = new Random();
 
-    private TextToSpeech mTts;
-    private boolean mTtsReady = false;
-    private boolean mIsSpeaking = false;
     private CounterStrikeListener mActiveListener = null;
 
     public interface CounterStrikeListener {
@@ -77,7 +70,6 @@ public class KantoiCounterStrikeEngine {
     private KantoiCounterStrikeEngine(Context context) {
         mContext = context.getApplicationContext();
         mPrefs = mContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        initTts();
     }
 
     public static KantoiCounterStrikeEngine getInstance(Context context) {
@@ -91,65 +83,6 @@ public class KantoiCounterStrikeEngine {
         return sInstance;
     }
 
-    private void initTts() {
-        try {
-            mTts = new TextToSpeech(mContext, new TextToSpeech.OnInitListener() {
-                @Override
-                public void onInit(int status) {
-                    if (status == TextToSpeech.SUCCESS && mTts != null) {
-                        try {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                                android.media.AudioAttributes aa = new android.media.AudioAttributes.Builder()
-                                        .setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
-                                        .build();
-                                mTts.setAudioAttributes(aa);
-                            }
-                        } catch (Throwable ignored) {}
-
-                        int res = mTts.setLanguage(new Locale("ms", "MY"));
-                        if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
-                            res = mTts.setLanguage(new Locale("ms"));
-                            if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
-                                res = mTts.setLanguage(new Locale("in", "ID"));
-                                if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
-                                    res = mTts.setLanguage(Locale.getDefault());
-                                    if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
-                                        mTts.setLanguage(Locale.US);
-                                    }
-                                }
-                            }
-                        }
-                        mTts.setPitch(0.92f);      // Nada autoriti, tegas, dan dalam
-                        mTts.setSpeechRate(0.85f); // Kelajuan teratur & jelas supaya perkataan tidak terpotong
-                        mTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                            @Override
-                            public void onStart(String utteranceId) {
-                                mIsSpeaking = true;
-                            }
-
-                            @Override
-                            public void onDone(String utteranceId) {
-                                mIsSpeaking = false;
-                            }
-
-                            @Override
-                            public void onError(String utteranceId) {
-                                mIsSpeaking = false;
-                            }
-                        });
-                        mTtsReady = true;
-                        Log.i(TAG, "TextToSpeech initialized successfully for Counter-Strike.");
-                    } else {
-                        Log.w(TAG, "TextToSpeech init failed with status: " + status);
-                    }
-                }
-            });
-        } catch (Throwable t) {
-            Log.e(TAG, "Error initializing TextToSpeech: " + t.getMessage(), t);
-        }
-    }
-
     public boolean isEnabled() {
         return mPrefs.getBoolean(KEY_ENABLED, true);
     }
@@ -159,14 +92,16 @@ public class KantoiCounterStrikeEngine {
     }
 
     public int getMode() {
-        return mPrefs.getInt(KEY_MODE, MODE_TACTIC_A_PDRM);
+        int m = mPrefs.getInt(KEY_MODE, MODE_TACTIC_B_ACOUSTIC);
+        if (m == MODE_TACTIC_C_SILENT) return MODE_TACTIC_C_SILENT;
+        return MODE_TACTIC_B_ACOUSTIC;
     }
 
     public void setMode(int mode) {
         mPrefs.edit().putInt(KEY_MODE, mode).apply();
     }
 
-    // Deprecated Persona methods maintained as stubs for backward-compatibility
+    // Deprecated Persona methods (stubs keserasian)
     public int getPersona() { return 0; }
     public void setPersona(int persona) {}
     public String getPersonaName(int persona) { return "Mod Rasmi Siber"; }
@@ -178,8 +113,6 @@ public class KantoiCounterStrikeEngine {
     public void setZeroRingBlockEnabled(boolean enabled) {
         mPrefs.edit().putBoolean(KEY_ZERO_RING_BLOCK, enabled).apply();
     }
-
-
 
     public boolean isAutoAnswerEnabled() {
         return mPrefs.getBoolean(KEY_AUTO_ANSWER, false);
@@ -206,7 +139,7 @@ public class KantoiCounterStrikeEngine {
         boolean saved = engine.saveThreatLocal(
                 local,
                 "🧪 SASARAN UJIAN SIMULASI (RAKAN)",
-                "Ujian simulasi fungsi Counter-Strike KANTOI. Nombor ini dipintas khas untuk menguji Taktik A, B, dan C.",
+                "Ujian simulasi fungsi Counter-Strike KANTOI. Nombor ini dipintas khas untuk menguji sistem amaran & telemetri.",
                 "TEST_SIMULATION",
                 0,
                 1
@@ -241,49 +174,21 @@ public class KantoiCounterStrikeEngine {
     }
 
     /**
-     * Tentukan taktik mana yang akan dilancarkan berdasarkan tetapan dan jenis ancaman.
+     * Tentukan taktik yang akan dilancarkan.
      */
     public int resolveTacticForThreat(KantoiThreatEngine.ScammerThreat threat) {
         int configuredMode = getMode();
-        if (configuredMode == MODE_TACTIC_A_PDRM) return MODE_TACTIC_A_PDRM;
-        if (configuredMode == MODE_TACTIC_B_ACOUSTIC) return MODE_TACTIC_B_ACOUSTIC;
-        if (configuredMode == MODE_TACTIC_C_SILENT) return MODE_TACTIC_C_SILENT;
-
-        // MODE_HYBRID_RANDOM (80% Taktik A Amaran Rasmi, 20% Taktik B Pemutus Talian)
-        if (threat != null) {
-            if ("SPOOFED_INBOUND_HOTLINE".equals(threat.riskTag)) {
-                return MODE_TACTIC_A_PDRM; // Hotline dispoof sentiasa dikenakan Taktik A
-            }
-            return (mRandom.nextInt(100) < 75) ? MODE_TACTIC_A_PDRM : MODE_TACTIC_B_ACOUSTIC;
+        if (configuredMode == MODE_TACTIC_C_SILENT) {
+            return MODE_TACTIC_C_SILENT;
         }
-        return MODE_TACTIC_A_PDRM;
+        return MODE_TACTIC_B_ACOUSTIC;
     }
 
     /**
-     * KUNCI AUDIO UTAMA:
-     * Menghidupkan pembesar suara telefon (Speakerphone) dan menetapkan kelantangan MAKSIMUM.
-     * Ini membolehkan isyarat audio TTS & Siren memancar keluar dari corong pembesar suara
-     * dan ditangkap secara terus oleh mikrofon peranti untuk disalurkan ke talian pemanggil (scammer).
+     * Kaedah penyediaan audio (dikekalkan untuk keserasian panggilan).
      */
     public void prepareAudioForBroadcast() {
-        try {
-            // 1. Arahkan servis panggilan rasmi (InCallService) ke SPEAKER jika ada panggilan aktif
-            KantoiInCallService.setSpeaker(true);
-
-            // 2. Maksimumkan volum media (STREAM_MUSIC) dan panggilan supaya amaran lantang kedengaran
-            AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
-            if (am != null) {
-                int maxMusic = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-                am.setStreamVolume(AudioManager.STREAM_MUSIC, maxMusic, 0);
-
-                int maxVoice = am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL);
-                am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVoice, 0);
-
-                am.setSpeakerphoneOn(true);
-            }
-        } catch (Throwable t) {
-            Log.e(TAG, "prepareAudioForBroadcast error: " + t.getMessage());
-        }
+        // Diringkaskan: Tiada pengalihan paksa speakerphone yang mengganggu pengguna.
     }
 
     /**
@@ -304,57 +209,25 @@ public class KantoiCounterStrikeEngine {
         }
 
         if (tactic == MODE_TACTIC_C_SILENT) {
-            if (listener != null) listener.onTacticFinished();
+            if (listener != null) {
+                listener.onSpeechSpoken("📡 Mod Senyap Aktif: Rakaman telemetri forensik direkodkan.", 1, 1);
+                listener.onTacticFinished();
+            }
             return;
         }
 
-        // Pastikan laluan audio bersedia ke speaker sebelum memainkan sebarang bunyi
-        prepareAudioForBroadcast();
-
-        if (tactic == MODE_TACTIC_A_PDRM) {
-            executeTacticA_PdrmTrap(listener);
-        } else if (tactic == MODE_TACTIC_B_ACOUSTIC) {
-            executeTacticB_AcousticDisruption(listener);
-        }
-    }
-
-    private void executeTacticA_PdrmTrap(final CounterStrikeListener listener) {
-        // 1. Siren permulaan (DTMF Telco Burst + Loud Siren)
-        playRadarToneSequence();
-
-        final String warningScript =
-                "PERHATIAN: Panggilan ini telah dipintas oleh sistem pertahanan siber KANTOI. " +
-                "Nombor ini disahkan memalsukan identiti rasmi dan berada dalam senarai hitam penipuan siber. " +
-                "Rakaman audio dan telemetri pemanggil kini sedang disalurkan terus kepada Bahagian Siasatan Jenayah Siber JSJK PDRM " +
-                "di bawah Seksyen 420 Kanun Keseksaan. Talian anda kini sedang dijejak dan disekat.";
-
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                speakText(warningScript, 1, 1, new Runnable() {
-                    @Override
-                    public void run() {
-                        playRadarToneSequence();
-                        if (listener != null) listener.onTacticFinished();
-                    }
-                });
-                if (listener != null) {
-                    listener.onSpeechSpoken(warningScript, 1, 1);
-                }
-            }
-        }, 1200);
+        // Taktik B: Letusan Nada DTMF Berterusan (Acoustic Disruption)
+        executeTacticB_AcousticDisruption(listener);
     }
 
     /**
-     * Taktik B: Siren Frekuensi Tinggi Pemutus Talian.
-     * Menggantikan watak Atuk/Nenek yang robotik dengan siri letusan nada frekuensi tinggi
-     * (DTMF rangkaian + Dual-Tone Siren) yang menembusi fon kepala (headset) scammer,
-     * memaksa mereka menanggalkan headset dan memutuskan panggilan dengan serta-merta.
+     * Taktik B: Letusan Nada DTMF Rangkaian Pemutus Talian.
+     * Menggunakan API Telecom rasmi (Call.playDtmfTone) yang dihantar terus melalui
+     * modem dan isyarat rangkaian telco ke fon telinga scammer, tanpa disekat oleh
+     * pembatal gema peranti (AEC).
      */
     private void executeTacticB_AcousticDisruption(final CounterStrikeListener listener) {
-        prepareAudioForBroadcast();
-
-        final String statusMsg = "⚡ MEMANJANGKAN SIREN FREKUENSI TINGGI (GANGGUAN FON KEPALA SCAMMER)...";
+        final String statusMsg = "⚡ MEMANJANGKAN NADA DTMF TELCO KE FON KEPALA SCAMMER...";
         if (listener != null) {
             listener.onSpeechSpoken(statusMsg, 1, 1);
         }
@@ -362,25 +235,15 @@ public class KantoiCounterStrikeEngine {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                ToneGenerator toneGen = null;
                 try {
-                    toneGen = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
-                    char[] dtmfSequence = new char[]{'1', '9', '#', '0', '*'};
-                    for (int i = 0; i < 5; i++) {
-                        // Letuskan nada DTMF terus ke suis telekomunikasi jika dalam talian
-                        KantoiInCallService.playDtmfToneBurst(dtmfSequence[i % dtmfSequence.length], 200);
-                        toneGen.startTone(ToneGenerator.TONE_DTMF_D, 220);
-                        Thread.sleep(260);
-                        toneGen.startTone(ToneGenerator.TONE_SUP_RINGTONE, 220);
-                        Thread.sleep(260);
+                    // Siri nada DTMF frekuensi tinggi yang menusuk pendengaran pemanggil
+                    char[] dtmfSequence = new char[]{'9', '1', '#', '0', '*', '7', '4', '#'};
+                    for (int i = 0; i < dtmfSequence.length; i++) {
+                        KantoiInCallService.playDtmfToneBurst(dtmfSequence[i], 250);
+                        Thread.sleep(350);
                     }
                 } catch (Throwable ignored) {
                 } finally {
-                    if (toneGen != null) {
-                        try {
-                            toneGen.release();
-                        } catch (Throwable ignored) {}
-                    }
                     mHandler.post(new Runnable() {
                         @Override
                         public void run() {
@@ -392,118 +255,39 @@ public class KantoiCounterStrikeEngine {
         }).start();
     }
 
-    private void speakText(final String text, final int seq, final int total, final Runnable onDone) {
-        prepareAudioForBroadcast();
-
-        if (mTts == null) {
-            initTts();
-        }
-
-        if (!mTtsReady) {
-            Log.w(TAG, "TTS not ready yet, queuing speech retry...");
-            mHandler.postDelayed(new Runnable() {
-                private int retry = 0;
-                @Override
-                public void run() {
-                    if (mTtsReady && mTts != null) {
-                        doSpeak(text, onDone);
-                    } else if (retry < 6) {
-                        retry++;
-                        mHandler.postDelayed(this, 350);
-                    } else {
-                        Log.e(TAG, "TTS timed out, playing fallback siren...");
-                        playRadarToneSequence();
-                        if (onDone != null) onDone.run();
-                    }
-                }
-            }, 300);
-            return;
-        }
-
-        doSpeak(text, onDone);
-    }
-
-    private void doSpeak(String text, final Runnable onDone) {
-        prepareAudioForBroadcast();
-        if (mTts != null) {
-            try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                    Bundle params = new Bundle();
-                    params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f);
-                    mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "cs_pdrm_" + System.currentTimeMillis());
-                } else {
-                    java.util.HashMap<String, String> params = new java.util.HashMap<String, String>();
-                    params.put(TextToSpeech.Engine.KEY_PARAM_VOLUME, "1.0");
-                    mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params);
-                }
-            } catch (Throwable t) {
-                Log.e(TAG, "TTS speak error: " + t.getMessage(), t);
-            }
-        }
-
-        long duration = Math.max(3500L, (long) (text.length() * 80L));
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (onDone != null) onDone.run();
-            }
-        }, duration);
-    }
-
-    private void playRadarToneSequence() {
-        prepareAudioForBroadcast();
-
+    /**
+     * Ujian nada amaran setempat (simulasi DTMF melalui pembesar suara peranti untuk pengguna semak).
+     */
+    public void testAudioWarning(final Context context) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 ToneGenerator toneGen = null;
                 try {
-                    // Letuskan isyarat nada DTMF terus ke talian telco jika dalam panggilan
-                    KantoiInCallService.playDtmfToneBurst('*', 250);
-
-                    toneGen = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
-                    for (int i = 0; i < 3; i++) {
-                        toneGen.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 180);
-                        Thread.sleep(280);
+                    toneGen = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
+                    int[] tones = {ToneGenerator.TONE_DTMF_9, ToneGenerator.TONE_DTMF_1, ToneGenerator.TONE_DTMF_P, ToneGenerator.TONE_DTMF_0};
+                    for (int t : tones) {
+                        toneGen.startTone(t, 220);
+                        Thread.sleep(300);
                     }
-                    toneGen.startTone(ToneGenerator.TONE_PROP_PROMPT, 450);
-                    Thread.sleep(500);
                 } catch (Throwable ignored) {
                 } finally {
                     if (toneGen != null) {
-                        try {
-                            toneGen.release();
-                        } catch (Throwable ignored) {}
+                        try { toneGen.release(); } catch (Throwable ignored) {}
                     }
                 }
             }
         }).start();
     }
 
-    public void testAudioWarning(final Context context) {
-        prepareAudioForBroadcast();
-        playRadarToneSequence();
-
-        final String testScript = "Perhatian: Ini adalah ujian sistem amaran siber KANTOI. Siren frekuensi dan sistem audio bersedia sepenuhnya.";
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                speakText(testScript, 1, 1, new Runnable() {
-                    @Override
-                    public void run() {
-                        playRadarToneSequence();
-                    }
-                });
-            }
-        }, 1200);
-    }
-
     public String getTacticName(int tactic) {
         switch (tactic) {
-            case MODE_TACTIC_A_PDRM: return "🚨 Taktik A: Amaran Rasmi Siber PDRM";
-            case MODE_TACTIC_B_ACOUSTIC: return "🔊 Taktik B: Siren Pemutus Talian";
-            case MODE_TACTIC_C_SILENT: return "📡 Taktik C: Telemetri Senyap";
-            default: return "🎲 Hibrid Pintar (Taktik A & B)";
+            case MODE_TACTIC_C_SILENT:
+                return "📡 Taktik 2: Telemetri Forensik Senyap";
+            case MODE_TACTIC_B_ACOUSTIC:
+            case MODE_TACTIC_A_PDRM:
+            default:
+                return "🔊 Taktik 1: Letusan Nada DTMF Pemutus Talian";
         }
     }
 
@@ -574,11 +358,6 @@ public class KantoiCounterStrikeEngine {
     }
 
     public void stopTts() {
-        if (mTts != null) {
-            try {
-                mTts.stop();
-            } catch (Throwable ignored) {}
-        }
-        mIsSpeaking = false;
+        // Safe stub
     }
 }
