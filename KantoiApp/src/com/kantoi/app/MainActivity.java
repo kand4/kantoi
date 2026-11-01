@@ -2729,12 +2729,12 @@ public class MainActivity extends Activity {
         card.addView(tvZeroHint);
 
         // 2. Butang Ujian Bunyi Amaran & Siren Terus
-        final Button btnTestAudio = createButton("🔊 UJI AMARAN AUDIO LOKAL (TEST SOUND)", 0xFF141422, 0xFF00FF88);
+        final Button btnTestAudio = createButton("🔊 UJI NADA DTMF PINTASAN (TEST DTMF)", 0xFF141422, 0xFF00FF88);
         setMarginTop(btnTestAudio, 4);
         btnTestAudio.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(MainActivity.this, "Memainkan ujian siren & amaran siber PDRM...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Memainkan simulasi letusan nada DTMF pemutus talian...", Toast.LENGTH_SHORT).show();
                 csEngine.testAudioWarning(MainActivity.this);
             }
         });

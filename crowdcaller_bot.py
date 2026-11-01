@@ -3590,6 +3590,79 @@ def answer_callback(callback_query_id, text, alert=False):
         "show_alert": alert
     })
 
+# ==============================================================================
+# MODUL PENGESAHAN KEAHLIAN SALURAN (FORCE SUBSCRIBE: @kantoiradar)
+# ==============================================================================
+SUBSCRIBED_USERS_CACHE = {}
+CACHE_TTL_SECONDS = 300  # 5 minit cache untuk kelajuan dan mengelakkan Telegram Rate Limits
+
+def is_user_subscribed_to_channel(user_id):
+    """
+    Menyemak sama ada pengguna telah menyertai saluran rasmi @kantoiradar.
+    - Admin KANTOI sentiasa dikecualikan (Bypass automatik).
+    - Cache 5 minit digunakan untuk kelajuan respon maksimum.
+    - Menggunakan prinsip fail-open jika berlaku ralat sambungan luar.
+    """
+    if not user_id:
+        return True
+
+    # 1. Pengecualian khas untuk Admin KANTOI
+    if user_id in get_admin_ids():
+        return True
+
+    # 2. Semak Cache
+    now = time.time()
+    last_verified = SUBSCRIBED_USERS_CACHE.get(user_id)
+    if last_verified and (now - last_verified < CACHE_TTL_SECONDS):
+        return True
+
+    # 3. Panggil Telegram Bot API getChatMember
+    try:
+        res = api_call("getChatMember", {
+            "chat_id": CHANNEL_ID,
+            "user_id": user_id
+        })
+        if res and res.get("ok"):
+            status = res["result"].get("status")
+            if status in ["creator", "administrator", "member", "restricted"]:
+                SUBSCRIBED_USERS_CACHE[user_id] = now
+                return True
+            else:
+                SUBSCRIBED_USERS_CACHE.pop(user_id, None)
+                return False
+        else:
+            err_desc = (res.get("description") or "").lower() if res else ""
+            if any(k in err_desc for k in ["user not found", "not a member", "chat not found", "user_not_participant"]):
+                SUBSCRIBED_USERS_CACHE.pop(user_id, None)
+                return False
+            # Fail-open untuk sebarang isu teknikal Telegram sementara
+            return True
+    except Exception as e:
+        print(f"[FORCE_SUB_ERR] Gagal menyemak keahlian pengguna {user_id}: {e}")
+        return True
+
+def get_force_sub_prompt():
+    """
+    Menjana teks amaran pintu masuk dan papan kekunci sertai saluran @kantoiradar.
+    """
+    text = (
+        "📢 <b>AKSES TERHAD: SILA SERTAI SALURAN KANTOI RADAR</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Untuk menggunakan <b>Bot Risikan KANTOI (@crowdcallerbot)</b> bagi menyemak nombor scammer, mengimbas kod QR DuitNow, menganalisis fail APK, atau membuat aduan keselamatan, anda <b>diwajibkan menyertai saluran rasmi kami terlebih dahulu</b>.\n\n"
+        "Dengan menyertai saluran, anda akan menerima makluman amaran sindiket penipuan siber terkini secara masa nyata bagi melindungi diri dan keluarga!\n\n"
+        "👇 <b>Langkah Pantas Pengaktifan:</b>\n"
+        "1. Klik butang <b>'📢 Sertai Saluran @kantoiradar'</b> di bawah.\n"
+        "2. Tekan <b>'Join Channel'</b> di Telegram.\n"
+        "3. Kembali ke sini dan klik <b>'🔄 Saya Sudah Sertai (Sahkan)'</b>."
+    )
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": "📢 Sertai Saluran @kantoiradar", "url": "https://t.me/kantoiradar"}],
+            [{"text": "🔄 Saya Sudah Sertai (Sahkan)", "callback_data": "check_sub"}]
+        ]
+    }
+    return text, keyboard
+
 def render_progress_bar(percent, stage_title, detail=""):
     """
     Menjana reka bentuk indikator kemajuan (HUD) canggih 0% -> 100% untuk Telegram.
@@ -3782,7 +3855,7 @@ def format_channel_approved_post(rep, admin_username):
         "━━━━━━━━━━━━━━━━━━━━━━━━━━",
         f"🛡️ <b>STATUS:</b> 🚨 <b>SAH SEBAGAI ANCAMAN PENIPUAN (DILULUSKAN MOD)</b>",
         f"🆔 <b>Rujukan Kes:</b> <code>{html.escape(str(rep_id))}</code>",
-        f"👤 <b>Disahkan Oleh:</b> @{html.escape(str(reviewed_by))} (Pentadbir Saluran)",
+        "🛡️ <b>Pengesahan:</b> Disahkan Oleh Pentadbir KANTOI",
         ""
     ]
     
@@ -3886,22 +3959,16 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
                     "parse_mode": "HTML"
                 })
             else:
-                # Jika laporan terperinci melebihi 1024 aksara:
-                # Hantar foto dengan tajuk ringkas bukti, disusuli mesej teks laporan penuh tanpa potongan!
-                short_caption = (
-                    f"🚨 <b>AMARAN RASMI KANTOI RADAR (Ref: <code>{html.escape(str(rep_id))}</code>)</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"📱 <b>Sasaran:</b> <code>{html.escape(str(phone_norm))}</code>\n"
-                    f"👤 <b>Modus:</b> {html.escape(str(suspect_name)[:80])}\n"
-                    f"📸 <i>Bukti tangkapan layar dilampirkan. Sila rujuk laporan dan keterangan kes penuh di bawah:</i>"
-                )
+                # Jika laporan terperinci melebihi had 1024 aksara:
+                # Pos 1: Hantar foto dengan label lampiran bukti kemas tanpa menduplikasi tajuk & modus amaran
+                evidence_caption = f"📸 <b>Lampiran Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
                 api_call("sendPhoto", {
                     "chat_id": CHANNEL_ID,
                     "photo": photo_id,
-                    "caption": short_caption,
+                    "caption": evidence_caption,
                     "parse_mode": "HTML"
                 })
-                # Hantar teks penuh (sehingga 4096 aksara)
+                # Pos 2: Hantar teks laporan penuh (sehingga 4096 aksara) tanpa duplikasi tajuk berulang
                 if len(channel_post) <= 4096:
                     api_call("sendMessage", {
                         "chat_id": CHANNEL_ID,
@@ -4074,7 +4141,7 @@ def handle_admin_batch_decision(action, batch_id, admin_chat_id, admin_username,
         post_text = (
             f"🚨 <b>KEMASKINI PUKAL SCAMMER BAHARU ({inserted_count} NOMBOR DILULUSKAN)</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"Laporan pukal komuniti disahkan oleh Admin @{admin_username} (Ref: <code>{batch_id}</code>):\n\n"
+            f"Laporan pukal komuniti disahkan oleh Pentadbir KANTOI (Ref: <code>{batch_id}</code>):\n\n"
         )
         for idx, it in enumerate(items, 1):
             p_str = ", ".join(f"<code>{p}</code>" for p in it['phones'])
@@ -4525,6 +4592,39 @@ def run_bot():
                     cb_chat_id = callback["message"]["chat"]["id"]
                     cb_msg_id = callback["message"]["message_id"]
                     username = cb_user.get("username") or str(cb_user.get("id"))
+
+                    # 0. Semakan Pengesahan Saluran (Force Subscribe Check Callback)
+                    if cb_data == "check_sub":
+                        SUBSCRIBED_USERS_CACHE.pop(cb_chat_id, None)
+                        if is_user_subscribed_to_channel(cb_chat_id):
+                            answer_callback(cb_id, "🎉 Tahniah! Keahlian anda telah disahkan. Selamat datang ke KANTOI!", alert=True)
+                            edit_message(
+                                cb_chat_id,
+                                cb_msg_id,
+                                "🎉 <b>PENGESAHAN KEAHLIAN BERJAYA!</b>\n\nTerima kasih kerana menyertai saluran rasmi @kantoiradar. Anda kini mempunyai akses penuh kepada Bot Risikan KANTOI.",
+                                parse_mode="HTML"
+                            )
+                            send_message(
+                                cb_chat_id,
+                                format_welcome_message(is_admin=(cb_chat_id in get_admin_ids()), user_id=cb_chat_id),
+                                reply_markup=get_help_menu_keyboard(),
+                                parse_mode="HTML"
+                            )
+                        else:
+                            answer_callback(
+                                cb_id,
+                                "⚠️ Anda masih belum menyertai saluran @kantoiradar!\nSila klik butang 'Sertai Saluran @kantoiradar' dahulu, kemudian klik butang ini semula.",
+                                alert=True
+                            )
+                        continue
+
+                    # Sekat interaksi butang lain jika belum melanggan saluran (kecuali callback admin)
+                    is_admin_cb = cb_data.startswith(("app_", "rej_", "appb_", "rejb_", "cfrm_direct_", "cfrmb_direct_"))
+                    if not is_admin_cb and not is_user_subscribed_to_channel(cb_chat_id):
+                        answer_callback(cb_id, "⚠️ Sila sertai saluran @kantoiradar terlebih dahulu untuk menggunakan bot ini!", alert=True)
+                        sub_text, sub_kb = get_force_sub_prompt()
+                        send_message(cb_chat_id, sub_text, reply_markup=sub_kb, parse_mode="HTML")
+                        continue
 
                     # 1a. Pengesahan Terus oleh Admin (Satu Klik Luluskan)
                     if cb_data.startswith("cfrm_direct_"):
@@ -5036,6 +5136,17 @@ def run_bot():
                             )
                             print(f"[GROUP SENTINEL] Ancaman dipadamkan dalam kumpulan {chat_id} daripada @{username}: {threat_found[0]}")
                         api_call("sendMessage", {"chat_id": chat_id, "text": warning_msg, "parse_mode": "HTML"})
+                        continue
+
+                # ------------------------------------------------------------------
+                # KAWALAN PINTU MASUK: WAJIB SERTAI SALURAN @kantoiradar (FORCE SUBSCRIBE)
+                # ------------------------------------------------------------------
+                # Kecualikan arahan /admin (supaya admin boleh memasukkan kod laluan jika belum berdaftar)
+                is_admin_cmd = text.startswith("/admin")
+                if not is_group and not is_admin_cmd:
+                    if not is_user_subscribed_to_channel(chat_id):
+                        sub_text, sub_kb = get_force_sub_prompt()
+                        send_message(chat_id, sub_text, reply_markup=sub_kb, parse_mode="HTML")
                         continue
 
                 # ------------------------------------------------------------------

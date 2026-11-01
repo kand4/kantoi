@@ -94,11 +94,39 @@ public class ChangelogActivity extends Activity {
         });
         root.addView(btnGithub);
 
+        // ==================== VERSION 1.16.1 ====================
+        LinearLayout cardV1161 = createCard(0xFF141422, 0xFF00FF88, 12);
+        cardV1161.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1161Header = createVersionHeader("VERSI 1.16.1 (TERKINI)", "1 NOVEMBER 2026", 0xFF00FF88);
+        cardV1161.addView(v1161Header);
+
+        TextView tvV1161Content = new TextView(this);
+        tvV1161Content.setText(
+            "⚡ Pengoptimuman & Penyelarasan Enjin Counter-Strike Siber:\n\n" +
+            "🔊 1. Pemurnian Taktik Letusan DTMF Rangkaian (Acoustic Disruption):\n" +
+            "     Menyalurkan letusan nada frekuensi tinggi DTMF secara terus melalui modem selular (Call.playDtmfTone) ke fon telinga scammer.\n" +
+            "     Kebal daripada sekatan pembatal gema (Acoustic Echo Cancellation - AEC) peranti moden.\n\n" +
+            "📡 2. Pemantapan Telemetri Forensik Senyap (Silent Telemetry):\n" +
+            "     Rakaman automatik 100% cap jari pemanggil, analisis nombor, dan penyediaan draf laporan rasmi sedia hantar ke PDRM/Telegram.\n\n" +
+            "🧹 3. Pemansuhan Modul Audio TTS & Speakerphone:\n" +
+            "     Memadamkan sintesis suara TTS pembesar suara yang terhalang oleh perkakasan AEC Android — mengurangkan penggunaan memori RAM, mempercepatkan masa tindak balas panggilan, dan menghapuskan sebarang gangguan audio tempatan.\n\n" +
+            "🛡️ 4. Pengekalan Penuh Perisai Anti-Spoofing Hotline Inbound-Only (39 Agensi & Bank) dan Mod Ujian Simulasi Kawan."
+        );
+        tvV1161Content.setTextColor(0xFFCBD5E1);
+        tvV1161Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvV1161Content.setLineSpacing(dpToPx(4), 1.15f);
+        setMarginTop(tvV1161Content, 10);
+        cardV1161.addView(tvV1161Content);
+
+        setMarginTop(cardV1161, 14);
+        root.addView(cardV1161);
+
         // ==================== VERSION 1.16.0 ====================
         LinearLayout cardV1160 = createCard(0xFF141422, 0xFF00FF88, 12);
         cardV1160.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        LinearLayout v1160Header = createVersionHeader("VERSI 1.16.0 (TERKINI)", "28 OKTOBER 2026", 0xFF00FF88);
+        LinearLayout v1160Header = createVersionHeader("VERSI 1.16.0", "28 OKTOBER 2026", 0xFF94A3B8);
         cardV1160.addView(v1160Header);
 
         TextView tvV1160Content = new TextView(this);

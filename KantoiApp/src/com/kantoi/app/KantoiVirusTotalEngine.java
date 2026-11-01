@@ -179,8 +179,9 @@ public class KantoiVirusTotalEngine {
         try {
             File cacheDir = new File(context.getCacheDir(), "apk_scan");
             if (!cacheDir.exists()) cacheDir.mkdirs();
-            String name = (fallbackName != null && !fallbackName.isEmpty()) ? fallbackName : ("scan_" + System.currentTimeMillis() + ".apk");
-            File dest = new File(cacheDir, name);
+            String rawName = (fallbackName != null && !fallbackName.isEmpty()) ? fallbackName : ("scan_" + System.currentTimeMillis() + ".apk");
+            String safeName = new File(rawName).getName();
+            File dest = new File(cacheDir, safeName);
             InputStream is = context.getContentResolver().openInputStream(uri);
             if (is == null) return null;
             FileOutputStream fos = new FileOutputStream(dest);
