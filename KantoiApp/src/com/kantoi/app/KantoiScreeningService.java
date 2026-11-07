@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.telecom.Call;
 import android.telecom.CallScreeningService;
+import android.telecom.Connection;
 import android.util.Log;
 
 public class KantoiScreeningService extends CallScreeningService {
@@ -25,15 +26,41 @@ public class KantoiScreeningService extends CallScreeningService {
             Log.i(TAG, "Screening incoming call: " + rawNumber);
             KantoiThreatEngine engine = KantoiThreatEngine.getInstance(this);
 
+            SharedPreferences prefs = getSharedPreferences("kantoi_settings", Context.MODE_PRIVATE);
+            boolean seniorMode = prefs.getBoolean("pref_senior_mode", false);
+            boolean autoBlock = prefs.getBoolean("pref_auto_block", true);
+
+            // CIRI 1 (INSPIRASI SPAMBLOCKER): PENGESANAN CALLER ID SPOOFING (STIR/SHAKEN TELCO ATTESTATION)
+            boolean isCallerIdSpoofed = false;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // Android 11+
+                try {
+                    int verificationStatus = callDetails.getCallerNumberVerificationStatus();
+                    if (verificationStatus == Connection.VERIFICATION_STATUS_FAILED) {
+                        isCallerIdSpoofed = true;
+                        Log.w(TAG, "\uD83D\uDEA8 STIR/SHAKEN FAILED! Panggilan VoIP memalsukan Caller ID: " + rawNumber);
+                    }
+                } catch (Throwable t) {
+                    Log.d(TAG, "Semakan STIR/SHAKEN tidak disokong telco: " + t.getMessage());
+                }
+            }
+
+            if (isCallerIdSpoofed) {
+                final KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
+                csEngine.recordTelemetryIncident(rawNumber, "Penyamaran Caller ID (STIR/SHAKEN Gagal)", "VOIP_SPOOFING", "SEKATAN_STIR_SHAKEN_SPOOF");
+                engine.showSpoofedCallNotification(this, rawNumber, autoBlock);
+
+                if (autoBlock) {
+                    respondBlock(callDetails);
+                    Log.i(TAG, "Panggilan VoIP Spoofed berjaya disekat automatik: " + rawNumber);
+                    return;
+                }
+            }
+
             if (engine.isSafeContact(rawNumber)) {
                 Log.i(TAG, "Incoming call is verified native contact: " + rawNumber + ". Allowing safely.");
                 respondAllow(callDetails);
                 return;
             }
-
-            SharedPreferences prefs = getSharedPreferences("kantoi_settings", Context.MODE_PRIVATE);
-            boolean seniorMode = prefs.getBoolean("pref_senior_mode", false);
-            boolean autoBlock = prefs.getBoolean("pref_auto_block", true);
 
             KantoiThreatEngine.ScammerThreat threat = engine.checkThreat(rawNumber);
 
@@ -42,16 +69,16 @@ public class KantoiScreeningService extends CallScreeningService {
                 respondBlock(callDetails);
                 if (threat != null) {
                     engine.showScammerCallNotification(this, rawNumber, threat, true);
-                    Log.w(TAG, "👴 Senior Mode: Disekat panggilan scammer disahkan: " + rawNumber);
+                    Log.w(TAG, "Senior Mode: Disekat panggilan scammer disahkan: " + rawNumber);
                 } else {
                     engine.showSeniorBlockedNotification(this, rawNumber);
-                    Log.w(TAG, "👴 Senior Mode: Disekat panggilan nombor asing tidak dikenali: " + rawNumber);
+                    Log.w(TAG, "Senior Mode: Disekat panggilan nombor asing tidak dikenali: " + rawNumber);
                 }
                 return;
             }
 
             if (threat != null) {
-                Log.w(TAG, "🚨 KANTOI! Panggilan scammer dikesan: " + rawNumber + " (" + threat.suspectName + ")");
+                Log.w(TAG, "KANTOI! Panggilan scammer dikesan: " + rawNumber + " (" + threat.suspectName + ")");
 
                 final KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
                 if (autoBlock || csEngine.isZeroRingBlockEnabled()) {

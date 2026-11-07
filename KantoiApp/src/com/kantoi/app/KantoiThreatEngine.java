@@ -5059,6 +5059,63 @@ public class KantoiThreatEngine {
         }
     }
 
+    public void showSpoofedCallNotification(Context context, String phone, boolean isBlocked) {
+        if (context == null) return;
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                    SCAMMER_CALL_CHANNEL_ID,
+                    "Kantoi Amaran Scammer",
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                channel.setDescription("Notifikasi amaran dan sekatan panggilan scammer");
+                channel.enableVibration(true);
+                channel.setVibrationPattern(new long[]{0, 300, 150, 300, 150, 600});
+                nm.createNotificationChannel(channel);
+            }
+
+            Intent openApp = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            PendingIntent pi = null;
+            if (openApp != null) {
+                pi = PendingIntent.getActivity(
+                    context, 102, openApp,
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? (PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE) : PendingIntent.FLAG_UPDATE_CURRENT
+                );
+            }
+
+            String title = isBlocked ? "\uD83D\uDEA8 KANTOI: PANGGILAN PALSU DISEKAT (VOIP SPOOF)!" : "\uD83D\uDEA8 KANTOI: PANGGILAN PALSU DIKESAN (SPOOFED)!";
+            String subMsg = "Pemanggil (" + phone + ") disahkan memalsukan Caller ID oleh rangkaian telco (STIR/SHAKEN FAILED).";
+
+            Notification.Builder nb = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    ? new Notification.Builder(context, SCAMMER_CALL_CHANNEL_ID)
+                    : new Notification.Builder(context);
+
+            nb.setSmallIcon(android.R.drawable.stat_sys_warning)
+              .setContentTitle(title)
+              .setContentText(subMsg)
+              .setStyle(new Notification.BigTextStyle().bigText(
+                  "\uD83D\uDEA8 AMARAN KESELAMATAN KANTOI (STIR/SHAKEN):\n" +
+                  "Nombor Dipaparkan: " + phone + "\n" +
+                  "Status Telco: PENGESAHAN GAGAL (SPOOFED VOIP CALL)\n\n" +
+                  "\u26A0\uFE0F Pemanggil menggunakan talian VoIP komputer untuk memalsukan nombor ini (taktik Macau Scam menyamar Polis Bukit Aman, Mahkamah atau Bank). JANGAN PERCAYA & JANGAN DEDAHKAN MAKLUMAT PERIBADI!"
+              ))
+              .setPriority(Notification.PRIORITY_MAX)
+              .setAutoCancel(true);
+
+            if (pi != null) {
+                nb.setContentIntent(pi);
+            }
+
+            nm.notify(SCAMMER_CALL_NOTIFICATION_ID + 2, nb.build());
+            Log.i(TAG, "showSpoofedCallNotification: Spoofed caller alert displayed for " + phone);
+        } catch (Throwable t) {
+            Log.e(TAG, "showSpoofedCallNotification error: " + t.getMessage(), t);
+        }
+    }
+
     private static ScammerThreat parseThreat(Cursor c) {
         if (c == null) return null;
         ScammerThreat t = new ScammerThreat();
