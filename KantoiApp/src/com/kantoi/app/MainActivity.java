@@ -1782,6 +1782,45 @@ public class MainActivity extends Activity {
         countryRadarCard.addView(btnCountryToggle);
         root.addView(countryRadarCard);
 
+        // 4c. Sekatan Nombor Persendirian / Tersembunyi (Inspirasi Fossify Dialer)
+        LinearLayout privateCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
+        privateCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+        setMarginTop(privateCard, 12);
+
+        TextView tvPrivateTitle = new TextView(this);
+        tvPrivateTitle.setText("\uD83D\uDC7B SEKATAN NOMBOR PERSENDIRIAN (PRIVATE CALL)");
+        tvPrivateTitle.setTextColor(0xFFA78BFA);
+        tvPrivateTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvPrivateTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        privateCard.addView(tvPrivateTitle);
+
+        TextView tvPrivateDesc = new TextView(this);
+        tvPrivateDesc.setText("Menolak panggilan yang menyembunyikan identiti pemanggil (Private / Unknown Number) pada kelajuan 0-saat bagi mengelak scammer.");
+        tvPrivateDesc.setTextColor(0xFFE2E8F0);
+        tvPrivateDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tvPrivateDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
+        privateCard.addView(tvPrivateDesc);
+
+        final boolean blockPrivate = prefs.getBoolean("pref_block_private_numbers", true);
+        final Button btnPrivateToggle = createButton(
+            blockPrivate ? "\uD83D\uDEE1\uFE0F SEKATAN TERSEMBUNYI: AKTIF (AUTO-SEKAT)" : "\u26A0\uFE0F SEKATAN TERSEMBUNYI: BENARKAN",
+            blockPrivate ? 0xFF7C3AED : 0xFF475569,
+            Color.WHITE
+        );
+        btnPrivateToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean cur = prefs.getBoolean("pref_block_private_numbers", true);
+                boolean next = !cur;
+                prefs.edit().putBoolean("pref_block_private_numbers", next).apply();
+                btnPrivateToggle.setText(next ? "\uD83D\uDEE1\uFE0F SEKATAN TERSEMBUNYI: AKTIF (AUTO-SEKAT)" : "\u26A0\uFE0F SEKATAN TERSEMBUNYI: BENARKAN");
+                updateButtonBg(btnPrivateToggle, next ? 0xFF7C3AED : 0xFF475569);
+                Toast.makeText(MainActivity.this, next ? "Panggilan nombor tersembunyi akan disekat automatik." : "Panggilan nombor tersembunyi dibenarkan masuk.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        privateCard.addView(btnPrivateToggle);
+        root.addView(privateCard);
+
         // 5. Pengesan Akaun Keldai Papan Keratan (Clipboard Mule Sniffer)
         LinearLayout clipCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
         clipCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));

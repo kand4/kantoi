@@ -27,6 +27,16 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.util.Log;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.provider.ContactsContract;
+import android.telecom.PhoneAccountHandle;
+import android.telecom.TelecomManager;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Pendail Telefon Pintar KANTOI (Smart Dialer)
@@ -42,11 +52,16 @@ public class DialerActivity extends Activity {
     private KantoiThreatEngine mEngine;
     private Vibrator mVibrator;
 
+    // FASA 2 & 3: T9 & SPEED DIAL
+    private LinearLayout mT9Container;
+    private final List<KantoiT9SearchEngine.T9Contact> mCachedContacts = new ArrayList<>();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mEngine = KantoiThreatEngine.getInstance(this);
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        loadContactsForT9();
 
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
@@ -203,7 +218,9 @@ public class DialerActivity extends Activity {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                evaluateNumberThreat(s.toString().trim());
+                String q = s.toString().trim();
+                evaluateNumberThreat(q);
+                updateT9Suggestions(q);
             }
             @Override
             public void afterTextChanged(Editable s) {}
@@ -362,7 +379,7 @@ public class DialerActivity extends Activity {
     }
 
     private void initiateCall() {
-        String num = mEtNumber.getText().toString().trim();
+        final String num = mEtNumber.getText().toString().trim();
         if (num.isEmpty()) {
             Toast.makeText(this, "Sila masukkan nombor untuk mendail.", Toast.LENGTH_SHORT).show();
             return;
@@ -371,21 +388,280 @@ public class DialerActivity extends Activity {
         hapticFeedback();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-                Intent callIntent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(num)));
-                try {
-                    startActivity(callIntent);
-                    return;
-                } catch (Throwable ignored) {}
-            } else {
+            if (checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL_PERM);
                 return;
             }
+
+            // FASA 2: SOKONGAN DWI-SIM (DUAL-SIM SELECTOR)
+            TelecomManager tm = (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
+            if (tm != null && checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+                try {
+                    List<PhoneAccountHandle> accounts = tm.getCallCapablePhoneAccounts();
+                    if (accounts != null && accounts.size() > 1) {
+                        showDualSimSelector(num, accounts);
+                        return;
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            performCallWithAccount(num, null);
+            return;
         }
 
-        // Fallback to ACTION_DIAL
         Intent dialIntent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(num)));
         startActivity(dialIntent);
+    }
+
+    private void showDualSimSelector(final String num, final List<PhoneAccountHandle> accounts) {
+        String[] simOptions = new String[accounts.size()];
+        for (int i = 0; i < accounts.size(); i++) {
+            simOptions[i] = "\uD83D\uDCF1 Panggil Menggunakan Kad SIM " + (i + 1);
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("PILIH KAD SIM UNTUK PANGGILAN")
+            .setItems(simOptions, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    performCallWithAccount(num, accounts.get(which));
+                }
+            })
+            .setNegativeButton("BATAL", null)
+            .show();
+    }
+
+    private void performCallWithAccount(String num, PhoneAccountHandle handle) {
+        try {
+            Intent callIntent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(num)));
+            if (handle != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                callIntent.putExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle);
+            }
+            startActivity(callIntent);
+        } catch (Throwable t) {
+            Intent dialIntent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(num)));
+            startActivity(dialIntent);
+        }
+    }
+
+    // FASA 2: DAIL PANTAS (SPEED DIAL 1-9)
+    private void handleSpeedDial(final int digit) {
+        hapticFeedback();
+        if (digit == 1) {
+            new AlertDialog.Builder(this)
+                .setTitle("\uD83D\uDEA8 DAIL PANTAS KECEMASAN (999)")
+                .setMessage("Adakah anda mahu mendail talian kecemasan Polis / Ambulans 999 sekarang?")
+                .setPositiveButton("HUBUNGI 999", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        mEtNumber.setText("999");
+                        initiateCall();
+                    }
+                })
+                .setNegativeButton("BATAL", null)
+                .show();
+            return;
+        }
+
+        final SharedPreferences sp = getSharedPreferences("kantoi_speed_dial", Context.MODE_PRIVATE);
+        final String savedNum = sp.getString("sd_num_" + digit, null);
+        final String savedName = sp.getString("sd_name_" + digit, null);
+
+        if (savedNum != null && !savedNum.trim().isEmpty()) {
+            new AlertDialog.Builder(this)
+                .setTitle("\u26A1 DAIL PANTAS [KEKUNCI " + digit + "]")
+                .setMessage("Hubungi " + (savedName != null ? savedName : "Kenalan") + "\nNombor: " + savedNum + "?")
+                .setPositiveButton("PANGGIL", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        mEtNumber.setText(savedNum);
+                        initiateCall();
+                    }
+                })
+                .setNeutralButton("TETAP SEMULA", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        showSetSpeedDialDialog(digit);
+                    }
+                })
+                .setNegativeButton("BATAL", null)
+                .show();
+        } else {
+            showSetSpeedDialDialog(digit);
+        }
+    }
+
+    private void showSetSpeedDialDialog(final int digit) {
+        final SharedPreferences sp = getSharedPreferences("kantoi_speed_dial", Context.MODE_PRIVATE);
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dpToPx(20), dpToPx(14), dpToPx(20), dpToPx(14));
+
+        final EditText etName = new EditText(this);
+        etName.setHint("Nama Kenalan (cth: Ibu / Pejabat)");
+        etName.setTextColor(Color.WHITE);
+        form.addView(etName);
+
+        final EditText etNum = new EditText(this);
+        etNum.setHint("Nombor Telefon (cth: 0123456789)");
+        etNum.setTextColor(Color.WHITE);
+        String curNum = mEtNumber.getText().toString().trim();
+        if (!curNum.isEmpty()) etNum.setText(curNum);
+        form.addView(etNum);
+
+        new AlertDialog.Builder(this)
+            .setTitle("\u26A1 TETAPKAN DAIL PANTAS [KEKUNCI " + digit + "]")
+            .setView(form)
+            .setPositiveButton("SIMPAN", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String num = etNum.getText().toString().trim();
+                    String name = etName.getText().toString().trim();
+                    if (!num.isEmpty()) {
+                        sp.edit().putString("sd_num_" + digit, num).putString("sd_name_" + digit, name).apply();
+                        Toast.makeText(DialerActivity.this, "Dail Pantas kekunci " + digit + " disimpan.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            })
+            .setNegativeButton("BATAL", null)
+            .show();
+    }
+
+    // FASA 3: ENJIN CARIAN PINTAR T9
+    private void loadContactsForT9() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final List<KantoiT9SearchEngine.T9Contact> list = new ArrayList<>();
+                    Cursor cursor = getContentResolver().query(
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                        new String[]{
+                            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                            ContactsContract.CommonDataKinds.Phone.NUMBER
+                        },
+                        null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+                    );
+                    if (cursor != null) {
+                        try {
+                            int nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
+                            int numIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
+                            while (cursor.moveToNext()) {
+                                String name = (nameIdx >= 0) ? cursor.getString(nameIdx) : "";
+                                String num = (numIdx >= 0) ? cursor.getString(numIdx) : "";
+                                if (num != null && !num.trim().isEmpty()) {
+                                    list.add(new KantoiT9SearchEngine.T9Contact(name, num));
+                                }
+                            }
+                        } finally {
+                            cursor.close();
+                        }
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            synchronized (mCachedContacts) {
+                                mCachedContacts.clear();
+                                mCachedContacts.addAll(list);
+                            }
+                        }
+                    });
+                } catch (Throwable t) {
+                    Log.d("DialerActivity", "loadContactsForT9 error: " + t.getMessage());
+                }
+            }
+        }).start();
+    }
+
+    private void updateT9Suggestions(String query) {
+        if (mT9Container == null) return;
+        mT9Container.removeAllViews();
+        if (query == null || query.trim().isEmpty()) {
+            mT9Container.setVisibility(View.GONE);
+            return;
+        }
+
+        List<KantoiT9SearchEngine.T9Contact> matches;
+        synchronized (mCachedContacts) {
+            matches = KantoiT9SearchEngine.filter(mCachedContacts, query, 3);
+        }
+
+        if (matches == null || matches.isEmpty()) {
+            mT9Container.setVisibility(View.GONE);
+            return;
+        }
+
+        mT9Container.setVisibility(View.VISIBLE);
+        for (final KantoiT9SearchEngine.T9Contact c : matches) {
+            LinearLayout row = createT9SuggestionRow(c);
+            mT9Container.addView(row);
+        }
+    }
+
+    private LinearLayout createT9SuggestionRow(final KantoiT9SearchEngine.T9Contact c) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6));
+        setMarginTop(row, 3);
+
+        GradientDrawable rowBg = new GradientDrawable();
+        rowBg.setColor(0xFF1E1E30);
+        rowBg.setCornerRadius(dpToPx(8));
+        row.setBackground(rowBg);
+
+        TextView tvAvatar = new TextView(this);
+        String initial = (c.name != null && !c.name.isEmpty()) ? String.valueOf(c.name.charAt(0)).toUpperCase() : "\uD83D\uDC64";
+        tvAvatar.setText(initial);
+        tvAvatar.setTextColor(Color.WHITE);
+        tvAvatar.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvAvatar.setTypeface(Typeface.DEFAULT_BOLD);
+        tvAvatar.setGravity(Gravity.CENTER);
+        GradientDrawable avBg = new GradientDrawable();
+        avBg.setShape(GradientDrawable.OVAL);
+        avBg.setColor(0xFF0284C7);
+        tvAvatar.setBackground(avBg);
+        LinearLayout.LayoutParams avLp = new LinearLayout.LayoutParams(dpToPx(28), dpToPx(28));
+        tvAvatar.setLayoutParams(avLp);
+        row.addView(tvAvatar);
+
+        LinearLayout infoLayout = new LinearLayout(this);
+        infoLayout.setOrientation(LinearLayout.VERTICAL);
+        infoLayout.setPadding(dpToPx(10), 0, 0, 0);
+        LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        infoLayout.setLayoutParams(infoLp);
+
+        TextView tvName = new TextView(this);
+        tvName.setText(c.name);
+        tvName.setTextColor(0xFF38BDF8);
+        tvName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tvName.setTypeface(Typeface.DEFAULT_BOLD);
+        infoLayout.addView(tvName);
+
+        TextView tvNum = new TextView(this);
+        tvNum.setText(c.number);
+        tvNum.setTextColor(0xFF94A3B8);
+        tvNum.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        infoLayout.addView(tvNum);
+
+        row.addView(infoLayout);
+
+        row.setClickable(true);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticFeedback();
+                mEtNumber.setText(c.cleanNumber);
+                mEtNumber.setSelection(mEtNumber.getText().length());
+            }
+        });
+
+        return row;
     }
 
     @Override
@@ -485,6 +761,17 @@ public class DialerActivity extends Activity {
                     return true;
                 }
             });
+        } else {
+            try {
+                final int digitVal = Integer.parseInt(key.digit);
+                btnLayout.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View v) {
+                        handleSpeedDial(digitVal);
+                        return true;
+                    }
+                });
+            } catch (NumberFormatException ignored) {}
         }
 
         return btnLayout;

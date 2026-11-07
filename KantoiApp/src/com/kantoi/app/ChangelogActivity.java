@@ -94,11 +94,41 @@ public class ChangelogActivity extends Activity {
         });
         root.addView(btnGithub);
 
+        // ==================== VERSION 1.18.0 ====================
+        LinearLayout cardV1180 = createCard(0xFF141422, 0xFF00FF88, 12);
+        cardV1180.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1180Header = createVersionHeader("VERSI 1.18.0 (TERKINI)", "7 NOVEMBER 2026", 0xFF00FF88);
+        cardV1180.addView(v1180Header);
+
+        TextView tvV1180Content = new TextView(this);
+        tvV1180Content.setText(
+            "\uD83D\uDCF1 Peningkatan Pintar Telefon & Pendail (Inspirasi Fossify Dialer):\n\n" +
+            "\uD83D\uDD0D 1. Carian Pintar T9 pada Pad Pendail (Smart T9 Search):\n" +
+            "     Menapis dan memaparkan kenalan sepadan secara langsung di atas pad kekunci semasa anda menaip nombor atau abjad nama.\n\n" +
+            "\uD83D\uDCF1 2. Pemilih Pintar Kad Dwi-SIM (Dual-SIM Selector):\n" +
+            "     Menyokong pemilihan fleksibel antara SIM 1 dan SIM 2 sebelum panggilan keluar dibuat.\n\n" +
+            "\u26A1 3. Dail Pantas (Speed Dial 1-9):\n" +
+            "     Tekan lama kekunci 1 untuk talian kecemasan 999, atau kekunci 2-9 untuk kenalan kegemaran anda.\n\n" +
+            "\uD83D\uDC7B 4. Sekatan Nombor Persendirian / Tersembunyi (Private Call Blocker):\n" +
+            "     Menolak panggilan tanpa Caller ID pada kelajuan 0-saat bagi menutup taktik sindiket menyorok identiti.\n\n" +
+            "\uD83D\uDC42 5. Sensor Kehampiran Panggilan Aktif (Proximity WakeLock):\n" +
+            "     Memadamkan skrin telefon secara automatik apabila dilekapkan ke telinga untuk mengelak sentuhan pipi tidak sengaja."
+        );
+        tvV1180Content.setTextColor(0xFFCBD5E1);
+        tvV1180Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvV1180Content.setLineSpacing(dpToPx(4), 1.15f);
+        setMarginTop(tvV1180Content, 10);
+        cardV1180.addView(tvV1180Content);
+
+        setMarginTop(cardV1180, 14);
+        root.addView(cardV1180);
+
         // ==================== VERSION 1.17.3 ====================
         LinearLayout cardV1173 = createCard(0xFF141422, 0xFF00FF88, 12);
         cardV1173.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        LinearLayout v1173Header = createVersionHeader("VERSI 1.17.3 (TERKINI)", "7 NOVEMBER 2026", 0xFF00FF88);
+        LinearLayout v1173Header = createVersionHeader("VERSI 1.17.3", "7 NOVEMBER 2026", 0xFF00FF88);
         cardV1173.addView(v1173Header);
 
         TextView tvV1173Content = new TextView(this);

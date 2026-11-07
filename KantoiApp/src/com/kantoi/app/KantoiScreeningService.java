@@ -18,15 +18,32 @@ public class KantoiScreeningService extends CallScreeningService {
         try {
             Uri handle = callDetails.getHandle();
             String rawNumber = (handle != null) ? handle.getSchemeSpecificPart() : null;
-            if (rawNumber == null || rawNumber.isEmpty()) {
-                respondAllow(callDetails);
-                return;
+
+            SharedPreferences prefs = getSharedPreferences("kantoi_settings", Context.MODE_PRIVATE);
+            boolean blockPrivate = prefs.getBoolean("pref_block_private_numbers", true);
+
+            // CIRI FASA 1 (INSPIRASI FOSSIFY DIALER): SEKATAN NOMBOR PERSENDIRIAN / TERSEMBUNYI (PRIVATE CALL)
+            if (rawNumber == null || rawNumber.trim().isEmpty() 
+                    || rawNumber.equalsIgnoreCase("UNKNOWN") 
+                    || rawNumber.equalsIgnoreCase("RESTRICTED") 
+                    || rawNumber.equalsIgnoreCase("PRIVATE")) {
+                
+                if (blockPrivate) {
+                    respondBlock(callDetails);
+                    final KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
+                    csEngine.recordTelemetryIncident("Nombor Tersembunyi", "Panggilan Tanpa Identiti (Private Number)", "PRIVATE_NUMBER", "SEKATAN_NOMBOR_TERSEMBUNYI");
+                    KantoiThreatEngine.getInstance(this).showPrivateCallBlockedNotification(this);
+                    Log.i(TAG, "Panggilan nombor tersembunyi/persendirian berjaya disekat automatik.");
+                    return;
+                } else {
+                    respondAllow(callDetails);
+                    return;
+                }
             }
 
             Log.i(TAG, "Screening incoming call: " + rawNumber);
             KantoiThreatEngine engine = KantoiThreatEngine.getInstance(this);
 
-            SharedPreferences prefs = getSharedPreferences("kantoi_settings", Context.MODE_PRIVATE);
             boolean seniorMode = prefs.getBoolean("pref_senior_mode", false);
             boolean autoBlock = prefs.getBoolean("pref_auto_block", true);
 
