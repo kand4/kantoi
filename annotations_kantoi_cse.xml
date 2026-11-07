@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?><Annotations>
+  <Annotation about="*.carousell.com.my/*" timestamp="0x00065f5907e39582" score="1.0">
+    <Label name="_include_"/>
+    <AdditionalData attribute="original_url" value="carousell.com.my/*"/>
+  </Annotation>
+  <Annotation about="weixin.qq.com/*" timestamp="0x00065f5903c23de7" score="1.0">
+    <Label name="_include_"/>
+    <AdditionalData attribute="original_url" value="weixin.qq.com/*"/>
+  </Annotation>
+  <Annotation about="mp.weixin.qq.com/*" timestamp="0x00065f590345560b" score="1.0">
+    <Label name="_include_"/>
+    <AdditionalData attribute="original_url" value="mp.weixin.qq.com/*"/>
+  </Annotation>
+  <Annotation about="*.t.me/*" timestamp="0x00065f58fc861492" score="1.0">
+    <Label name="_include_"/>
+    <AdditionalData attribute="original_url" value="t.me/*"/>
+  </Annotation>
+  <Annotation about="*.tiktok.com/*" timestamp="0x00065ee773ef2664" score="1.0">
+    <Label name="_include_"/>
+    <AdditionalData attribute="original_url" value="tiktok.com/*"/>
+  </Annotation>
+  <Annotation about="*.threads.net/*" timestamp="0x00065ee77168f9ba" score="1.0">
+    <Label name="_include_"/>
+    <AdditionalData attribute="original_url" value="threads.net/*"/>
+  </Annotation>
+  <Annotation about="*.mudah.my/*" timestamp="0x00065b7330b9af32" score="1.0">
+    <Label name="_include_"/>
+    <Label name="forummy"/>
+    <AdditionalData attribute="original_url" value="mudah.my/*"/>
+  </Annotation>
+  <Annotation about="*.wangcyber.com/*" timestamp="0x00065b7330b9af1b" score="1.0">
+    <Label name="_include_"/>
+    <Label name="forummy"/>
+    <AdditionalData attribute="original_url" value="wangcyber.com/*"/>
+  </Annotation>
+  <Annotation about="carigold.com/forum/*" timestamp="0x00065b7330b9af10" score="1.0">
+    <Label name="_include_"/>
+    <Label name="forummy"/>
+    <AdditionalData attribute="original_url" value="carigold.com/forum/*"/>
+  </Annotation>
+  <Annotation about="forum.cari.com.my/*" timestamp="0x00065b7330b9af02" score="1.0">
+    <Label name="_include_"/>
+    <Label name="forummy"/>
+    <AdditionalData attribute="original_url" value="forum.cari.com.my/*"/>
+  </Annotation>
+  <Annotation about="forum.lowyat.net/*" timestamp="0x00065b7330b9aef6" score="1.0">
+    <Label name="_include_"/>
+    <Label name="forummy"/>
+    <AdditionalData attribute="original_url" value="forum.lowyat.net/*"/>
+  </Annotation>
+  <Annotation about="*.controlc.com/*" timestamp="0x00065b7330b9aee2" score="1.0">
+    <Label name="_include_"/>
+    <Label name="pastebin"/>
+    <AdditionalData attribute="original_url" value="controlc.com/*"/>
+  </Annotation>
+  <Annotation about="paste.ee/p/*" timestamp="0x00065b7330b9aed5" score="1.0">
+    <Label name="_include_"/>
+    <Label name="pastebin"/>
+    <AdditionalData attribute="original_url" value="paste.ee/p/*"/>
+  </Annotation>
+  <Annotation about="*.rentry.co/*" timestamp="0x00065b7330b9aebe" score="1.0">
+    <Label name="_include_"/>
+    <Label name="pastebin"/>
+    <AdditionalData attribute="original_url" value="rentry.co/*"/>
+  </Annotation>
+  <Annotation about="*.justpaste.it/*" timestamp="0x00065b7330b9aea5" score="1.0">
+    <Label name="_include_"/>
+    <Label name="pastebin"/>
+    <AdditionalData attribute="original_url" value="justpaste.it/*"/>
+  </Annotation>
+  <Annotation about="*.pastebin.com/*" timestamp="0x00065b7330b9ae90" score="1.0">
+    <Label name="_include_"/>
+    <Label name="pastebin"/>
+    <AdditionalData attribute="original_url" value="pastebin.com/*"/>
+  </Annotation>
+  <Annotation about="*.telegra.ph/*" timestamp="0x00065b7330b9ae79" score="1.0">
+    <Label name="_include_"/>
+    <Label name="grams"/>
+    <AdditionalData attribute="original_url" value="telegra.ph/*"/>
+  </Annotation>
+  <Annotation about="t.me/s/*" timestamp="0x00065b7330b9ae6f" score="1.0">
+    <Label name="_include_"/>
+    <Label name="grams"/>
+    <AdditionalData attribute="original_url" value="t.me/s/*"/>
+  </Annotation>
+  <Annotation about="*.instagram.com/*" timestamp="0x00065b7330b9ae5a" score="1.0">
+    <Label name="_include_"/>
+    <Label name="grams"/>
+    <AdditionalData attribute="original_url" value="instagram.com/*"/>
+  </Annotation>
+  <Annotation about="tiktok.com/@*" timestamp="0x00065b7330b9ae50" score="1.0">
+    <Label name="_include_"/>
+    <Label name="genz"/>
+    <AdditionalData attribute="original_url" value="tiktok.com/@*"/>
+  </Annotation>
+  <Annotation about="linkedin.com/company/*/posts/*" timestamp="0x00065b7330b9ae44" score="1.0">
+    <Label name="_include_"/>
+    <Label name="linkedin"/>
+    <AdditionalData attribute="original_url" value="linkedin.com/company/*/posts/*"/>
+  </Annotation>
+  <Annotation about="linkedin.com/in/*" timestamp="0x00065b7330b9ae3a" score="1.0">
+    <Label name="_include_"/>
+    <Label name="linkedin"/>
+    <AdditionalData attribute="original_url" value="linkedin.com/in/*"/>
+  </Annotation>
+  <Annotation about="linkedin.com/pulse/*" timestamp="0x00065b7330b9ae1f" score="1.0">
+    <Label name="_include_"/>
+    <Label name="linkedin"/>
+    <AdditionalData attribute="original_url" value="linkedin.com/pulse/*"/>
+  </Annotation>
+  <Annotation about="linkedin.com/posts/*" timestamp="0x00065b7330b9ae10" score="1.0">
+    <Label name="_include_"/>
+    <Label name="linkedin"/>
+    <AdditionalData attribute="original_url" value="linkedin.com/posts/*"/>
+  </Annotation>
+  <Annotation about="*.x.com/*" timestamp="0x00065b7330b9adfa" score="1.0">
+    <Label name="_include_"/>
+    <Label name="genz"/>
+    <AdditionalData attribute="original_url" value="x.com/*"/>
+  </Annotation>
+  <Annotation about="*.twitter.com/*" timestamp="0x00065b7330b9add7" score="1.0">
+    <Label name="_include_"/>
+    <Label name="genz"/>
+    <AdditionalData attribute="original_url" value="twitter.com/*"/>
+  </Annotation>
+  <Annotation about="old.reddit.com/*" timestamp="0x00065b7330b9adcb" score="1.0">
+    <Label name="_include_"/>
+    <Label name="reddit"/>
+    <AdditionalData attribute="original_url" value="old.reddit.com/*"/>
+  </Annotation>
+  <Annotation about="reddit.com/user/*" timestamp="0x00065b7330b9adc1" score="1.0">
+    <Label name="_include_"/>
+    <Label name="reddit"/>
+    <AdditionalData attribute="original_url" value="reddit.com/user/*"/>
+  </Annotation>
+  <Annotation about="reddit.com/r/*/comments/*" timestamp="0x00065b7330b9adae" score="1.0">
+    <Label name="_include_"/>
+    <Label name="reddit"/>
+    <AdditionalData attribute="original_url" value="reddit.com/r/*/comments/*"/>
+  </Annotation>
+  <Annotation about="m.facebook.com/*" timestamp="0x00065b7330b9ada1" score="1.0">
+    <Label name="_include_"/>
+    <Label name="facebook"/>
+    <AdditionalData attribute="original_url" value="m.facebook.com/*"/>
+  </Annotation>
+  <Annotation about="facebook.com/groups/*" timestamp="0x00065b7330b9ad96" score="1.0">
+    <Label name="_include_"/>
+    <Label name="facebook"/>
+    <AdditionalData attribute="original_url" value="facebook.com/groups/*"/>
+  </Annotation>
+  <Annotation about="facebook.com/story.php*" timestamp="0x00065b7330b9ad8a" score="1.0">
+    <Label name="_include_"/>
+    <Label name="facebook"/>
+    <AdditionalData attribute="original_url" value="facebook.com/story.php*"/>
+  </Annotation>
+  <Annotation about="facebook.com/permalink.php*" timestamp="0x00065b7330b9ad7f" score="1.0">
+    <Label name="_include_"/>
+    <Label name="facebook"/>
+    <AdditionalData attribute="original_url" value="facebook.com/permalink.php*"/>
+  </Annotation>
+  <Annotation about="*.facebook.com/*/photos/*" timestamp="0x00065b7330b9ad65" score="1.0">
+    <Label name="_include_"/>
+    <Label name="facebook"/>
+    <AdditionalData attribute="original_url" value="facebook.com/*/photos/*"/>
+  </Annotation>
+  <Annotation about="*.facebook.com/*/videos/*" timestamp="0x00065b7330b9ad4d" score="1.0">
+    <Label name="_include_"/>
+    <Label name="facebook"/>
+    <AdditionalData attribute="original_url" value="facebook.com/*/videos/*"/>
+  </Annotation>
+  <Annotation about="*.facebook.com/*" timestamp="0x00065b7330b9aceb" score="1.0">
+    <Label name="_include_"/>
+    <Label name="facebook"/>
+    <AdditionalData attribute="original_url" value="facebook.com/*"/>
+  </Annotation>
+  <Annotation about="wa.me/*" timestamp="0x00065f59783a783f" score="1.0">
+    <Label name="_include_"/>
+    <AdditionalData attribute="original_url" value="wa.me/*"/>
+  </Annotation>
+  <Annotation about="t.me/*" timestamp="0x00065f59783a78a3" score="1.0">
+    <Label name="_include_"/>
+    <AdditionalData attribute="original_url" value="t.me/*"/>
+  </Annotation>
+</Annotations>

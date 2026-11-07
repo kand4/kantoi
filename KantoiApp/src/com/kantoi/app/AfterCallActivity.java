@@ -303,7 +303,7 @@ public class AfterCallActivity extends Activity {
         setMarginTop(gridRow3, 14);
 
         // Action 5: WhatsApp Hub (Sembang Direct & Risikan OSINT DP CheckLeaked Tanpa Butang Berkembar)
-        Button btnWhatsApp = createSmallButton("💬 WHATSAPP HUB", 0xFF059669, 0xFF34D399, Color.WHITE);
+        Button btnWhatsApp = createSmallButton("💬 WHATSAPP", 0xFF059669, 0xFF34D399, Color.WHITE);
         btnWhatsApp.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

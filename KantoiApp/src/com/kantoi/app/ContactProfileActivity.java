@@ -426,9 +426,9 @@ public class ContactProfileActivity extends Activity {
         setMarginTop(tvSmDesc, 4);
         smCard.addView(tvSmDesc);
 
-        // Sub-Section A: WhatsApp DP & Breach Intel (CheckLeaked OSINT)
+        // Sub-Section A: WhatsApp Direct Chat (1-Klik Tanpa Simpan)
         TextView tvSmSubB = new TextView(this);
-        tvSmSubB.setText("📸 1. RISIKAN GAMBAR DP & KEBOCORAN (CHECKLEAKED)");
+        tvSmSubB.setText("💬 1. PINTASAN SEMBANG WHATSAPP RASMI");
         tvSmSubB.setTextColor(0xFF34D399);
         tvSmSubB.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         tvSmSubB.setTypeface(Typeface.DEFAULT_BOLD);
@@ -436,19 +436,19 @@ public class ContactProfileActivity extends Activity {
         smCard.addView(tvSmSubB);
 
         TextView tvWaIntelInfo = new TextView(this);
-        tvWaIntelInfo.setText("Siasat gambar profil (DP) WhatsApp, status info akaun, dan rekod pangkalan data terbocor secara sulit.");
+        tvWaIntelInfo.setText("Buka perbualan terus di aplikasi WhatsApp tanpa perlu menyimpan nombor ini ke dalam buku kenalan telefon anda.");
         tvWaIntelInfo.setTextColor(0xFFD1FAE5);
         tvWaIntelInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         setMarginTop(tvWaIntelInfo, 2);
         smCard.addView(tvWaIntelInfo);
 
-        Button btnCheckLeaked = createActionButton("📸 SIASAT GAMBAR DP DI CHECKLEAKED", 0xFF059669, Color.WHITE);
+        Button btnCheckLeaked = createActionButton("💬 BUKA WHATSAPP (1-KLIK)", 0xFF059669, Color.WHITE);
         updateButtonStroke(btnCheckLeaked, 0xFF10B981);
         setMarginTop(btnCheckLeaked, 6);
         btnCheckLeaked.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                KantoiThreatEngine.showWhatsAppIntelDialog(ContactProfileActivity.this, cleanLocal);
+                KantoiThreatEngine.openWhatsAppChatDirect(ContactProfileActivity.this, cleanLocal);
             }
         });
         smCard.addView(btnCheckLeaked);

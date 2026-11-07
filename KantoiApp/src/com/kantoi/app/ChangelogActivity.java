@@ -94,11 +94,68 @@ public class ChangelogActivity extends Activity {
         });
         root.addView(btnGithub);
 
+        // ==================== VERSION 1.17.1 ====================
+        LinearLayout cardV1171 = createCard(0xFF141422, 0xFF00FF88, 12);
+        cardV1171.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1171Header = createVersionHeader("VERSI 1.17.1 (TERKINI)", "7 NOVEMBER 2026", 0xFF00FF88);
+        cardV1171.addView(v1171Header);
+
+        TextView tvV1171Content = new TextView(this);
+        tvV1171Content.setText(
+            "🔒 Kemas Kini Keselamatan & Integrasi Perisai Bot KANTOI:\n\n" +
+            "🛡️ 1. Penyingkiran Butang Web CheckLeaked Pihak Ketiga:\n" +
+            "     Fungsi penyiasatan DP nombor dialihkan eksklusif untuk Admin di Telegram Bot sahaja demi privasi kuota.\n\n" +
+            "📲 2. Butang Pintar 1-Ketik Terus ke WhatsApp (wa.me):\n" +
+            "     Menyediakan akses terus ke chat rasmi WhatsApp suspek tanpa membuka pelayar web pihak ketiga.\n\n" +
+            "⚡ 3. Sinkronisasi Pangkalan Data Ancaman Terkini (Offline Vault v1.17.1).\n\n" +
+            "🛡️ 4. Penyelarasan Penuh Dengan Perisai Kebal Bot Telegram @crowdcallerbot."
+        );
+        tvV1171Content.setTextColor(0xFFCBD5E1);
+        tvV1171Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvV1171Content.setLineSpacing(dpToPx(4), 1.15f);
+        setMarginTop(tvV1171Content, 10);
+        cardV1171.addView(tvV1171Content);
+
+        setMarginTop(cardV1171, 14);
+        root.addView(cardV1171);
+
+        // ==================== VERSION 1.17.0 ====================
+        LinearLayout cardV1170 = createCard(0xFF141422, 0xFF00FF88, 12);
+        cardV1170.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1170Header = createVersionHeader("VERSI 1.17.0", "2 NOVEMBER 2026", 0xFF94A3B8);
+        cardV1170.addView(v1170Header);
+
+        TextView tvV1170Content = new TextView(this);
+        tvV1170Content.setText(
+            "🛡️ Pelancaran Enjin Perisai Anti-Quishing (QR Safety Shield) & Pintasan Pautan Web:\n\n" +
+            "📷 1. Enjin Analisis Kod QR Pantas (KantoiQrSafetyEngine):\n" +
+            "     Pengecaman automatik dua hala bagi Kod QR DuitNow PayNet vs Kod QR Pautan Web (URL).\n" +
+            "     Menyemak nombor akaun tersembunyi dengan pangkalan data KANTOI & portal PDRM CCID SemakMule.\n\n" +
+            "🌐 2. Pintasan Pautan Web 'ACTION_VIEW' (Link Interceptor Shield):\n" +
+            "     Memintas pautan terus dari imbasan Kamera telefon atau aplikasi luar sebelum pelayar web sempat dibuka.\n" +
+            "     Menyekat sambungan domain berisiko tinggi (.top, .xyz, .vip, .buzz, .cfd dsb).\n\n" +
+            "🏛️ 3. Pengesanan Penyamaran Bantuan Kerajaan & TNG Money Packet Palsu:\n" +
+            "     Amaran merah automatik jika pautan mendakwa Bantuan STR/Madani/MyKasih tetapi bukan domain .gov.my.\n" +
+            "     Pengesanan pancingan Touch 'n Go Money Packet palsu yang memancing nombor telefon & PIN eWallet.\n\n" +
+            "🚫 4. Sekatan Perangkap Muat Turun Fail .APK Trojan Perbankan Secara Terus.\n\n" +
+            "⚡ 5. Penyelarasan Penuh dengan Bot Telegram KANTOI v2.7.0 (Multi-Platform Threat Harvester)."
+        );
+        tvV1170Content.setTextColor(0xFFCBD5E1);
+        tvV1170Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvV1170Content.setLineSpacing(dpToPx(4), 1.15f);
+        setMarginTop(tvV1170Content, 10);
+        cardV1170.addView(tvV1170Content);
+
+        setMarginTop(cardV1170, 14);
+        root.addView(cardV1170);
+
         // ==================== VERSION 1.16.1 ====================
         LinearLayout cardV1161 = createCard(0xFF141422, 0xFF00FF88, 12);
         cardV1161.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        LinearLayout v1161Header = createVersionHeader("VERSI 1.16.1 (TERKINI)", "1 NOVEMBER 2026", 0xFF00FF88);
+        LinearLayout v1161Header = createVersionHeader("VERSI 1.16.1", "1 NOVEMBER 2026", 0xFF94A3B8);
         cardV1161.addView(v1161Header);
 
         TextView tvV1161Content = new TextView(this);

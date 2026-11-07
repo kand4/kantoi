@@ -145,8 +145,18 @@ Bagi memastikan KANTOI terus berkembang secara teratur dan aktif, ciri-ciri baha
   - 📱 **Native In-App Dossier View:** Paparan siasatan SemakMule CCID & forum Lowyat secara terus dalam aplikasi tanpa pelayar web luar.
 - ⏳ **Fasa 4: Awal Tahun 2027**
   - 📞 **WhatsApp Call & Contact Risk Sentinel:** Perlindungan masa nyata panggilan WhatsApp scammer & audit keselamatan buku kenalan.
-- 💡 **Fasa Penyelidikan (Future Pipeline):**
-  - 📸 *AI Slip Forgery Detector (Pengecam Resit Bank Palsu)*
+- 💡 **Fasa Penyelidikan & Perancangan Masa Depan (Future Threat Intelligence Pipeline):**
+  - 🌐 *Ekosistem Risikan Forensik Siber Nusantara (Malaysia & Indonesia):* Rujuk dokumen komprehensif [ROADMAP_NUSANTARA_INTEL.md](ROADMAP_NUSANTARA_INTEL.md) untuk perincian senibina 6-modul:
+    1. **SOCMINT Serantau (Maigret SEA Fast-Scan):** Imbasan pantas 30–50 platform utama (TikTok, IG, Telegram, X, Carousell, Mudah.my, Tokopedia, Shopee).
+    2. **Pematuhan & Pengesahan Entiti Tempatan:** Integrasi rekod rasmi PDRM CCID SemakMule, SSM, BNM/SC (Malaysia) serta CekRekening.id, Patroli Siber POLRI, OJK, dan Kemenkumham (Indonesia).
+    3. **Pertahanan Anti-Phishing & Typo-Squatting:** Pemantauan domain palsu perbankan tempatan (Maybank2u, CIMB, KlikBCA, Livin Mandiri) via DNSTwist.
+    4. **Geolokasi & Pengikisan Web Tanpa Kos:** Penentuan kedudukan fasiliti/ATM melalui OpenStreetMap Nominatim & pengikisan senyap pautan bio.
+    5. **Pelaksanaan Asynchronous & Telegram Dynamic ProgressHUD:** Aliran tugas bebas-sekat (non-blocking worker threads) bagi mengelak isu timeout/terputus sambungan.
+    6. **Lapisan Sintesis & Penaakulan Forensik Gemini AI:** Penganalisis pintar untuk pengesahan silang, klasifikasi modus operandi penipuan, dan penjanaan draf laporan polis (PDRM & POLRI).
+  - 🧅 *Dark Web & Tor Leak Profiler (Ahmia Clearnet Bridge — Inspirasi VoidAccess):* Pengesanan nombor telefon dan akaun bank yang tersenarai dalam pangkalan data bocor atau forum jual beli akaun keldai di Dark Web.
+  - 🪙 *Crypto Mule Wallet Profiler (USDT TRC-20 & Bitcoin):* Pengecaman automatik alamat dompet kripto yang digunakan sindiket pelaburan palsu untuk pengubahan wang haram.
+  - 💬 *Dark Comms Identifier:* Pengesanan identiti komunikasi gelap berkriptografi tinggi seperti Tox ID dan Session ID.
+  - 📄 *Piawaian Eksport Siasatan Digital (STIX 2.1 & IOC JSON):* Penjanaan bukti digital berstruktur piawaian antarabangsa untuk siasatan forensik Cawangan Siasatan Jenayah Siber PDRM & CyberSecurity Malaysia (Cyber999).
   - 👨‍👩‍👧 *Family Shield (Mod Perlindungan Keluarga & Warga Emas)*
 
 ---
