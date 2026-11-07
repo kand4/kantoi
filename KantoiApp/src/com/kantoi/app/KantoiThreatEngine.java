@@ -5176,6 +5176,62 @@ public class KantoiThreatEngine {
         }
     }
 
+    public void showPrivateCallBlockedNotification(Context context) {
+        if (context == null) return;
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                    SCAMMER_CALL_CHANNEL_ID,
+                    "Kantoi Amaran Scammer",
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                channel.setDescription("Notifikasi amaran dan sekatan panggilan scammer");
+                channel.enableVibration(true);
+                channel.setVibrationPattern(new long[]{0, 300, 150, 300, 150, 600});
+                nm.createNotificationChannel(channel);
+            }
+
+            Intent openApp = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            PendingIntent pi = null;
+            if (openApp != null) {
+                pi = PendingIntent.getActivity(
+                    context, 104, openApp,
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? (PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE) : PendingIntent.FLAG_UPDATE_CURRENT
+                );
+            }
+
+            String title = "\uD83D\uDEA8 KANTOI: PANGGILAN TERSEMBUNYI DISEKAT!";
+            String subMsg = "Panggilan tanpa Caller ID (Private/Restricted Number) telah ditolak demi keselamatan.";
+
+            Notification.Builder nb = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    ? new Notification.Builder(context, SCAMMER_CALL_CHANNEL_ID)
+                    : new Notification.Builder(context);
+
+            nb.setSmallIcon(android.R.drawable.stat_sys_warning)
+              .setContentTitle(title)
+              .setContentText(subMsg)
+              .setStyle(new Notification.BigTextStyle().bigText(
+                  "\uD83D\uDEA8 SEKATAN PANGGILAN TERSEMBUNYI (PRIVATE CALL):\n" +
+                  "Pemanggil menyembunyikan identiti nombor bagi mengelakkan semakan risikan.\n\n" +
+                  "\u26A0\uFE0F Panggilan ini telah disekat secara automatik pada kelajuan 0-saat mengikut tetapan perisai KANTOI."
+              ))
+              .setPriority(Notification.PRIORITY_MAX)
+              .setAutoCancel(true);
+
+            if (pi != null) {
+                nb.setContentIntent(pi);
+            }
+
+            nm.notify(SCAMMER_CALL_NOTIFICATION_ID + 4, nb.build());
+            Log.i(TAG, "showPrivateCallBlockedNotification: Alert displayed.");
+        } catch (Throwable t) {
+            Log.e(TAG, "showPrivateCallBlockedNotification error: " + t.getMessage(), t);
+        }
+    }
+
     private static ScammerThreat parseThreat(Cursor c) {
         if (c == null) return null;
         ScammerThreat t = new ScammerThreat();

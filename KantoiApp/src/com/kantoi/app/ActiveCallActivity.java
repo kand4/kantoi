@@ -12,6 +12,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.util.Log;
 import android.os.SystemClock;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -57,6 +59,9 @@ public class ActiveCallActivity extends Activity {
     private Button mBtnCsToggleTactic;
     private Button mBtnCsStop;
 
+    // FASA 1 (INSPIRASI FOSSIFY DIALER): SENSOR KEHAMPIRAN (PROXIMITY WAKELOCK)
+    private PowerManager.WakeLock mProximityWakeLock;
+
     private final BroadcastReceiver mCallEndReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -87,6 +92,7 @@ public class ActiveCallActivity extends Activity {
         mContactName = mEngine.getContactDisplayName(cleanLocal);
 
         registerReceiver(mCallEndReceiver, new IntentFilter(ACTION_CALL_ENDED));
+        initProximitySensor();
 
         View uiView = buildLayout(cleanLocal);
         setContentView(uiView);
@@ -106,9 +112,49 @@ public class ActiveCallActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
+    private void initProximitySensor() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && pm.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
+                mProximityWakeLock = pm.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "Kantoi:ActiveCallProximity");
+            }
+        } catch (Throwable t) {
+            Log.d("ActiveCallActivity", "Proximity sensor not supported: " + t.getMessage());
+        }
+    }
+
+    private void acquireProximity() {
+        try {
+            if (mProximityWakeLock != null && !mProximityWakeLock.isHeld()) {
+                mProximityWakeLock.acquire();
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void releaseProximity() {
+        try {
+            if (mProximityWakeLock != null && mProximityWakeLock.isHeld()) {
+                mProximityWakeLock.release();
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        acquireProximity();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        releaseProximity();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        releaseProximity();
         try {
             unregisterReceiver(mCallEndReceiver);
         } catch (Throwable ignored) {}
