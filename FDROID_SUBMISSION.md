@@ -4,27 +4,16 @@ Panduan ini menyediakan templat siap guna untuk memohon kemasukan aplikasi **KAN
 
 ---
 
-## 🚀 Laluan 1: IzzyOnDroid (Paling Cepat & Disyorkan)
+## 🚀 Laluan 1: F-Droid RFP di GitLab (Menggunakan Akaun GitLab Anda)
 
-IzzyOnDroid adalah repositori rasmi terbesar dalam ekosistem F-Droid yang mengambil APK yang telah siap ditandatangani terus dari GitHub Releases anda.
+F-Droid rasmi menyediakan penjejak isu **RFP (Request For Packaging)** di GitLab untuk memasukkan aplikasi baharu:
 
-### Langkah-Langkah:
-1. **Tolak Kod ke GitHub:**
-   Pastikan commit terkini ditolak ke GitHub:
-   ```bash
-   git push origin main
-   ```
-2. **Cipta Tag Release di GitHub:**
-   * Pergi ke: `https://github.com/kand4/kantoi/releases/new`
-   * Masukkan Tag version: `v1.18.0`
-   * Release title: `v1.18.0 - Kantoi Scam Shield` (atau `v1.18.0 - Kantoi Scam Shield & Smart Dialer`)
-   * Lampirkan fail: `Kantoi_v1.18.0_Release_signed.apk`
-   * Klik **Publish release**.
-
-3. **Buka Permohonan (*Inclusion Request*) di IzzyOnDroid:**
-   * Pergi ke: `https://gitlab.com/IzzyOnDroid/repo/-/issues/new?issue%5Bissue_type%5D=issue`
-   * Pilih templat: **"Inclusion Request"**
-   * Salin dan tampal data berikut:
+1. **Buka Borang RFP di GitLab:**
+   👉 Pautan: `https://gitlab.com/fdroid/rfp/-/issues/new`
+2. **Tajuk Isu (*Title*):**
+   `RFP: com.kantoi.app (KANTOI - Anti-Scam Call Blocker)`
+3. **Kandungan Isu (*Description*):**
+   Salin teks templat di bawah dan hantar.
 
 ```markdown
 ### Application details
@@ -46,8 +35,16 @@ IzzyOnDroid adalah repositori rasmi terbesar dalam ekosistem F-Droid yang mengam
 - **Non-Free Dependencies:** NO (Pure Java/Android SDK)
 
 ### Additional Information
-KANTOI is a privacy-first, offline scam call screening and cyber threat defense application designed specifically for Malaysia and Southeast Asia. Fastlane metadata structure with 512x512 app icon and multi-language descriptions (en-US & ms-MY) is already included in the root directory.
+KANTOI is a privacy-first, zero-cost, offline scam call screening and cyber threat defense application designed specifically for Malaysia and Southeast Asia. Fastlane metadata structure with 512x512 app icon and multi-language descriptions (en-US & ms-MY) is already included in the root directory.
 ```
+
+---
+
+## 📦 Laluan 2: IzzyOnDroid di Codeberg (Staging Repo)
+
+*Nota: IzzyOnDroid telah memindahkan penjejak isu mereka dari GitLab ke **Codeberg**.*
+* **Pautan Isu Codeberg:** `https://codeberg.org/IzzyOnDroid/repo/issues`
+* Gunakan templat yang sama jika anda memohon di Codeberg IzzyOnDroid.
 
 ---
 
