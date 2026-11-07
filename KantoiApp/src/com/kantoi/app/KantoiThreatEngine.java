@@ -5116,6 +5116,66 @@ public class KantoiThreatEngine {
         }
     }
 
+    public void showHighRiskCountryNotification(Context context, String phone, KantoiCountryRadar.CountryRisk risk, boolean isBlocked) {
+        if (context == null || risk == null) return;
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                    SCAMMER_CALL_CHANNEL_ID,
+                    "Kantoi Amaran Scammer",
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                channel.setDescription("Notifikasi amaran dan sekatan panggilan scammer");
+                channel.enableVibration(true);
+                channel.setVibrationPattern(new long[]{0, 300, 150, 300, 150, 600});
+                nm.createNotificationChannel(channel);
+            }
+
+            Intent openApp = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            PendingIntent pi = null;
+            if (openApp != null) {
+                pi = PendingIntent.getActivity(
+                    context, 103, openApp,
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? (PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE) : PendingIntent.FLAG_UPDATE_CURRENT
+                );
+            }
+
+            String title = isBlocked 
+                ? "\uD83D\uDEA8 KANTOI: PANGGILAN " + risk.countryName.toUpperCase() + " DISEKAT!"
+                : "\uD83D\uDEA8 KANTOI: PANGGILAN LUAR NEGARA BERISIKO (" + risk.countryName + ")!";
+            String subMsg = "Nombor asing (" + phone + ") dikesan dari zon sindiket penipuan siber (" + risk.countryCode + ").";
+
+            Notification.Builder nb = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    ? new Notification.Builder(context, SCAMMER_CALL_CHANNEL_ID)
+                    : new Notification.Builder(context);
+
+            nb.setSmallIcon(android.R.drawable.stat_sys_warning)
+              .setContentTitle(title)
+              .setContentText(subMsg)
+              .setStyle(new Notification.BigTextStyle().bigText(
+                  "\uD83D\uDEA8 RADAR RISIKO NEGARA KANTOI:\n" +
+                  "Asal Panggilan: " + risk.countryName + " (" + risk.countryCode + ")\n" +
+                  "Kategori: " + risk.riskCategory + "\n\n" +
+                  "\u26A0\uFE0F " + risk.advice + "\n" +
+                  "JANGAN sesekali melayan sebarang tawaran kerja, pelaburan kripto, atau memindahkan wang!"
+              ))
+              .setPriority(Notification.PRIORITY_MAX)
+              .setAutoCancel(true);
+
+            if (pi != null) {
+                nb.setContentIntent(pi);
+            }
+
+            nm.notify(SCAMMER_CALL_NOTIFICATION_ID + 3, nb.build());
+            Log.i(TAG, "showHighRiskCountryNotification: Alert shown for " + phone + " (" + risk.countryName + ")");
+        } catch (Throwable t) {
+            Log.e(TAG, "showHighRiskCountryNotification error: " + t.getMessage(), t);
+        }
+    }
+
     private static ScammerThreat parseThreat(Cursor c) {
         if (c == null) return null;
         ScammerThreat t = new ScammerThreat();

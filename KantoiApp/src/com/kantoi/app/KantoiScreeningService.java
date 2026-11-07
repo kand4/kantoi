@@ -62,6 +62,23 @@ public class KantoiScreeningService extends CallScreeningService {
                 return;
             }
 
+            // CIRI C (INSPIRASI PHONEINFOGA): RADAR KOD NEGARA BERISIKO TINGGI (OVERSEAS SCAM RADAR)
+            KantoiCountryRadar.CountryRisk countryRisk = KantoiCountryRadar.checkCountryRisk(rawNumber);
+            if (countryRisk != null && countryRisk.isHighRisk) {
+                boolean blockOverseas = prefs.getBoolean("pref_block_overseas_scam", true);
+                Log.w(TAG, "\uD83D\uDEA8 Panggilan luar negara berisiko dikesan: " + rawNumber + " (" + countryRisk.countryName + ")");
+
+                final KantoiCounterStrikeEngine csEngine = KantoiCounterStrikeEngine.getInstance(this);
+                csEngine.recordTelemetryIncident(rawNumber, "Scam Luar Negara (" + countryRisk.countryName + ")", "OVERSEAS_SCAM", "SEKATAN_RADAR_NEGARA");
+                engine.showHighRiskCountryNotification(this, rawNumber, countryRisk, blockOverseas);
+
+                if (blockOverseas) {
+                    respondBlock(callDetails);
+                    Log.i(TAG, "Panggilan antarabangsa berisiko berjaya disekat automatik: " + rawNumber);
+                    return;
+                }
+            }
+
             KantoiThreatEngine.ScammerThreat threat = engine.checkThreat(rawNumber);
 
             // CIRI 3: MOD PERLINDUNGAN WARGA EMAS (STRICT WHITELIST)

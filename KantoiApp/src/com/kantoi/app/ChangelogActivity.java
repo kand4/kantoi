@@ -94,11 +94,37 @@ public class ChangelogActivity extends Activity {
         });
         root.addView(btnGithub);
 
+        // ==================== VERSION 1.17.3 ====================
+        LinearLayout cardV1173 = createCard(0xFF141422, 0xFF00FF88, 12);
+        cardV1173.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1173Header = createVersionHeader("VERSI 1.17.3 (TERKINI)", "7 NOVEMBER 2026", 0xFF00FF88);
+        cardV1173.addView(v1173Header);
+
+        TextView tvV1173Content = new TextView(this);
+        tvV1173Content.setText(
+            "\uD83C\uDF0D Inspirasi PhoneInfoga: Radar Kod Negara Berisiko Tinggi (Overseas Scam Radar):\n\n" +
+            "\uD83D\uDEA8 1. Pengesanan Zon Hab Sindiket Penipuan Luar Negara:\n" +
+            "     Mengimbas secara pintar kod panggilan antarabangsa seperti Kemboja (+855), Myanmar (+95), Laos (+856), Nigeria (+234), Pakistan (+92), India (+91), dan Bangladesh (+880).\n\n" +
+            "\uD83D\uDEE1\uFE0F 2. Sekatan Automatik Pintar Tanpa Menjejaskan Kenalan:\n" +
+            "     Panggilan daripada nombor asing luar zon selamat akan disekat serta-merta pada kelajuan 0-saat sekiranya tiada dalam buku telefon.\n\n" +
+            "\u2699\uFE0F 3. Suis Kawalan Fleksibel di Skrin Utama:\n" +
+            "     Pengguna boleh memilih antara Auto-Sekat Zon Scam atau Dering Amaran Sahaja di tab Tetapan."
+        );
+        tvV1173Content.setTextColor(0xFFCBD5E1);
+        tvV1173Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvV1173Content.setLineSpacing(dpToPx(4), 1.15f);
+        setMarginTop(tvV1173Content, 10);
+        cardV1173.addView(tvV1173Content);
+
+        setMarginTop(cardV1173, 14);
+        root.addView(cardV1173);
+
         // ==================== VERSION 1.17.2 ====================
         LinearLayout cardV1172 = createCard(0xFF141422, 0xFF00FF88, 12);
         cardV1172.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        LinearLayout v1172Header = createVersionHeader("VERSI 1.17.2 (TERKINI)", "7 NOVEMBER 2026", 0xFF00FF88);
+        LinearLayout v1172Header = createVersionHeader("VERSI 1.17.2", "7 NOVEMBER 2026", 0xFF00FF88);
         cardV1172.addView(v1172Header);
 
         TextView tvV1172Content = new TextView(this);
