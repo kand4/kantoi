@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Sync KenaScam to KANTOI Threat Database
-Menggunakan rangkaian Tor (SOCKS5 127.0.0.1:9150) untuk perlindungan privasi dan IP penuh.
-Menyedut data kes scammer dari kenascam.com, mengekstrak nombor telefon & akaun bank,
-dan mengimportnya ke dalam pangkalan data SQLite KANTOI (kantoi_threats.db).
+
+
 """
 
 import os
