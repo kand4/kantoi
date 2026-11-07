@@ -1743,6 +1743,45 @@ public class MainActivity extends Activity {
         seniorCard.addView(mBtnSeniorModeToggle);
         root.addView(seniorCard);
 
+        // 4b. Radar Kod Negara Berisiko Tinggi (Overseas Scam Radar)
+        LinearLayout countryRadarCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
+        countryRadarCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+        setMarginTop(countryRadarCard, 12);
+
+        TextView tvCountryTitle = new TextView(this);
+        tvCountryTitle.setText("\uD83C\uDF0D RADAR SCAM LUAR NEGARA (OVERSEAS RADAR)");
+        tvCountryTitle.setTextColor(0xFF38BDF8);
+        tvCountryTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvCountryTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        countryRadarCard.addView(tvCountryTitle);
+
+        TextView tvCountryDesc = new TextView(this);
+        tvCountryDesc.setText("Mengesan dan menyekat panggilan sindiket penipuan antarabangsa (Kemboja +855, Myanmar +95, Laos +856, Nigeria +234, dsb.) yang tiada dalam buku kenalan.");
+        tvCountryDesc.setTextColor(0xFFE2E8F0);
+        tvCountryDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tvCountryDesc.setPadding(0, dpToPx(4), 0, dpToPx(8));
+        countryRadarCard.addView(tvCountryDesc);
+
+        final boolean blockOverseas = prefs.getBoolean("pref_block_overseas_scam", true);
+        final Button btnCountryToggle = createButton(
+            blockOverseas ? "\uD83D\uDEE1\uFE0F RADAR NEGARA: AKTIF (AUTO-SEKAT ZON SCAM)" : "\u26A0\uFE0F RADAR NEGARA: HANYA AMARAN",
+            blockOverseas ? 0xFF0284C7 : 0xFF475569,
+            Color.WHITE
+        );
+        btnCountryToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean cur = prefs.getBoolean("pref_block_overseas_scam", true);
+                boolean next = !cur;
+                prefs.edit().putBoolean("pref_block_overseas_scam", next).apply();
+                btnCountryToggle.setText(next ? "\uD83D\uDEE1\uFE0F RADAR NEGARA: AKTIF (AUTO-SEKAT ZON SCAM)" : "\u26A0\uFE0F RADAR NEGARA: HANYA AMARAN");
+                updateButtonBg(btnCountryToggle, next ? 0xFF0284C7 : 0xFF475569);
+                Toast.makeText(MainActivity.this, next ? "Panggilan dari zon scammer luar negara akan disekat automatik." : "Radar negara ditetapkan kepada mod amaran sahaja.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        countryRadarCard.addView(btnCountryToggle);
+        root.addView(countryRadarCard);
+
         // 5. Pengesan Akaun Keldai Papan Keratan (Clipboard Mule Sniffer)
         LinearLayout clipCard = createCard(0xFF141422, 0xFF2A2A3A, 12);
         clipCard.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));

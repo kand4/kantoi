@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.kantoi.app"
-    android:versionCode="11720"
-    android:versionName="1.17.2">
+    android:versionCode="11730"
+    android:versionName="1.17.3">
 
     <uses-sdk
         android:minSdkVersion="26"

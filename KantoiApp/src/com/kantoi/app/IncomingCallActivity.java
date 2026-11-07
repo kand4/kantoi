@@ -372,9 +372,29 @@ public class IncomingCallActivity extends Activity {
             threatCard.addView(tvSafeDesc);
 
         } else {
-            cardBg.setColor(0xFF0A0A0F);
-            cardBg.setStroke(dpToPx(1), 0xFF0284C7);
-            threatCard.setBackground(cardBg);
+            KantoiCountryRadar.CountryRisk countryRisk = KantoiCountryRadar.checkCountryRisk(mPhoneNumber);
+            if (countryRisk != null && countryRisk.isHighRisk) {
+                cardBg.setColor(0xFF450A0A);
+                cardBg.setStroke(dpToPx(2), 0xFFF97316);
+                threatCard.setBackground(cardBg);
+
+                TextView tvCountryTitle = new TextView(this);
+                tvCountryTitle.setText("\uD83D\uDEA8 PANGGILAN ZON SCAM: " + countryRisk.countryName.toUpperCase() + " (" + countryRisk.countryCode + ")");
+                tvCountryTitle.setTextColor(0xFFFDBA74);
+                tvCountryTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                tvCountryTitle.setTypeface(Typeface.DEFAULT_BOLD);
+                threatCard.addView(tvCountryTitle);
+
+                TextView tvCountryDesc = new TextView(this);
+                tvCountryDesc.setText("Kategori: " + countryRisk.riskCategory + "\n\u26A0\uFE0F " + countryRisk.advice);
+                tvCountryDesc.setTextColor(0xFFFED7AA);
+                tvCountryDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                setMarginTop(tvCountryDesc, 3);
+                threatCard.addView(tvCountryDesc);
+            } else {
+                cardBg.setColor(0xFF0A0A0F);
+                cardBg.setStroke(dpToPx(1), 0xFF0284C7);
+                threatCard.setBackground(cardBg);
 
             TextView tvUnkTitle = new TextView(this);
             tvUnkTitle.setText("ℹ️ NOMBOR ASING (TIADA DALAM KENALAN)");
@@ -389,6 +409,7 @@ public class IncomingCallActivity extends Activity {
             tvUnkDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             setMarginTop(tvUnkDesc, 3);
             threatCard.addView(tvUnkDesc);
+            }
         }
 
         mContentContainer.addView(threatCard);
