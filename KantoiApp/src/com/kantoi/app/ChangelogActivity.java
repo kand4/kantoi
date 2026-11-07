@@ -94,11 +94,37 @@ public class ChangelogActivity extends Activity {
         });
         root.addView(btnGithub);
 
+        // ==================== VERSION 1.17.2 ====================
+        LinearLayout cardV1172 = createCard(0xFF141422, 0xFF00FF88, 12);
+        cardV1172.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1172Header = createVersionHeader("VERSI 1.17.2 (TERKINI)", "7 NOVEMBER 2026", 0xFF00FF88);
+        cardV1172.addView(v1172Header);
+
+        TextView tvV1172Content = new TextView(this);
+        tvV1172Content.setText(
+            "\uD83D\uDEE1\uFE0F Inspirasi SpamBlocker: Enjin Pengesanan Pemalsuan Caller ID (STIR/SHAKEN Telco Attestation):\n\n" +
+            "\uD83D\uDEA8 1. Pengesanan VoIP Caller ID Spoofing (Android 11+ / API 30+):\n" +
+            "     Mengesan taktik sindiket Macau Scam yang memalsukan nombor Bukit Aman, Mahkamah, atau Bank menggunakan talian VoIP komputer.\n\n" +
+            "\u26A0\uFE0F 2. Sekatan Pintar Mengatasi Whitelist Buku Kenalan:\n" +
+            "     Sekiranya pengesahan kriptografi rangkaian telco menandakan GAGAL (Connection.VERIFICATION_STATUS_FAILED), panggilan disekat serta-merta walaupun nombor tertera kelihatan seperti kenalan yang sah.\n\n" +
+            "\uD83D\uDD25 3. Integrasi Telemetri Counter-Strike:\n" +
+            "     Setiap percubaan pemalsuan identiti direkod ke dalam log insiden telemetri KANTOI dengan tanda amaran kritikal."
+        );
+        tvV1172Content.setTextColor(0xFFCBD5E1);
+        tvV1172Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvV1172Content.setLineSpacing(dpToPx(4), 1.15f);
+        setMarginTop(tvV1172Content, 10);
+        cardV1172.addView(tvV1172Content);
+
+        setMarginTop(cardV1172, 14);
+        root.addView(cardV1172);
+
         // ==================== VERSION 1.17.1 ====================
         LinearLayout cardV1171 = createCard(0xFF141422, 0xFF00FF88, 12);
         cardV1171.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        LinearLayout v1171Header = createVersionHeader("VERSI 1.17.1 (TERKINI)", "7 NOVEMBER 2026", 0xFF00FF88);
+        LinearLayout v1171Header = createVersionHeader("VERSI 1.17.1", "7 NOVEMBER 2026", 0xFF00FF88);
         cardV1171.addView(v1171Header);
 
         TextView tvV1171Content = new TextView(this);
