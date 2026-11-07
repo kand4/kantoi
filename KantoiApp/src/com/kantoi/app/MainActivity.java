@@ -1931,13 +1931,13 @@ public class MainActivity extends Activity {
         });
         toolsCard.addView(btnCse);
 
-        Button btnWaIntel = createButton("📸 SIASAT WHATSAPP & KEBOCORAN (CHECKLEAKED OSINT)", 0xFF059669, Color.WHITE);
+        Button btnWaIntel = createButton("💬 BUKA WHATSAPP (1-KLIK TANPA SIMPAN)", 0xFF059669, Color.WHITE);
         setMarginTop(btnWaIntel, 8);
         btnWaIntel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String input = mEtSearchPhone != null ? mEtSearchPhone.getText().toString() : "";
-                KantoiThreatEngine.showWhatsAppIntelDialog(MainActivity.this, input);
+                KantoiThreatEngine.openWhatsAppChatDirect(MainActivity.this, input);
             }
         });
         toolsCard.addView(btnWaIntel);
@@ -2259,12 +2259,12 @@ public class MainActivity extends Activity {
             });
             mSearchResultCard.addView(btnCheckCse);
 
-            Button btnCheckWa = createButton("📸 SIASAT GAMBAR DP WHATSAPP (CHECKLEAKED)", 0xFF059669, Color.WHITE);
+            Button btnCheckWa = createButton("💬 BUKA WHATSAPP (1-KLIK)", 0xFF059669, Color.WHITE);
             setMarginTop(btnCheckWa, 6);
             btnCheckWa.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    KantoiThreatEngine.showWhatsAppIntelDialog(MainActivity.this, local);
+                    KantoiThreatEngine.openWhatsAppChatDirect(MainActivity.this, local);
                 }
             });
             mSearchResultCard.addView(btnCheckWa);

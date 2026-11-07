@@ -80,6 +80,12 @@ public class KantoiShareActivity extends Activity {
         Matcher um = urlPattern.matcher(text);
         if (um.find()) {
             final String foundUrl = um.group();
+            // Analisis Enjin Keselamatan Kod QR & Anti-Quishing KANTOI
+            KantoiQrSafetyEngine.QrVerdict qv = KantoiQrSafetyEngine.evaluate(foundUrl);
+            if (qv.riskLevel == KantoiQrSafetyEngine.RiskLevel.CRITICAL) {
+                showQuishingWarningDialog(qv, foundUrl);
+                return;
+            }
             KantoiVirusTotalEngine.showUrlScanDialog(this, foundUrl);
             return;
         }
@@ -146,5 +152,33 @@ public class KantoiShareActivity extends Activity {
                 });
             }
         }).start();
+    }
+
+    private void showQuishingWarningDialog(final KantoiQrSafetyEngine.QrVerdict qv, final String url) {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle(qv.title);
+        builder.setMessage(qv.description + "\n\n🌐 Sasaran: " + qv.domain + "\n\n" + qv.safetyNote);
+        builder.setIcon(android.R.drawable.ic_dialog_alert);
+        builder.setPositiveButton("🛡️ FAHAM & SEKAT", new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface dialog, int which) {
+                dialog.dismiss();
+                finish();
+            }
+        });
+        builder.setNegativeButton("Imbas Mendalam (VirusTotal)", new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface dialog, int which) {
+                dialog.dismiss();
+                KantoiVirusTotalEngine.showUrlScanDialog(KantoiShareActivity.this, url);
+            }
+        });
+        builder.setOnCancelListener(new android.content.DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(android.content.DialogInterface dialog) {
+                finish();
+            }
+        });
+        builder.show();
     }
 }

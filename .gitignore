@@ -77,3 +77,45 @@ secret.json
 secrets.json
 scratch/
 *.bak
+
+# Internal strategy & roadmap documents
+ROADMAP_NUSANTARA_INTEL.md
+user_analytics.json
+banned_users.json
+
+# ==========================================
+# 1. Scraping, Harvesters & Raw Forum Dumps (PRIVATE / OFFLINE ONLY)
+# ==========================================
+scrape_*.py
+*scammers_db.json
+*threads*.json
+kenascam_*.json
+extract_*.py
+analyze_threads.py
+sync_kenascam*.py
+update_lowyat*.js
+
+# ==========================================
+# 2. Reverse Engineering & Decompilation Traces
+# ==========================================
+BuildC*.java
+DecodeC*.java
+TestCheckApp.java
+inspect_*.py
+find_*.py
+check_form.py
+check_search.py
+check_table*.py
+package_mod*.py
+
+# ==========================================
+# 3. Local Developer Mockups & Maintenance Scripts
+# ==========================================
+*.html
+clean_database*.py
+create_portable*.py
+export_threats*.py
+generate_jauhi*.py
+merge_all*.py
+update_all*.py
+run_full_system*.py

@@ -26,6 +26,10 @@ import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -2675,618 +2679,29 @@ public class KantoiThreatEngine {
         }
     }
 
+    public static void openWhatsAppChatDirect(final Context context, final String rawNumber) {
+        if (context == null || rawNumber == null) return;
+        try {
+            String intlNumber = normalizeToIntl(rawNumber);
+            String waDigits = intlNumber.replace("+", "");
+            Intent waIt = new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/" + waDigits));
+            waIt.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(waIt);
+        } catch (Throwable t) {
+            Toast.makeText(context, "Gagal membuka WhatsApp: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
     public static void showWhatsAppHubDialog(final Context context, final String rawNumber) {
-        if (context == null) return;
-        final Activity activity = activity_to_activity(context);
-        if (activity == null || activity.isFinishing()) return;
-
-        final String cleanLocal = normalizeToLocal(rawNumber);
-        final String intlNumber = normalizeToIntl(rawNumber);
-        final String waDigits = intlNumber.replace("+", "");
-
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final Dialog dialog = new Dialog(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert);
-                    dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-
-                    LinearLayout root = new LinearLayout(activity);
-                    root.setOrientation(LinearLayout.VERTICAL);
-                    root.setPadding(dpToPx(activity, 20), dpToPx(activity, 18), dpToPx(activity, 20), dpToPx(activity, 20));
-                    root.setBackgroundColor(0xFF0A0A0F); // Slate 900 Tactical
-
-                    // 1. Header Row
-                    LinearLayout headerRow = new LinearLayout(activity);
-                    headerRow.setOrientation(LinearLayout.HORIZONTAL);
-                    headerRow.setGravity(Gravity.CENTER_VERTICAL);
-
-                    TextView tvIcon = new TextView(activity);
-                    tvIcon.setText("💬");
-                    tvIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
-                    headerRow.addView(tvIcon);
-
-                    LinearLayout titleCol = new LinearLayout(activity);
-                    titleCol.setOrientation(LinearLayout.VERTICAL);
-                    titleCol.setPadding(dpToPx(activity, 12), 0, 0, 0);
-                    LinearLayout.LayoutParams tcP = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-                    titleCol.setLayoutParams(tcP);
-
-                    TextView tvTitle = new TextView(activity);
-                    tvTitle.setText("HAB OPERASI WHATSAPP");
-                    tvTitle.setTextColor(Color.WHITE);
-                    tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-                    tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
-                    titleCol.addView(tvTitle);
-
-                    TextView tvSub = new TextView(activity);
-                    tvSub.setText(formatPhoneNumber(cleanLocal) + " (" + intlNumber + ")");
-                    tvSub.setTextColor(0xFF38BDF8); // Cyber Cyan
-                    tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-                    titleCol.addView(tvSub);
-
-                    headerRow.addView(titleCol);
-
-                    Button btnClose = new Button(activity);
-                    btnClose.setText("✕");
-                    btnClose.setTextColor(0xFF94A3B8);
-                    btnClose.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-                    btnClose.setBackgroundColor(Color.TRANSPARENT);
-                    btnClose.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            dialog.dismiss();
-                        }
-                    });
-                    headerRow.addView(btnClose);
-                    root.addView(headerRow);
-
-                    // Notice / Subtext
-                    TextView tvDesc = new TextView(activity);
-                    tvDesc.setText("Pilih mod operasi yang diinginkan. Anda boleh menyiasat gambar profil & kebocoran data secara sulit atau terus bersembang tanpa perlu simpan ke kenalan.");
-                    tvDesc.setTextColor(0xFF94A3B8);
-                    tvDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-                    setMarginTop(activity, tvDesc, 10);
-                    root.addView(tvDesc);
-
-                    // Card Option 1: 🌐 SIASAT DI BROWSER CHROME (DISYORKAN - BEBAS SEKATAN)
-                    LinearLayout cardBrowser = new LinearLayout(activity);
-                    cardBrowser.setOrientation(LinearLayout.VERTICAL);
-                    cardBrowser.setPadding(dpToPx(activity, 14), dpToPx(activity, 14), dpToPx(activity, 14), dpToPx(activity, 14));
-                    setMarginTop(activity, cardBrowser, 14);
-
-                    GradientDrawable brBg = new GradientDrawable();
-                    brBg.setColor(0xFF064E3B); // Deep Emerald
-                    brBg.setCornerRadius(dpToPx(activity, 12));
-                    brBg.setStroke(dpToPx(activity, 2), 0xFF10B981);
-                    cardBrowser.setBackground(brBg);
-                    cardBrowser.setClickable(true);
-
-                    TextView tvBrTitle = new TextView(activity);
-                    tvBrTitle.setText("🌐 1. SIASAT DI CHROME / BROWSER (DISYORKAN)");
-                    tvBrTitle.setTextColor(0xFF34D399);
-                    tvBrTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-                    tvBrTitle.setTypeface(Typeface.DEFAULT_BOLD);
-                    cardBrowser.addView(tvBrTitle);
-
-                    TextView tvBrDesc = new TextView(activity);
-                    tvBrDesc.setText("Buka CheckLeaked CC terus di aplikasi pelayar telefon anda. Bebas daripada sebarang sekatan bot Cloudflare & paparan penuh. Nombor disalin automatik.");
-                    tvBrDesc.setTextColor(0xFFD1FAE5);
-                    tvBrDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-                    setMarginTop(activity, tvBrDesc, 4);
-                    cardBrowser.addView(tvBrDesc);
-
-                    cardBrowser.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            dialog.dismiss();
-                            openWhatsAppIntelInBrowser(activity, cleanLocal);
-                        }
-                    });
-                    root.addView(cardBrowser);
-
-                    // Card Option 2: 📱 PAPARAN DALAM APLIKASI KANTOI (WEBVIEW HUD)
-                    LinearLayout cardOsint = new LinearLayout(activity);
-                    cardOsint.setOrientation(LinearLayout.VERTICAL);
-                    cardOsint.setPadding(dpToPx(activity, 14), dpToPx(activity, 14), dpToPx(activity, 14), dpToPx(activity, 14));
-                    setMarginTop(activity, cardOsint, 10);
-
-                    GradientDrawable osintBg = new GradientDrawable();
-                    osintBg.setColor(0xFF141422); // Slate
-                    osintBg.setCornerRadius(dpToPx(activity, 12));
-                    osintBg.setStroke(dpToPx(activity, 1), 0xFF0284C7);
-                    cardOsint.setBackground(osintBg);
-                    cardOsint.setClickable(true);
-
-                    TextView tvOsintTitle = new TextView(activity);
-                    tvOsintTitle.setText("📱 2. SIASAT DALAM APLIKASI (WEBVIEW HUD)");
-                    tvOsintTitle.setTextColor(0xFF38BDF8);
-                    tvOsintTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-                    tvOsintTitle.setTypeface(Typeface.DEFAULT_BOLD);
-                    cardOsint.addView(tvOsintTitle);
-
-                    TextView tvOsintDesc = new TextView(activity);
-                    tvOsintDesc.setText("Paparan skrin mini terus dalam KANTOI tanpa keluar dari aplikasi.");
-                    tvOsintDesc.setTextColor(0xFF94A3B8);
-                    tvOsintDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-                    setMarginTop(activity, tvOsintDesc, 4);
-                    cardOsint.addView(tvOsintDesc);
-
-                    cardOsint.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            dialog.dismiss();
-                            showWhatsAppIntelDialog(activity, cleanLocal);
-                        }
-                    });
-                    root.addView(cardOsint);
-
-                    // Card Option 3: 💬 BUKA SEMBANG WHATSAPP TERUS (WA.ME)
-                    LinearLayout cardChat = new LinearLayout(activity);
-                    cardChat.setOrientation(LinearLayout.VERTICAL);
-                    cardChat.setPadding(dpToPx(activity, 14), dpToPx(activity, 14), dpToPx(activity, 14), dpToPx(activity, 14));
-                    setMarginTop(activity, cardChat, 10);
-
-                    GradientDrawable chatBg = new GradientDrawable();
-                    chatBg.setColor(0xFF0A0A0F); // Dark Slate
-                    chatBg.setCornerRadius(dpToPx(activity, 12));
-                    chatBg.setStroke(dpToPx(activity, 1), 0xFF2A2A3A);
-                    cardChat.setBackground(chatBg);
-                    cardChat.setClickable(true);
-
-                    TextView tvChatTitle = new TextView(activity);
-                    tvChatTitle.setText("💬 3. BUKA SEMBANG TERUS (DIRECT CHAT)");
-                    tvChatTitle.setTextColor(0xFFE2E8F0);
-                    tvChatTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-                    tvChatTitle.setTypeface(Typeface.DEFAULT_BOLD);
-                    cardChat.addView(tvChatTitle);
-
-                    TextView tvChatDesc = new TextView(activity);
-                    tvChatDesc.setText("Buka perbualan terus di aplikasi WhatsApp tanpa perlu menyimpan nombor ini ke dalam Buku Telefon Android anda.");
-                    tvChatDesc.setTextColor(0xFF94A3B8);
-                    tvChatDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-                    setMarginTop(activity, tvChatDesc, 4);
-                    cardChat.addView(tvChatDesc);
-
-                    cardChat.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            dialog.dismiss();
-                            try {
-                                Intent waIt = new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/" + waDigits));
-                                waIt.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                activity.startActivity(waIt);
-                            } catch (Throwable t) {
-                                Toast.makeText(activity, "Gagal membuka WhatsApp: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    });
-                    root.addView(cardChat);
-
-                    dialog.setContentView(root);
-                    dialog.setCancelable(true);
-                    dialog.setCanceledOnTouchOutside(true);
-                    dialog.show();
-
-                    Window win = dialog.getWindow();
-                    if (win != null) {
-                        GradientDrawable dWinBg = new GradientDrawable();
-                        dWinBg.setColor(0xFF0A0A0F);
-                        dWinBg.setCornerRadius(dpToPx(activity, 16));
-                        win.setBackgroundDrawable(dWinBg);
-
-                        DisplayMetrics dm = activity.getResources().getDisplayMetrics();
-                        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-                        lp.copyFrom(win.getAttributes());
-                        lp.width = (int) (dm.widthPixels * 0.94);
-                        lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
-                        lp.gravity = Gravity.CENTER;
-                        win.setAttributes(lp);
-                    }
-                } catch (Throwable t) {
-                    Log.e(TAG, "showWhatsAppHubDialog error: " + t.getMessage(), t);
-                }
-            }
-        });
+        openWhatsAppChatDirect(context, rawNumber);
     }
 
     public static void showWhatsAppIntelDialog(final Context context, final String rawNumber) {
-        if (context == null) return;
-        final Activity activity = activity_to_activity(context);
-        if (activity == null || activity.isFinishing()) return;
-
-        final String cleanLocal = normalizeToLocal(rawNumber);
-        final String intlNumber = normalizeToIntl(rawNumber);
-        final String checkLeakedUrl = "https://whatsapp.checkleaked.cc/";
-
-        // Auto-copy international number to clipboard
-        try {
-            ClipboardManager cm = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm != null) {
-                cm.setPrimaryClip(ClipData.newPlainText("WhatsApp Number", intlNumber));
-            }
-        } catch (Throwable ignored) {}
-
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final Dialog dialog = new Dialog(activity, android.R.style.Theme_DeviceDefault_NoActionBar);
-                    dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-
-                    LinearLayout root = new LinearLayout(activity);
-                    root.setOrientation(LinearLayout.VERTICAL);
-                    root.setBackgroundColor(0xFF0A0A0F); // Deep Slate 900 Tactical
-                    root.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-                    // 1. Tactical HUD Header Bar
-                    LinearLayout headerBar = new LinearLayout(activity);
-                    headerBar.setOrientation(LinearLayout.HORIZONTAL);
-                    headerBar.setGravity(Gravity.CENTER_VERTICAL);
-                    headerBar.setPadding(dpToPx(activity, 16), dpToPx(activity, 12), dpToPx(activity, 16), dpToPx(activity, 10));
-                    headerBar.setBackgroundColor(0xFF141422);
-
-                    LinearLayout titleBox = new LinearLayout(activity);
-                    titleBox.setOrientation(LinearLayout.VERTICAL);
-                    LinearLayout.LayoutParams tP = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-                    titleBox.setLayoutParams(tP);
-
-                    TextView tvTitle = new TextView(activity);
-                    tvTitle.setText("📸 RISIKAN WHATSAPP & KEBOCORAN");
-                    tvTitle.setTextColor(Color.WHITE);
-                    tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-                    tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
-                    titleBox.addView(tvTitle);
-
-                    TextView tvSub = new TextView(activity);
-                    tvSub.setText("OSINT CheckLeaked • DP & Profil Suspek");
-                    tvSub.setTextColor(0xFF38BDF8);
-                    tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-                    titleBox.addView(tvSub);
-
-                    headerBar.addView(titleBox);
-
-                    Button btnClose = new Button(activity);
-                    btnClose.setText("✕ TUTUP");
-                    btnClose.setTextColor(Color.WHITE);
-                    btnClose.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-                    btnClose.setTypeface(Typeface.DEFAULT_BOLD);
-                    GradientDrawable cBg = new GradientDrawable();
-                    cBg.setColor(0xFFDC2626);
-                    cBg.setCornerRadius(dpToPx(activity, 6));
-                    btnClose.setBackground(cBg);
-                    LinearLayout.LayoutParams cP = new LinearLayout.LayoutParams(dpToPx(activity, 74), dpToPx(activity, 34));
-                    btnClose.setLayoutParams(cP);
-                    headerBar.addView(btnClose);
-
-                    root.addView(headerBar);
-
-                    // 2. Tactical Target Banner with Copy Badge
-                    LinearLayout banner = new LinearLayout(activity);
-                    banner.setOrientation(LinearLayout.HORIZONTAL);
-                    banner.setGravity(Gravity.CENTER_VERTICAL);
-                    banner.setPadding(dpToPx(activity, 14), dpToPx(activity, 8), dpToPx(activity, 14), dpToPx(activity, 8));
-                    banner.setBackgroundColor(0xFF064E3B); // Emerald Banner
-
-                    LinearLayout bannerInfo = new LinearLayout(activity);
-                    bannerInfo.setOrientation(LinearLayout.VERTICAL);
-                    LinearLayout.LayoutParams biP = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-                    bannerInfo.setLayoutParams(biP);
-
-                    TextView tvTargetNum = new TextView(activity);
-                    tvTargetNum.setText("🎯 SASARAN: " + intlNumber + " (" + cleanLocal + ")");
-                    tvTargetNum.setTextColor(0xFF34D399);
-                    tvTargetNum.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-                    tvTargetNum.setTypeface(Typeface.DEFAULT_BOLD);
-                    bannerInfo.addView(tvTargetNum);
-
-                    TextView tvTargetNotice = new TextView(activity);
-                    tvTargetNotice.setText("✓ Nombor disalin automatik. Jika skrin putih, tekan [🌐 BUKA CHROME].");
-                    tvTargetNotice.setTextColor(0xFFD1FAE5);
-                    tvTargetNotice.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-                    bannerInfo.addView(tvTargetNotice);
-
-                    banner.addView(bannerInfo);
-
-                    Button btnRecopy = new Button(activity);
-                    btnRecopy.setText("📋 SALIN");
-                    btnRecopy.setTextColor(Color.WHITE);
-                    btnRecopy.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-                    btnRecopy.setTypeface(Typeface.DEFAULT_BOLD);
-                    GradientDrawable rcBg = new GradientDrawable();
-                    rcBg.setColor(0xFF059669);
-                    rcBg.setCornerRadius(dpToPx(activity, 4));
-                    btnRecopy.setBackground(rcBg);
-                    LinearLayout.LayoutParams rcP = new LinearLayout.LayoutParams(dpToPx(activity, 64), dpToPx(activity, 30));
-                    btnRecopy.setLayoutParams(rcP);
-                    btnRecopy.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            try {
-                                ClipboardManager cm = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
-                                if (cm != null) {
-                                    cm.setPrimaryClip(ClipData.newPlainText("WhatsApp Number", intlNumber));
-                                    Toast.makeText(activity, "Nombor " + intlNumber + " disalin semula!", Toast.LENGTH_SHORT).show();
-                                }
-                            } catch (Throwable ignored) {}
-                        }
-                    });
-                    banner.addView(btnRecopy);
-
-                    root.addView(banner);
-
-                    // 3. Loading Indicator
-                    final ProgressBar progressBar = new ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
-                    progressBar.setMax(100);
-                    progressBar.setProgress(10);
-                    progressBar.setVisibility(View.VISIBLE);
-                    LinearLayout.LayoutParams pbP = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 3));
-                    progressBar.setLayoutParams(pbP);
-                    root.addView(progressBar);
-
-                    // Error Fallback Container (Hidden by default, shown if page errors or blocked)
-                    final LinearLayout errorContainer = new LinearLayout(activity);
-                    errorContainer.setOrientation(LinearLayout.VERTICAL);
-                    errorContainer.setPadding(dpToPx(activity, 16), dpToPx(activity, 16), dpToPx(activity, 16), dpToPx(activity, 16));
-                    errorContainer.setBackgroundColor(0xFF141422);
-                    errorContainer.setVisibility(View.GONE);
-
-                    TextView tvErrNotice = new TextView(activity);
-                    tvErrNotice.setText("⚠️ Laman web CheckLeaked memerlukan pengesahan pelayar penuh (Cloudflare Security Check). Sila tekan butang di bawah untuk membuka terus di pelayar Chrome:");
-                    tvErrNotice.setTextColor(0xFFFBBF24); // Amber
-                    tvErrNotice.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-                    errorContainer.addView(tvErrNotice);
-
-                    Button btnOpenInChrome = new Button(activity);
-                    btnOpenInChrome.setText("🌐 BUKA TERUS DI PELAYAR CHROME (AUTO-SALIN)");
-                    btnOpenInChrome.setTextColor(Color.WHITE);
-                    btnOpenInChrome.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-                    btnOpenInChrome.setTypeface(Typeface.DEFAULT_BOLD);
-                    GradientDrawable crBg = new GradientDrawable();
-                    crBg.setColor(0xFF059669);
-                    crBg.setCornerRadius(dpToPx(activity, 8));
-                    btnOpenInChrome.setBackground(crBg);
-                    LinearLayout.LayoutParams ocP = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(activity, 44));
-                    ocP.setMargins(0, dpToPx(activity, 10), 0, 0);
-                    btnOpenInChrome.setLayoutParams(ocP);
-                    btnOpenInChrome.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            dialog.dismiss();
-                            openWhatsAppIntelInBrowser(activity, cleanLocal);
-                        }
-                    });
-                    errorContainer.addView(btnOpenInChrome);
-                    root.addView(errorContainer);
-
-                    // 4. In-App Tactical WebView
-                    final WebView webView = new WebView(activity);
-                    LinearLayout.LayoutParams wvP = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
-                    webView.setLayoutParams(wvP);
-                    webView.setBackgroundColor(Color.WHITE);
-                    webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-
-                    WebSettings ws = webView.getSettings();
-                    ws.setJavaScriptEnabled(true);
-                    ws.setDomStorageEnabled(true);
-                    ws.setDatabaseEnabled(true);
-                    ws.setAllowContentAccess(true);
-                    ws.setAllowFileAccess(true);
-                    ws.setJavaScriptCanOpenWindowsAutomatically(true);
-                    ws.setSupportMultipleWindows(true);
-                    ws.setSupportZoom(true);
-                    ws.setBuiltInZoomControls(true);
-                    ws.setDisplayZoomControls(false);
-                    ws.setUseWideViewPort(true);
-                    ws.setLoadWithOverviewMode(true);
-                    ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-                    ws.setCacheMode(WebSettings.LOAD_DEFAULT);
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
-                    }
-                    android.webkit.CookieManager.getInstance().setAcceptCookie(true);
-
-                    webView.setWebChromeClient(new WebChromeClient() {
-                        @Override
-                        public void onProgressChanged(WebView view, int newProgress) {
-                            if (newProgress >= 100) {
-                                progressBar.setVisibility(View.GONE);
-                            } else {
-                                progressBar.setVisibility(View.VISIBLE);
-                                progressBar.setProgress(newProgress);
-                            }
-                        }
-                    });
-
-                    webView.setWebViewClient(new WebViewClient() {
-                        @Override
-                        public void onPageFinished(WebView view, String url) {
-                            super.onPageFinished(view, url);
-                            progressBar.setVisibility(View.GONE);
-                        }
-
-                        @Override
-                        public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                            Log.w(TAG, "CheckLeaked SSL error ignored: " + error);
-                            handler.proceed();
-                        }
-
-                        @Override
-                        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                            if (request != null && request.getUrl() != null) {
-                                String url = request.getUrl().toString();
-                                if (!url.contains("checkleaked.cc")) {
-                                    try {
-                                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                        activity.startActivity(intent);
-                                        return true;
-                                    } catch (Throwable ignored) {}
-                                }
-                            }
-                            return false;
-                        }
-
-                        @Override
-                        public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                            if (url != null && !url.contains("checkleaked.cc")) {
-                                try {
-                                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    activity.startActivity(intent);
-                                    return true;
-                                } catch (Throwable ignored) {}
-                            }
-                            return false;
-                        }
-
-                        @Override
-                        public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                            super.onReceivedError(view, errorCode, description, failingUrl);
-                            Log.w(TAG, "CheckLeaked WebView error: " + description + " for " + failingUrl);
-                            progressBar.setVisibility(View.GONE);
-                            errorContainer.setVisibility(View.VISIBLE);
-                        }
-                    });
-
-                    root.addView(webView);
-
-                    // 5. Tactical Bottom Toolbar (Reload, External Browser Fallback, wa.me)
-                    LinearLayout bottomBar = new LinearLayout(activity);
-                    bottomBar.setOrientation(LinearLayout.HORIZONTAL);
-                    bottomBar.setGravity(Gravity.CENTER_VERTICAL);
-                    bottomBar.setPadding(dpToPx(activity, 12), dpToPx(activity, 8), dpToPx(activity, 12), dpToPx(activity, 8));
-                    bottomBar.setBackgroundColor(0xFF141422);
-
-                    Button btnReload = new Button(activity);
-                    btnReload.setText("🔄 SEMULA");
-                    btnReload.setTextColor(0xFFE2E8F0);
-                    btnReload.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-                    GradientDrawable rBg = new GradientDrawable();
-                    rBg.setColor(0xFF2A2A3A);
-                    rBg.setCornerRadius(dpToPx(activity, 6));
-                    btnReload.setBackground(rBg);
-                    LinearLayout.LayoutParams rP = new LinearLayout.LayoutParams(0, dpToPx(activity, 34), 1.0f);
-                    btnReload.setLayoutParams(rP);
-                    btnReload.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            errorContainer.setVisibility(View.GONE);
-                            webView.reload();
-                        }
-                    });
-                    bottomBar.addView(btnReload);
-
-                    Button btnBrowser = new Button(activity);
-                    btnBrowser.setText("🌐 BUKA CHROME");
-                    btnBrowser.setTextColor(0xFF38BDF8);
-                    btnBrowser.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-                    btnBrowser.setBackground(rBg);
-                    LinearLayout.LayoutParams bP = new LinearLayout.LayoutParams(0, dpToPx(activity, 34), 1.3f);
-                    bP.setMargins(dpToPx(activity, 6), 0, 0, 0);
-                    btnBrowser.setLayoutParams(bP);
-                    btnBrowser.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            dialog.dismiss();
-                            openWhatsAppIntelInBrowser(activity, cleanLocal);
-                        }
-                    });
-                    bottomBar.addView(btnBrowser);
-
-                    Button btnWaDirect = new Button(activity);
-                    btnWaDirect.setText("💬 WA.ME");
-                    btnWaDirect.setTextColor(0xFF34D399);
-                    btnWaDirect.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-                    btnWaDirect.setBackground(rBg);
-                    LinearLayout.LayoutParams wP = new LinearLayout.LayoutParams(0, dpToPx(activity, 34), 1.0f);
-                    wP.setMargins(dpToPx(activity, 6), 0, 0, 0);
-                    btnWaDirect.setLayoutParams(wP);
-                    btnWaDirect.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            String waDigits = intlNumber.replace("+", "");
-                            try {
-                                Intent waIt = new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/" + waDigits));
-                                waIt.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                activity.startActivity(waIt);
-                            } catch (Throwable t) {
-                                Toast.makeText(activity, "Gagal membuka WhatsApp.", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    });
-                    bottomBar.addView(btnWaDirect);
-
-                    root.addView(bottomBar);
-
-                    btnClose.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            try {
-                                webView.stopLoading();
-                                webView.destroy();
-                            } catch (Throwable ignored) {}
-                            dialog.dismiss();
-                        }
-                    });
-
-                    dialog.setContentView(root);
-                    dialog.setCancelable(true);
-                    dialog.setCanceledOnTouchOutside(true);
-                    dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                        @Override
-                        public void onDismiss(DialogInterface d) {
-                            try {
-                                webView.stopLoading();
-                                webView.destroy();
-                            } catch (Throwable ignored) {}
-                        }
-                    });
-
-                    dialog.show();
-
-                    Window win = dialog.getWindow();
-                    if (win != null) {
-                        GradientDrawable dWinBg = new GradientDrawable();
-                        dWinBg.setColor(0xFF0A0A0F);
-                        dWinBg.setCornerRadius(dpToPx(activity, 14));
-                        win.setBackgroundDrawable(dWinBg);
-
-                        DisplayMetrics dm = activity.getResources().getDisplayMetrics();
-                        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-                        lp.copyFrom(win.getAttributes());
-                        lp.width = (int) (dm.widthPixels * 0.96);
-                        lp.height = (int) (dm.heightPixels * 0.90);
-                        lp.gravity = Gravity.CENTER;
-                        win.setAttributes(lp);
-                    }
-
-                    webView.loadUrl(checkLeakedUrl);
-                    Toast.makeText(activity, "📸 Nombor [" + intlNumber + "] telah disalin ke papan keratan!", Toast.LENGTH_SHORT).show();
-                } catch (Throwable t) {
-                    Log.e(TAG, "showWhatsAppIntelDialog error: " + t.getMessage(), t);
-                    openWhatsAppIntelInBrowser(activity, rawNumber);
-                }
-            }
-        });
+        openWhatsAppChatDirect(context, rawNumber);
     }
 
     public static void openWhatsAppIntelInBrowser(final Context context, final String phone) {
-        if (context == null) return;
-        try {
-            String intl = normalizeToIntl(phone);
-            try {
-                ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm != null && !intl.isEmpty()) {
-                    cm.setPrimaryClip(ClipData.newPlainText("WhatsApp Number", intl));
-                }
-            } catch (Throwable ignored) {}
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://whatsapp.checkleaked.cc/"));
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
-            Toast.makeText(context, "📸 Membuka CheckLeaked di pelayar. Nombor [" + intl + "] telah disalin!", Toast.LENGTH_SHORT).show();
-        } catch (Throwable ignored) {}
+        openWhatsAppChatDirect(context, phone);
     }
 
     private static String escapeTelegramHtml(String text) {
@@ -6850,6 +6265,28 @@ public class KantoiThreatEngine {
         }
     }
 
+    /**
+     * Memeriksa sama ada peranti disambungkan ke rangkaian Wi-Fi bagi mengelakkan penggunaan kuota data mudah alih pengguna.
+     */
+    public static boolean isWifiConnected(Context context) {
+        if (context == null) return false;
+        try {
+            ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return false;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Network network = cm.getActiveNetwork();
+                if (network == null) return false;
+                NetworkCapabilities capabilities = cm.getNetworkCapabilities(network);
+                return capabilities != null && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+            } else {
+                NetworkInfo netInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+                return netInfo != null && netInfo.isConnected();
+            }
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     public void checkAndAutoSyncTelegramAsync(final Context context, final boolean forceCheck) {
         if (context == null) return;
         new Thread(new Runnable() {
@@ -6860,9 +6297,15 @@ public class KantoiThreatEngine {
                     long lastSync = prefs.getLong(PREF_KEY_LAST_SYNC, 0L);
                     long now = System.currentTimeMillis();
 
-                    if (!forceCheck && (now - lastSync < MIN_AUTO_SYNC_INTERVAL_MS)) {
-                        Log.d(TAG, "Auto-sync ditangguhkan: Semakan terakhir dibuat " + ((now - lastSync) / 60000) + " minit lepas.");
-                        return;
+                    if (!forceCheck) {
+                        if (!isWifiConnected(context)) {
+                            Log.d(TAG, "Auto-sync ditangguhkan: Menunggu sambungan Wi-Fi.");
+                            return;
+                        }
+                        if (now - lastSync < MIN_AUTO_SYNC_INTERVAL_MS) {
+                            Log.d(TAG, "Auto-sync ditangguhkan: Semakan terakhir dibuat " + ((now - lastSync) / 60000) + " minit lepas.");
+                            return;
+                        }
                     }
 
                     Log.i(TAG, "Menjalankan auto-sync latar belakang dari @kantoiradar...");
