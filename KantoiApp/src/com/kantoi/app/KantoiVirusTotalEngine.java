@@ -66,11 +66,21 @@ public class KantoiVirusTotalEngine {
         public boolean hasSmsPermissions = false;
         public boolean hasInstallerPermission = false;
         public boolean hasOverlayPermission = false;
+        public boolean hasBootPermission = false;
         public boolean isBankingTrojanSignature = false;
-        public int riskScore = 0; // 0=Clean, 1-2=Warning, 3+=Dangerous
-        public String riskTitle = "✅ BERSIH";
+        public int riskScore = 0; // 0-100 MobSF Security Risk Score
+        public String riskGrade = "BERSIH"; // KRITIKAL, TINGGI, SEDERHANA, BERSIH
+        public String riskTitle = "\uD83D\uDEE1\uFE0F BERSIH";
         public String riskDescription = "";
         public List<String> flaggedPermissions = new ArrayList<String>();
+
+        // Ciri MobSF Lanjutan: Analisis Sijil Kriptografi & Pemburu C2 DEX
+        public boolean isDebugCertificate = false;
+        public String certSubject = "";
+        public String certIssuer = "";
+        public boolean hasTelegramC2 = false;
+        public String extractedTelegramToken = "";
+        public List<String> extractedEndpoints = new ArrayList<String>();
 
         // VirusTotal Results
         public boolean vtQueried = false;
@@ -204,6 +214,127 @@ public class KantoiVirusTotalEngine {
      * Analisis Heuristik Tempatan (0ms, Luar Talian & Percuma)
      * Mengesan cap jari Trojan Perbankan (contoh: MaliBot, Godfather, Poslaju/Kenduri APK palsu)
      */
+    /**
+     * Audit Sijil Kriptografi APK (Inspirasi MobSF)
+     * Mengesan sama ada fail ditandatangani menggunakan kunci debug amatur (Android Debug)
+     * atau sijil palsu yang bukan dari pengeluar sah.
+     */
+    private static void inspectApkCertificate(File apkFile, ApkScanReport report, Context context) {
+        if (apkFile == null || !apkFile.exists() || context == null) return;
+        try {
+            PackageManager pm = context.getPackageManager();
+            PackageInfo pi = null;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                pi = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_SIGNING_CERTIFICATES);
+            } else {
+                pi = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_SIGNATURES);
+            }
+
+            android.content.pm.Signature[] sigs = null;
+            if (pi != null) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P && pi.signingInfo != null) {
+                    if (pi.signingInfo.hasMultipleSigners()) {
+                        sigs = pi.signingInfo.getApkContentsSigners();
+                    } else {
+                        sigs = pi.signingInfo.getSigningCertificateHistory();
+                    }
+                } else {
+                    sigs = pi.signatures;
+                }
+            }
+
+            if (sigs != null && sigs.length > 0) {
+                java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X509");
+                java.security.cert.X509Certificate cert = (java.security.cert.X509Certificate) cf.generateCertificate(
+                    new java.io.ByteArrayInputStream(sigs[0].toByteArray())
+                );
+                if (cert != null) {
+                    report.certSubject = (cert.getSubjectDN() != null) ? cert.getSubjectDN().getName() : "";
+                    report.certIssuer = (cert.getIssuerDN() != null) ? cert.getIssuerDN().getName() : "";
+
+                    String subLower = report.certSubject.toLowerCase();
+                    String issLower = report.certIssuer.toLowerCase();
+                    if (subLower.contains("android debug") || issLower.contains("android debug")
+                            || subLower.contains("testkey") || issLower.contains("testkey")
+                            || subLower.contains("debug") || issLower.contains("debug")) {
+                        report.isDebugCertificate = true;
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            Log.d(TAG, "inspectApkCertificate error: " + t.getMessage());
+        }
+    }
+
+    /**
+     * Pemburu C2 & Token Rahsia dalam Fail classes.dex (Inspirasi MobSF)
+     * Mengimbas rentetan binari DEX untuk mengekstrak token Telegram bot pencuri TAC
+     * atau alamat pelayan C2 mentah tanpa perlu decompile kod.
+     */
+    private static void inspectDexStringsForC2(File apkFile, ApkScanReport report) {
+        if (apkFile == null || !apkFile.exists()) return;
+        java.util.zip.ZipFile zip = null;
+        try {
+            zip = new java.util.zip.ZipFile(apkFile);
+            java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries();
+            java.util.regex.Pattern tgPattern = java.util.regex.Pattern.compile("(bot[0-9]{8,11}:[a-zA-Z0-9_-]{35})|(api\\.telegram\\.org/bot[0-9]{8,11}:[a-zA-Z0-9_-]{35})");
+            java.util.regex.Pattern ipPattern = java.util.regex.Pattern.compile("https?://([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}(:[0-9]{1,5})?(/[^\\s\"'<>]*)?)");
+
+            while (entries.hasMoreElements()) {
+                java.util.zip.ZipEntry entry = entries.nextElement();
+                String name = entry.getName();
+                if (name != null && name.startsWith("classes") && name.endsWith(".dex")) {
+                    java.io.InputStream is = zip.getInputStream(entry);
+                    try {
+                        byte[] buffer = new byte[65536];
+                        int bytesRead;
+                        StringBuilder sb = new StringBuilder();
+                        while ((bytesRead = is.read(buffer)) != -1) {
+                            String chunk = new String(buffer, 0, bytesRead, java.nio.charset.StandardCharsets.ISO_8859_1);
+                            sb.append(chunk);
+                            if (sb.length() > 200000) {
+                                scanDexChunk(sb.toString(), tgPattern, ipPattern, report);
+                                sb.delete(0, 100000);
+                            }
+                        }
+                        if (sb.length() > 0) {
+                            scanDexChunk(sb.toString(), tgPattern, ipPattern, report);
+                        }
+                    } finally {
+                        is.close();
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            Log.d(TAG, "inspectDexStringsForC2 error: " + t.getMessage());
+        } finally {
+            if (zip != null) {
+                try { zip.close(); } catch (Throwable ignored) {}
+            }
+        }
+    }
+
+    private static void scanDexChunk(String text, java.util.regex.Pattern tg, java.util.regex.Pattern ip, ApkScanReport report) {
+        if (text == null) return;
+        if (!report.hasTelegramC2) {
+            java.util.regex.Matcher m = tg.matcher(text);
+            if (m.find()) {
+                report.hasTelegramC2 = true;
+                report.extractedTelegramToken = m.group(0);
+            }
+        }
+        if (report.extractedEndpoints.size() < 3) {
+            java.util.regex.Matcher m = ip.matcher(text);
+            while (m.find()) {
+                String found = m.group(1);
+                if (!report.extractedEndpoints.contains(found) && !found.startsWith("127.0.0.1") && !found.startsWith("0.0.0.0")) {
+                    report.extractedEndpoints.add(found);
+                    if (report.extractedEndpoints.size() >= 3) break;
+                }
+            }
+        }
+    }
+
     public static ApkScanReport analyzeApkFile(Context context, File apkFile) {
         ApkScanReport report = new ApkScanReport();
         if (apkFile == null || !apkFile.exists()) return report;
@@ -246,32 +377,54 @@ public class KantoiVirusTotalEngine {
             Log.e(TAG, "getPackageArchiveInfo error: " + t.getMessage());
         }
 
-        // Penilaian Risiko Heuristik
-        if (report.hasAccessibilityService && report.hasSmsPermissions) {
+        // CIRI MOBSF 1 & 2: SEMAKAN SIJIL KRIPTOGRAFI & IMBASAN DEX UNTUK C2 TELEGRAM
+        inspectApkCertificate(apkFile, report, context);
+        inspectDexStringsForC2(apkFile, report);
+
+        if (report.isDebugCertificate) {
+            report.flaggedPermissions.add("🚨 SIJIL DEBUG: Ditandatangani dengan kunci amatur 'Android Debug'!");
+        }
+        if (report.hasTelegramC2) {
+            report.flaggedPermissions.add("🚨 C2 TELEGRAM: Mengandungi token bot Telegram pencuri TAC!");
+        }
+
+        // CIRI MOBSF 3: MATRIKS SKOR RISIKO KESELAMATAN (0-100%)
+        int score = 0;
+        if (report.hasAccessibilityService) score += 35;
+        if (report.hasSmsPermissions) score += 30;
+        if (report.hasTelegramC2) score += 25;
+        if (report.isDebugCertificate) score += 15;
+        if (report.hasOverlayPermission) score += 10;
+        if (report.hasBootPermission) score += 10;
+        if (report.hasInstallerPermission) score += 10;
+
+        if (score > 100) score = 100;
+        report.riskScore = score;
+
+        if (score >= 70 || (report.hasAccessibilityService && report.hasSmsPermissions)) {
             report.isBankingTrojanSignature = true;
-            report.riskScore = 10;
-            report.riskTitle = "🚨 BAHAYA MAKSIMA: TROJAN KELDAI PERBANKAN";
-            report.riskDescription = "Fail ini dikesan meminta KAWALAN SKRIN (Accessibility) serentak dengan PEMBACAAN SMS! Ini adalah corak mutlak perisian hasad pencuri simpanan bank di Malaysia. JANGAN PASANG!";
-        } else if (report.hasAccessibilityService) {
-            report.riskScore = 6;
-            report.riskTitle = "⚠️ AMARAN TINGGI: KAWALAN SKRIN SENYAP";
-            report.riskDescription = "Fail ini meminta kebenaran Accessibility Service yang membolehkannya mengawal skrin dan membaca kata laluan secara senyap.";
-        } else if (report.hasSmsPermissions) {
-            report.riskScore = 5;
-            report.riskTitle = "⚠️ AMARAN TINGGI: PINTASAN SMS / OTP";
-            report.riskDescription = "Fail ini meminta kebenaran membaca mesej SMS peribadi dan berisiko memintas kod OTP perbankan anda.";
-        } else if (report.hasInstallerPermission || report.hasOverlayPermission) {
-            report.riskScore = 2;
-            report.riskTitle = "⚠️ PERLU PERHATIAN: KEBENARAN KHAS";
-            report.riskDescription = "Fail ini meminta kebenaran memasang aplikasi lain atau memaparkan lapisan skrin di atas aplikasi lain.";
+            report.riskGrade = "KRITIKAL";
+            report.riskTitle = "\uD83D\uDEA8 SKOR RISIKO: " + score + "/100 (TROJAN PERBANKAN)";
+            report.riskDescription = "Fail ini dikesan meminta KAWALAN SKRIN (Accessibility) & PEMBACAAN SMS untuk memintas kod TAC bank!"
+                + (report.hasTelegramC2 ? "\n\n\u26A0\uFE0F BUKTI EKSTRASI: Mengandungi pautan terus ke Bot Telegram scammer!" : "")
+                + (report.isDebugCertificate ? "\n\u26A0\uFE0F SIJIL TIDAK SAH: Ditandatangani dengan Sijil Debug amatur!" : "");
+        } else if (score >= 45) {
+            report.riskGrade = "TINGGI";
+            report.riskTitle = "\u26A0\uFE0F SKOR RISIKO: " + score + "/100 (ANCAMAN TINGGI)";
+            report.riskDescription = "Fail ini memiliki kebenaran invasif yang mencurigakan bagi aplikasi biasa.";
+        } else if (score >= 20) {
+            report.riskGrade = "SEDERHANA";
+            report.riskTitle = "\u26A0\uFE0F SKOR RISIKO: " + score + "/100 (PERHATIAN)";
+            report.riskDescription = "Fail mengandungi kebenaran khas yang memerlukan pemantauan pengguna.";
         } else {
-            report.riskScore = 0;
-            report.riskTitle = "✅ BERSIH DARI CORAK TROJAN PERBANKAN";
-            report.riskDescription = "Tiada kebenaran berbahaya membaca SMS atau Accessibility Service dikesan pada fail APK ini.";
+            report.riskGrade = "BERSIH";
+            report.riskTitle = "\uD83D\uDEE1\uFE0F SKOR RISIKO: " + score + "/100 (BERSIH)";
+            report.riskDescription = "Tiada corak Trojan Perbankan atau pengaliran data berniat jahat dikesan pada fail APK ini.";
         }
 
         return report;
     }
+
 
     /**
      * Semakan Hash Fail secara Asynchronous ke VirusTotal API v3
@@ -592,6 +745,96 @@ public class KantoiVirusTotalEngine {
                 tvP.setPadding(dpToPx(activity, 4), dpToPx(activity, 2), 0, dpToPx(activity, 2));
                 root.addView(tvP);
             }
+        }
+
+        // KAD SIJIL KRIPTOGRAFI (INSPIRASI MOBSF)
+        if (report.certSubject != null && !report.certSubject.isEmpty()) {
+            LinearLayout certCard = new LinearLayout(activity);
+            certCard.setOrientation(LinearLayout.VERTICAL);
+            GradientDrawable cBg = new GradientDrawable();
+            cBg.setColor(report.isDebugCertificate ? 0xFF450A0A : 0xFF141422);
+            cBg.setCornerRadius(dpToPx(activity, 10));
+            if (report.isDebugCertificate) {
+                cBg.setStroke(dpToPx(activity, 1), 0xFFEF4444);
+            }
+            certCard.setBackground(cBg);
+            certCard.setPadding(dpToPx(activity, 14), dpToPx(activity, 10), dpToPx(activity, 14), dpToPx(activity, 10));
+            LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            cLp.topMargin = dpToPx(activity, 10);
+            certCard.setLayoutParams(cLp);
+
+            TextView tvCertHead = new TextView(activity);
+            tvCertHead.setText(report.isDebugCertificate ? "\uD83D\uDEA8 SIJIL PENANDATANGAN AMATUR (DEBUG KEYSTORE)" : "\uD83D\uDD12 MAKLUMAT SIJIL INTEGRITI APK");
+            tvCertHead.setTextColor(report.isDebugCertificate ? 0xFFF87171 : 0xFF38BDF8);
+            tvCertHead.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            tvCertHead.setTypeface(Typeface.DEFAULT_BOLD);
+            certCard.addView(tvCertHead);
+
+            TextView tvCertInfo = new TextView(activity);
+            tvCertInfo.setText("Pemilik: " + report.certSubject);
+            tvCertInfo.setTextColor(0xFFCBD5E1);
+            tvCertInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            tvCertInfo.setPadding(0, dpToPx(activity, 4), 0, 0);
+            certCard.addView(tvCertInfo);
+
+            if (report.isDebugCertificate) {
+                TextView tvCertWarn = new TextView(activity);
+                tvCertWarn.setText("\u26A0\uFE0F Ditandatangani dengan kunci 'Android Debug'. Sijil ini biasanya digunakan scammer untuk membina malware amatur!");
+                tvCertWarn.setTextColor(0xFFFCA5A5);
+                tvCertWarn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                tvCertWarn.setTypeface(Typeface.DEFAULT_BOLD);
+                tvCertWarn.setPadding(0, dpToPx(activity, 4), 0, 0);
+                certCard.addView(tvCertWarn);
+            }
+
+            root.addView(certCard);
+        }
+
+        // KAD SALURAN KEBOCORAN C2 TELEGRAM (INSPIRASI MOBSF)
+        if (report.hasTelegramC2 || !report.extractedEndpoints.isEmpty()) {
+            LinearLayout c2Card = new LinearLayout(activity);
+            c2Card.setOrientation(LinearLayout.VERTICAL);
+            GradientDrawable c2Bg = new GradientDrawable();
+            c2Bg.setColor(0xFF450A0A);
+            c2Bg.setCornerRadius(dpToPx(activity, 10));
+            c2Bg.setStroke(dpToPx(activity, 1), 0xFFEF4444);
+            c2Card.setBackground(c2Bg);
+            c2Card.setPadding(dpToPx(activity, 14), dpToPx(activity, 10), dpToPx(activity, 14), dpToPx(activity, 10));
+            LinearLayout.LayoutParams c2Lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            c2Lp.topMargin = dpToPx(activity, 10);
+            c2Card.setLayoutParams(c2Lp);
+
+            TextView tvC2Head = new TextView(activity);
+            tvC2Head.setText("\uD83D\uDEA8 SALURAN PENCURIAN DATA (C2 LEAK CHANNEL)");
+            tvC2Head.setTextColor(0xFFFCA5A5);
+            tvC2Head.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            tvC2Head.setTypeface(Typeface.DEFAULT_BOLD);
+            c2Card.addView(tvC2Head);
+
+            if (report.hasTelegramC2) {
+                TextView tvTg = new TextView(activity);
+                tvTg.setText("\u26A0\uFE0F Bot Telegram Scammer Dikesan:\n" + report.extractedTelegramToken + "\n(Fail ini diprogramkan untuk menghantar SMS TAC terus ke Telegram sindiket!)");
+                tvTg.setTextColor(0xFFFED7AA);
+                tvTg.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                tvTg.setTypeface(Typeface.DEFAULT_BOLD);
+                tvTg.setPadding(0, dpToPx(activity, 4), 0, 0);
+                c2Card.addView(tvTg);
+            }
+
+            if (!report.extractedEndpoints.isEmpty()) {
+                TextView tvEp = new TextView(activity);
+                StringBuilder epSb = new StringBuilder("🌐 Alamat Pelayan C2 Mentah:\n");
+                for (String ep : report.extractedEndpoints) {
+                    epSb.append("• ").append(ep).append("\n");
+                }
+                tvEp.setText(epSb.toString().trim());
+                tvEp.setTextColor(0xFFE2E8F0);
+                tvEp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                tvEp.setPadding(0, dpToPx(activity, 4), 0, 0);
+                c2Card.addView(tvEp);
+            }
+
+            root.addView(c2Card);
         }
 
         // 4. Status Pengesanan VirusTotal

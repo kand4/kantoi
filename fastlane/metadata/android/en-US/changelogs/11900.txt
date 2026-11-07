@@ -1,0 +1,5 @@
+- MobSF-Grade On-Device APK Static Security Analysis (zero cloud/decompile required).
+- DEX String Hunter: Extracts hardcoded Telegram bot tokens and C2 endpoints used for OTP SMS theft.
+- X.509 Keystore Inspector: Flags debug keys and amateur certificates (CN=Android Debug).
+- 0-100% Threat Risk Matrix: Real-time risk grading (CRITICAL, HIGH, WARNING, CLEAN).
+- Emergency One-Tap Wipe: Instantly delete malicious APK files from storage before installation.
