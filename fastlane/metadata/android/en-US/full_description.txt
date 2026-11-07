@@ -1,0 +1,43 @@
+KANTOI is a privacy-first, zero-cost, offline scam call screening and cyber threat defense application designed specifically for Malaysia and Southeast Asia. Built for users who demand sovereign privacy, KANTOI operates 100% locally on your device without relying on invasive third-party cloud servers or harvesting your address book.
+
+🛡️ KEY SECURITY FEATURES:
+
+• Offline Threat Intelligence Vault:
+  Pre-loaded with 6,100+ verified financial scammer numbers, mule accounts, and fraud syndicates compiled from official PDRM CCID, SemakMule records, and Malaysian consumer community reports. Operates with zero latency and requires zero internet connection.
+
+• STIR/SHAKEN VoIP Caller ID Spoof Detection (Android 11+):
+  Detects Macau Scam syndicates that forge their Caller ID to impersonate police headquarters (IPD Bukit Aman), civil courts, or local banks. Flags and auto-blocks calls whose telco cryptographic attestation fails (Connection.VERIFICATION_STATUS_FAILED).
+
+• International High-Risk Country Code Radar:
+  Automatically monitors and screens unknown inbound calls originating from cyber crime and human trafficking compound hubs across Southeast Asia and internationally (Cambodia +855, Myanmar +95, Laos +856, Nigeria +234, Pakistan +92, India +91, Bangladesh +880, Indonesia +62, Philippines +63) while guaranteeing zero false-positives for domestic Malaysian (+60) numbers.
+
+• Private & Hidden Number Blocker:
+  Instantly terminates incoming calls that suppress or hide their Caller ID (Private, Restricted, or Unknown Number) at 0-second speed.
+
+• Senior Citizen Protection Mode (Strict Whitelist):
+  One-tap strict screening mode for elderly family members that automatically silences or rejects all unknown numbers, allowing only verified native phonebook contacts to ring through.
+
+• Cyber Counter-Strike Telemetry:
+  Real-time interactive tactical scripts designed to safely waste phone scammers' time, accompanied by local logging of caller telemetry and risk tags.
+
+📱 DAILY DIALER & CALL ERGONOMICS:
+
+• Smart T9 Keypad Contact Search:
+  Type numbers or letters directly on the numeric keypad (e.g., 5-2-6 for "Kamal") to search and dial contacts in real-time without leaving the dialer.
+
+• Proximity Sensor Management:
+  Automatically turns off the screen and touch sensors when the phone is held against your ear during active calls, eliminating accidental cheek presses.
+
+• Multi-SIM / Dual-SIM Selector:
+  Seamlessly choose between SIM 1 and SIM 2 before initiating outgoing calls.
+
+• Speed Dial (1-9):
+  Long-press key 1 for emergency hotline 999, or keys 2-9 for your favorite family and emergency contacts.
+
+🔒 PRIVACY & FREEDOM COMMITMENT:
+
+• 100% Free & Open Source Software (GPLv3).
+• Zero Advertisements.
+• Zero Cloud Tracking or Telemetry Harvesting.
+• Zero Cost (RM0 / $0) Forever.
+• Your contacts never leave your device.

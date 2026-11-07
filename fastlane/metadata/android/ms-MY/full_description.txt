@@ -1,0 +1,43 @@
+KANTOI ialah aplikasi penapis panggilan scammer, pengesan penyamaran identiti siber, dan pendail taktikal luar talian (offline) yang dibangunkan khusus untuk melindungi rakyat Malaysia dan rantau Asia Tenggara. Dibina dengan falsafah kedaulatan privasi mutlak, KANTOI beroperasi 100% secara tempatan pada peranti anda tanpa bergantung pada pelayan awan pihak ketiga atau menjual buku telefon anda.
+
+🛡️ CIRI-CIRI KESELAMATAN UTAMA:
+
+• Pangkalan Data Ancaman Luar Talian (Offline Vault):
+  Mengandungi 6,100+ rekod nombor penipu kewangan, akaun keldai, dan sindiket penipuan yang disahkan daripada rekod PDRM CCID, SemakMule, dan laporan komuniti pengguna Malaysia. Berfungsi sepantas kilat dengan sifar latensi tanpa memerlukan sambungan internet.
+
+• Pengesan Pemalsuan Caller ID STIR/SHAKEN (Android 11+):
+  Mengesan taktik sindiket Macau Scam yang memalsukan nombor pemanggil untuk menyamar sebagai Ibu Pejabat Polis (IPD Bukit Aman), Mahkamah, atau Bank. Panggilan yang gagal pengesahan kriptografi telco (Connection.VERIFICATION_STATUS_FAILED) disekat serta-merta.
+
+• Radar Kod Negara Berisiko Tinggi Antarabangsa:
+  Mengesan dan menyekat panggilan daripada zon sindiket penipuan dan hab pemerdagangan manusia antarabangsa (Kemboja +855, Myanmar +95, Laos +856, Nigeria +234, Pakistan +92, India +91, Bangladesh +880, Indonesia +62, Filipina +63) dengan jaminan sifar ralat pada nombor domestik Malaysia (+60).
+
+• Sekatan Nombor Persendirian / Tersembunyi:
+  Menolak panggilan tanpa identiti (Private, Restricted, atau Unknown Number) pada kelajuan 0-saat secara automatik.
+
+• Mod Perlindungan Warga Emas (Strict Whitelist):
+  Mod perlindungan khas satu-ketik untuk ibu bapa yang menyekat semua nombor asing yang tidak dikenali, membenarkan hanya kenalan tersimpan dalam buku telefon berdering.
+
+• Telemetri Counter-Strike Siber:
+  Skrip taktikal interaktif untuk membuang masa scammer secara selamat, disertai log rekod telemetri pemanggil dan tanda risiko tempatan.
+
+📱 ERGONOMI PENDAIL TELEFON HARIAN:
+
+• Carian Pintar T9 pada Pad Pendail:
+  Taip nombor atau huruf nama kenalan secara serentak di pad kekunci (contoh: 5-2-6 untuk "KAMAL") untuk mencari dan mendail kenalan tanpa perlu membuka buku telefon.
+
+• Kawalan Sensor Kehampiran (Proximity WakeLock):
+  Memadamkan skrin telefon secara automatik apabila dilekapkan ke telinga semasa panggilan aktif bagi mengelak sentuhan pipi tidak sengaja.
+
+• Pemilih Kad Dwi-SIM:
+  Menyokong pemilihan fleksibel antara SIM 1 dan SIM 2 sebelum sebarang panggilan keluar dibuat.
+
+• Dail Pantas (Speed Dial 1-9):
+  Tekan lama kekunci 1 untuk talian kecemasan 999, atau kekunci 2-9 untuk kenalan kegemaran anda.
+
+🔒 KOMITMEN PRIVASI & SUMBER TERBUKA:
+
+• 100% Perisian Sumber Terbuka Percuma (GPLv3).
+• Bebas Iklan (Zero Ads).
+• Bebas Penjejak Awan (Zero Cloud Tracking).
+• Percuma Sepenuhnya (RM0) Selamanya.
+• Buku kenalan anda kekal selamat di dalam telefon anda.
