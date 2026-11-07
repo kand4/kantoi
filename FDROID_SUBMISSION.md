@@ -17,7 +17,7 @@ IzzyOnDroid adalah repositori rasmi terbesar dalam ekosistem F-Droid yang mengam
 2. **Cipta Tag Release di GitHub:**
    * Pergi ke: `https://github.com/kand4/kantoi/releases/new`
    * Masukkan Tag version: `v1.18.0`
-   * Release title: `v1.18.0 - Fossify Dialer Enhancements & Scam Shield`
+   * Release title: `v1.18.0 - Kantoi Scam Shield` (atau `v1.18.0 - Kantoi Scam Shield & Smart Dialer`)
    * Lampirkan fail: `Kantoi_v1.18.0_Release_signed.apk`
    * Klik **Publish release**.
 
