@@ -94,11 +94,39 @@ public class ChangelogActivity extends Activity {
         });
         root.addView(btnGithub);
 
+        // ==================== VERSION 1.19.0 ====================
+        LinearLayout cardV1190 = createCard(0xFF141422, 0xFF00FF88, 12);
+        cardV1190.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
+
+        LinearLayout v1190Header = createVersionHeader("VERSI 1.19.0 (TERKINI)", "7 NOVEMBER 2026", 0xFF00FF88);
+        cardV1190.addView(v1190Header);
+
+        TextView tvV1190Content = new TextView(this);
+        tvV1190Content.setText(
+            "\uD83D\uDEE1\uFE0F Enjin Bedah APK Lanjutan Ala MobSF (On-Device Mobile SAST):\n\n" +
+            "\uD83D\uDC1B 1. Pemburu Token C2 & Bot Telegram Scammer (DEX String Hunter):\n" +
+            "     Mengimbas fail binari classes.dex tanpa decompile untuk mengesan dan mengekstrak token Bot Telegram pencuri SMS TAC bank serta pelayan C2 sindiket.\n\n" +
+            "\uD83D\uDD12 2. Audit Kriptografi Sijil APK (X.509 Keystore Inspector):\n" +
+            "     Mendedahkan aplikasi berniat jahat yang ditandatangani menggunakan kunci amatur (CN=Android Debug) atau sijil palsu.\n\n" +
+            "\uD83C\uDFAF 3. Matriks Skor Risiko MobSF 0-100%:\n" +
+            "     Menghitung skor ancaman siber sebenar berdasarkan gabungan Accessibility Service, pintasan SMS, dan kebocoran C2.\n\n" +
+            "\uD83D\uDDD1\uFE0F 4. Butang Padam Fail Kecemasan 1-Ketik (One-Tap Wipe):\n" +
+            "     Membolehkan mangsa memusnahkan fail APK berbahaya serta-merta dari memori telefon sebelum sempat dipasang."
+        );
+        tvV1190Content.setTextColor(0xFFCBD5E1);
+        tvV1190Content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tvV1190Content.setLineSpacing(dpToPx(4), 1.15f);
+        setMarginTop(tvV1190Content, 10);
+        cardV1190.addView(tvV1190Content);
+
+        setMarginTop(cardV1190, 14);
+        root.addView(cardV1190);
+
         // ==================== VERSION 1.18.0 ====================
         LinearLayout cardV1180 = createCard(0xFF141422, 0xFF00FF88, 12);
         cardV1180.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14));
 
-        LinearLayout v1180Header = createVersionHeader("VERSI 1.18.0 (TERKINI)", "7 NOVEMBER 2026", 0xFF00FF88);
+        LinearLayout v1180Header = createVersionHeader("VERSI 1.18.0", "7 NOVEMBER 2026", 0xFF00FF88);
         cardV1180.addView(v1180Header);
 
         TextView tvV1180Content = new TextView(this);

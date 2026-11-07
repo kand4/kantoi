@@ -1,0 +1,5 @@
+- Enjin Analisis Keselamatan Statik APK Ala MobSF terus pada telefon (tanpa cloud/server).
+- Pemburu String DEX: Mengesan token Bot Telegram dan pelayan C2 pencuri SMS OTP TAC bank.
+- Audit Kriptografi Sijil X.509: Mendedahkan sijil amatur (CN=Android Debug).
+- Matriks Skor Risiko 0-100%: Klasifikasi gred ancaman (KRITIKAL, TINGGI, SEDERHANA, BERSIH).
+- Butang Padam Kecemasan 1-Ketik: Musnahkan fail APK jahat dari storan serta-merta.
