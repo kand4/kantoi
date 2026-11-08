@@ -8172,7 +8172,7 @@ def run_bot():
                             f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                             f"🏷️ <b>Versi SemVer:</b> <code>v{BOT_VERSION}</code> ({BOT_CODENAME})\n"
                             f"📅 <b>Tarikh Keluaran:</b> {BOT_RELEASE_DATE}\n"
-                            f"📲 <b>Aplikasi Android KANTOI:</b> <code>v1.17.0</code> (Binaan 11700)\n\n"
+                            f"📲 <b>Aplikasi Android KANTOI:</b> <code>v1.19.0</code> (Binaan 11900)\n\n"
                             f"✨ <b>CIRI-CIRI TERBAHARU DALAM v{BOT_VERSION}:</b>\n\n"
                             f"📷 <b>1. Perisai Anti-Quishing (QR Phishing Shield):</b>\n"
                             f"• Pengecaman automatik Kod QR DuitNow (PayNet EMVCo) vs Pautan Web (URL).\n"
