@@ -120,3 +120,16 @@ generate_jauhi*.py
 merge_all*.py
 update_all*.py
 run_full_system*.py
+
+# ==========================================
+# 4. Local ETL, Ingestion & Sensitive Data Files (PRIVACY)
+# ==========================================
+convert_newdoc_to_sqlite.py
+tambah_data_arkib.py
+semak_statistik.py
+*.csv
+*.tsv
+*.pdf
+*.xls
+*archive*.db
+*historical*.db
