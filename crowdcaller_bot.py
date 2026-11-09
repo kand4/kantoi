@@ -95,6 +95,7 @@ DB_PATH = os.path.join(BASE_DIR, "kantoi_threats.db")
 if not os.path.exists(DB_PATH):
     DB_PATH = os.path.join(BASE_DIR, "KantoiApp", "assets", "kantoi_threats.db")
 BACKUP_DB_PATH = os.path.join(BASE_DIR, "lowyat_threats.db")
+COMMUNITY_DB_PATH = os.path.join(BASE_DIR, "community_threats.db")
 
 PDRM_SEMAKMULE_API = "https://semakmule.rmp.gov.my/api/mule/get_search_data.php"
 PDRM_API_KEY = "j3j389#nklala2"
@@ -2470,7 +2471,148 @@ def get_db_connection(db_path=DB_PATH, timeout=10.0):
         pass
     return conn
 
-def query_threat(query_text):
+def init_community_db():
+    """
+    Mengasaskan pangkalan data komuniti setempat yang kekal (Persistent & Immutable).
+    Pangkalan data ini tidak akan ditimpa atau dipadam semasa kemas kini versi aplikasi.
+    """
+    try:
+        conn = get_db_connection(COMMUNITY_DB_PATH)
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS threat_numbers (
+                phone_norm TEXT PRIMARY KEY,
+                profile_id INTEGER,
+                suspect_name TEXT,
+                all_phones TEXT,
+                bank_accounts TEXT,
+                ic_number TEXT,
+                address TEXT,
+                evidence_links TEXT,
+                risk_tag TEXT,
+                source TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[COMMUNITY DB INIT ERR] {e}")
+
+# Inisialisasi storan komuniti kekal serta-merta
+init_community_db()
+
+def search_kantoiradar_channel(query, channel="kantoiradar", timeout=6):
+    """
+    Mencari maklumat sasaran secara langsung di arkib saluran awam Telegram @kantoiradar
+    menggunakan gerbang carian web rasmi Telegram: https://t.me/s/{channel}?q={query}
+    """
+    if not query or not str(query).strip():
+        return []
+    clean_q = str(query).strip()
+    encoded_q = urllib.parse.quote(clean_q)
+    url = f"https://t.me/s/{channel}?q={encoded_q}"
+    req = urllib.request.Request(
+        url,
+        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            page = resp.read().decode('utf-8', errors='ignore')
+            pattern = r'class="[^"]*tgme_widget_message_wrap[^"]*"[^>]*>.*?data-post="([^"]+)".*?class="[^"]*tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>'
+            matches = re.findall(pattern, page, re.DOTALL)
+            results = []
+            for post_id, text_html in matches:
+                clean_text = re.sub(r'<br\s*/?>', '\n', text_html)
+                clean_text = re.sub(r'<[^>]+>', ' ', clean_text)
+                clean_text = html.unescape(clean_text).strip()
+                post_link = f"https://t.me/{post_id}"
+                ref_m = re.search(r'REP-\d+', clean_text)
+                ref_id = ref_m.group(0) if ref_m else ""
+
+                results.append({
+                    "post_id": post_id,
+                    "post_link": post_link,
+                    "text": clean_text,
+                    "ref_id": ref_id
+                })
+            return results
+    except Exception as e:
+        print(f"[CHANNEL SEARCH ERR] {e}")
+        return []
+
+def sync_channel_history(channel="kantoiradar", max_pages=15):
+    """
+    Mengimbas sejarah saluran Telegram dari terkini ke belakang,
+    mengekstrak semua nombor telefon, akaun bank, dan Ref ID kes,
+    serta menyimpan ke dalam SQLite setempat secara kekal (Backfill Migration).
+    """
+    init_community_db()
+    total_synced = 0
+    seen_posts = set()
+    current_url = f"https://t.me/s/{channel}"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+
+    for page_idx in range(max_pages):
+        try:
+            req = urllib.request.Request(current_url, headers=headers)
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                page_html = resp.read().decode('utf-8', errors='ignore')
+
+            pattern = r'class="[^"]*tgme_widget_message_wrap[^"]*"[^>]*>.*?data-post="([^"]+)".*?class="[^"]*tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>'
+            matches = re.findall(pattern, page_html, re.DOTALL)
+            if not matches:
+                break
+
+            for post_id, text_html in matches:
+                if post_id in seen_posts:
+                    continue
+                seen_posts.add(post_id)
+
+                clean_text = re.sub(r'<br\s*/?>', '\n', text_html)
+                clean_text = re.sub(r'<[^>]+>', ' ', clean_text)
+                clean_text = html.unescape(clean_text).strip()
+                post_link = f"https://t.me/{post_id}"
+
+                extracted_phones = re.findall(r'(?:01[0-9]-?[0-9]{7,8}|\+?601[0-9]-?[0-9]{7,8}|\+?62[0-9]{9,13})', clean_text)
+                extracted_accounts = re.findall(r'\b\d{10,18}\b', clean_text)
+                ref_m = re.search(r'REP-\d+', clean_text)
+                ref_id = ref_m.group(0) if ref_m else ""
+
+                if extracted_phones or (ref_id and extracted_accounts):
+                    norm_list = []
+                    for raw_p in extracted_phones:
+                        np = normalize_phone(raw_p) or re.sub(r'[^\d]', '', raw_p)
+                        if np and len(np) >= 8:
+                            norm_list.append(np)
+
+                    primary_phone = norm_list[0] if norm_list else (extracted_accounts[0] if extracted_accounts else f"ID_{post_id.replace('/', '_')}")
+                    acc_str = ", ".join(set(extracted_accounts)) if extracted_accounts else "N/A"
+                    all_p_str = ", ".join(set(norm_list)) if norm_list else primary_phone
+                    src_str = f"Arkib Saluran @kantoiradar ({ref_id or post_id})"
+
+                    insert_approved_threat(
+                        phone_norm=primary_phone,
+                        suspect_name="Suspek Siaran Saluran @kantoiradar",
+                        category="SALURAN_KANTOI_VERIFIED",
+                        bank_accounts=acc_str,
+                        source=f"{src_str} - {post_link}",
+                        all_phones=all_p_str
+                    )
+                    total_synced += 1
+
+            before_matches = re.findall(r'href="(/s/' + channel + r'\?before=\d+)"', page_html)
+            if before_matches:
+                current_url = f"https://t.me{before_matches[0]}"
+            else:
+                break
+        except Exception as e:
+            print(f"[SYNC ERR] Halaman {page_idx+1}: {e}")
+            break
+
+    return total_synced
+
+def query_threat(query_text, check_channel_fallback=True):
     if not query_text or not str(query_text).strip():
         return None, ""
     clean_raw = str(query_text).strip()
@@ -2479,30 +2621,102 @@ def query_threat(query_text):
 
     norm_phone = normalize_phone(clean_raw)
     clean_digits = re.sub(r"[^\d]", "", clean_raw)
-    
-    if not os.path.exists(DB_PATH):
-        return None, "DATABASE_MISSING"
 
-    conn = get_db_connection(DB_PATH)
-    cur = conn.cursor()
+    # 1. Semak SQLite Berperingkat: Komuniti Kekal -> Utama -> Sandaran Lowyat
+    candidate_dbs = []
+    if os.path.exists(COMMUNITY_DB_PATH):
+        candidate_dbs.append(COMMUNITY_DB_PATH)
+    if os.path.exists(DB_PATH) and DB_PATH != COMMUNITY_DB_PATH:
+        candidate_dbs.append(DB_PATH)
+    if os.path.exists(BACKUP_DB_PATH) and BACKUP_DB_PATH not in candidate_dbs:
+        candidate_dbs.append(BACKUP_DB_PATH)
+
     match = None
+    for db in candidate_dbs:
+        try:
+            conn = get_db_connection(db)
+            cur = conn.cursor()
+            if norm_phone and len(norm_phone) >= 8:
+                cur.execute("SELECT phone_norm, suspect_name, risk_tag, bank_accounts, address, source, evidence_links, all_phones FROM threat_numbers WHERE phone_norm = ? LIMIT 1", (norm_phone,))
+                match = cur.fetchone()
+                if not match:
+                    cur.execute("SELECT phone_norm, suspect_name, risk_tag, bank_accounts, address, source, evidence_links, all_phones FROM threat_numbers WHERE all_phones LIKE ? LIMIT 1", (f"%{norm_phone}%",))
+                    match = cur.fetchone()
 
-    if norm_phone and len(norm_phone) >= 8:
-        cur.execute("SELECT phone_norm, suspect_name, risk_tag, bank_accounts, address, source, evidence_links, all_phones FROM threat_numbers WHERE phone_norm = ? LIMIT 1", (norm_phone,))
-        match = cur.fetchone()
-        if not match:
-            cur.execute("SELECT phone_norm, suspect_name, risk_tag, bank_accounts, address, source, evidence_links, all_phones FROM threat_numbers WHERE all_phones LIKE ? LIMIT 1", (f"%{norm_phone}%",))
-            match = cur.fetchone()
+            if not match and len(clean_digits) >= 8:
+                cur.execute("SELECT phone_norm, suspect_name, risk_tag, bank_accounts, address, source, evidence_links, all_phones FROM threat_numbers WHERE bank_accounts LIKE ? LIMIT 1", (f"%{clean_digits}%",))
+                match = cur.fetchone()
+            conn.close()
+            if match:
+                break
+        except Exception as e:
+            print(f"[QUERY DB ERR] {db}: {e}")
 
-    if not match and len(clean_digits) >= 8:
-        cur.execute("SELECT phone_norm, suspect_name, risk_tag, bank_accounts, address, source, evidence_links, all_phones FROM threat_numbers WHERE bank_accounts LIKE ? LIMIT 1", (f"%{clean_digits}%",))
-        match = cur.fetchone()
+    # 2. Fallback: Semak laporan tersimpan di reports_data.json yang telah diluluskan
+    if not match and (norm_phone or (clean_digits and len(clean_digits) >= 8)):
+        try:
+            pending_reps = get_pending_reports()
+            for r_id, rep in pending_reps.items():
+                if rep.get("status") == "APPROVED":
+                    r_phone = rep.get("phone_norm", "")
+                    r_bank = rep.get("bank_account", "")
+                    all_p = rep.get("all_phones", [])
+                    if (norm_phone and (norm_phone == r_phone or norm_phone in all_p)) or (clean_digits and len(clean_digits) >= 8 and clean_digits in str(r_bank)):
+                        s_name = rep.get("suspect_name") or "Suspek Komuniti"
+                        source_str = f"Risikan Komuniti KANTOI (Ref: {r_id})"
+                        match = (
+                            r_phone or norm_phone,
+                            s_name,
+                            "LAPORAN_KOMUNITI_DISAHKAN",
+                            r_bank or "N/A",
+                            "Laporan Disahkan Komuniti",
+                            source_str,
+                            "https://t.me/kantoiradar",
+                            r_phone or norm_phone
+                        )
+                        insert_approved_threat(r_phone or norm_phone, s_name, "LAPORAN_KOMUNITI_DISAHKAN", r_bank, source_str, r_phone or norm_phone)
+                        break
+        except Exception:
+            pass
 
-    conn.close()
+    # 3. Fallback Auto-Healing: Semak Terus di Saluran Telegram @kantoiradar
+    if not match and check_channel_fallback and ((norm_phone and len(norm_phone) >= 8) or (clean_digits and len(clean_digits) >= 8)):
+        search_target = norm_phone or clean_digits
+        try:
+            ch_results = search_kantoiradar_channel(search_target, channel="kantoiradar", timeout=5)
+            if ch_results:
+                first_hit = ch_results[0]
+                p_link = first_hit["post_link"]
+                ref_str = f" (Ref: {first_hit['ref_id']})" if first_hit.get("ref_id") else ""
+                source_lbl = f"Arkib Saluran Telegram @kantoiradar{ref_str}"
+                
+                match = (
+                    norm_phone or clean_digits,
+                    "Suspek Siaran Saluran @kantoiradar",
+                    "SALURAN_KANTOI_VERIFIED",
+                    clean_digits if not norm_phone else "Rujuk Saluran",
+                    "Disahkan di Saluran Telegram",
+                    source_lbl,
+                    p_link,
+                    norm_phone or clean_digits
+                )
+                # Auto-healing backfill ke SQLite secara kekal
+                insert_approved_threat(
+                    phone_norm=norm_phone or clean_digits,
+                    suspect_name="Suspek Siaran Saluran @kantoiradar",
+                    category="SALURAN_KANTOI_VERIFIED",
+                    bank_accounts=clean_digits if not norm_phone else "N/A",
+                    source=f"{source_lbl} - {p_link}",
+                    all_phones=norm_phone or clean_digits
+                )
+                print(f"[CHANNEL AUTO-HEAL] Berjaya memulihkan rekod {search_target} dari pos {p_link} ke SQLite!")
+        except Exception as e:
+            print(f"[CHANNEL FALLBACK ERR] {e}")
+
     return match, norm_phone
 
 def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, source, all_phones=None):
-    dbs = [DB_PATH, BACKUP_DB_PATH]
+    dbs = [COMMUNITY_DB_PATH, DB_PATH, BACKUP_DB_PATH]
     for db in dbs:
         if not os.path.exists(db):
             continue
@@ -8060,6 +8274,15 @@ def run_bot():
                             continue
 
                     # Arahan Pengurusan Sekatan Pengguna (/ban, /unban, /banned)
+                    if text.startswith(("/sync_saluran", "/sync_channel", "/backfill")):
+                        if chat_id not in get_admin_ids():
+                            send_message(chat_id, "⛔ <b>Akses Ditolak:</b> Arahan ini eksklusif untuk Admin KANTOI.", parse_mode="HTML")
+                            continue
+                        send_message(chat_id, "🔄 <b>MEMULAKAN PENYELARASAN ARKIB SALURAN @kantoiradar...</b>\nBot sedang mengimbas sejarah siaran lampau untuk diserap ke dalam pangkalan data SQLite setempat (Backfill Migration).", parse_mode="HTML")
+                        synced_cnt = sync_channel_history(channel="kantoiradar", max_pages=15)
+                        send_message(chat_id, f"✅ <b>PENYELARASAN SELESAI!</b>\nSebanyak <b>{synced_cnt}</b> rekod kes berjaya dipulihkan dari saluran @kantoiradar dan disimpan kekal ke pangkalan data SQLite setempat.", parse_mode="HTML")
+                        continue
+
                     if text.startswith("/ban"):
                         if chat_id not in get_admin_ids():
                             send_message(chat_id, "⛔ Akses Ditolak: Pentadbir sahaja.")

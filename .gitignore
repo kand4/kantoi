@@ -33,6 +33,7 @@ test_*.*
 announce_*.py
 post_telegram_guide.py
 lowyat_threats.db
+community_threats.db
 
 # Android Studio / IntelliJ / Eclipse project files
 .idea/
