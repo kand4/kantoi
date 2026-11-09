@@ -8573,6 +8573,86 @@ def run_bot():
                             send_message(chat_id, "ℹ️ Format arahan: <code>/user &lt;id_atau_username&gt;</code>\nContoh: <code>/user 123456789</code> atau <code>/user @ahmad</code>", parse_mode="HTML")
                         continue
 
+                    # ------------------------------------------------------------------
+                    # MOD CHAT PERIBADI: KONSULTASI KESELAMATAN SIBER AI (/ai <soalan>)
+                    # ------------------------------------------------------------------
+                    if text.startswith(("/ai", "/tanya_ai", "/ask_ai")):
+                        parts = text.split(maxsplit=1)
+                        if len(parts) > 1 and parts[1].strip():
+                            user_q = parts[1].strip()
+                            hud = ProgressHUD(chat_id, reply_to_msg_id=msg_id)
+                            hud.start(25, "🧠 KANTOI AI sedang menganalisis situasi anda...", "Menilai Modus Operandi & Taktik Scammer")
+
+                            def async_process_ai_inquiry(c_id, h_obj, q_text):
+                                try:
+                                    import kantoi_ai_cascade as ai_cas
+                                    h_obj.update(60, "🔍 Menyaring helah psikologi & risiko undang-undang...", "Groq LPU / Gemini Cascade")
+                                    ai_res = ai_cas.analyze_scam_inquiry(q_text)
+                                    h_obj.update(90, "✨ Menjana rumusan nasihat keselamatan pantas...", "Selesai")
+
+                                    header = (
+                                        f"🧠 <b>ANALISIS KESELAMATAN SIBER AI ({ai_res.get('provider', 'AI')})</b>\n"
+                                        f"• <i>Model: {ai_res.get('model', 'SOTA')} | Kependaman: {ai_res.get('latency_ms', 0)}ms</i>\n"
+                                        "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                                    )
+                                    resp_text = header + ai_res.get("text", "")
+
+                                    markup = {
+                                        "inline_keyboard": [
+                                            [{"text": "🚨 Semak Nombor/Akaun", "callback_data": "help_menu"}],
+                                            [{"text": "📞 Talian NSRC 997", "url": "tel:997"}]
+                                        ]
+                                    }
+                                    h_obj.complete_with_message(resp_text, reply_markup=markup, parse_mode="HTML")
+                                except Exception as e_ai:
+                                    print(f"[AI INQUIRY ERR] {e_ai}")
+                                    h_obj.complete_with_message(f"⚠️ Ralat memproses analisis AI: {html.escape(str(e_ai))}")
+
+                            WORKER_POOL.submit(async_process_ai_inquiry, chat_id, hud, user_q)
+                            continue
+                        else:
+                            send_message(
+                                chat_id,
+                                "🧠 <b>KONSULTASI KESELAMATAN SIBER AI (KANTOI AI)</b>\n"
+                                "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                "Tanyakan sebarang situasi mencurigakan atau helah penipuan kepada AI kami.\n\n"
+                                "<b>Format:</b> <code>/ai &lt;pertanyaan situasi anda&gt;</code>\n\n"
+                                "<b>Contoh:</b>\n"
+                                "• <code>/ai ada orang call kata saya langgar orang di penang minta rm1000 untuk selesai luar</code>\n"
+                                "• <code>/ai beli barang di tiktok tapi seller suruh transfer ke akaun personal bukan shopee</code>\n"
+                                "• <code>/ai apa itu Macau scam dan macam mana mereka takutkan mangsa?</code>\n\n"
+                                "⚡ <i>Dikuasakan oleh Groq Cloud (LPU Ultra-Fast) dengan Sandaran Google Gemini & Enjin Forensik Tempatan.</i>",
+                                parse_mode="HTML"
+                            )
+                            continue
+
+                    # ------------------------------------------------------------------
+                    # STATUS ENJIN AI MULTI-PROVIDER (/ai_status)
+                    # ------------------------------------------------------------------
+                    if text.startswith(("/ai_status", "/groq")):
+                        groq_k = get_groq_api_key()
+                        gem_k = get_gemini_api_key()
+
+                        g_status = "✅ Aktif (LPU Ready)" if groq_k else "❌ Belum Ditetapkan"
+                        gem_status = "✅ Aktif (Multimodal Ready)" if gem_k else "❌ Belum Ditetapkan"
+
+                        status_msg = (
+                            "⚡ <b>STATUS ENJIN KANTOI AI MULTI-PROVIDER:</b>\n"
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"1. <b>Groq Cloud (LPU Ultra-Fast):</b> {g_status}\n"
+                            "   • Model: <code>openai/gpt-oss-120b</code>, <code>qwen/qwen3.8-27b</code>\n"
+                            "   • Keutamaan: 🥇 Utama (Kelajuan ~0.5s)\n\n"
+                            f"2. <b>Google Gemini (Multimodal Vision):</b> {gem_status}\n"
+                            "   • Model: <code>gemini-3.8-flash</code>, <code>gemini-flash-latest</code>\n"
+                            "   • Keutamaan: 🥈 Sandaran (Vision & Konteks Mendalam)\n\n"
+                            "3. <b>Enjin Forensik Tempatan (Offline):</b> ✅ Sentiasa Siap Siaga\n"
+                            "   • 64.8M Rekod DB & Heuristik Siber Tempatan\n"
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            "💡 <i>Gunakan arahan <code>/ai &lt;soalan&gt;</code> untuk bertanyakan sebarang situasi scam kepada AI.</i>"
+                        )
+                        send_message(chat_id, status_msg, parse_mode="HTML")
+                        continue
+
                     # Arahan Hubungi Pasukan Pentadbir KANTOI (/hubungi, /contact, /tanya, /modmail)
                     if text.startswith(("/hubungi", "/contact", "/tanya", "/modmail", "hubungi", "contact")):
                         parts = text.split(maxsplit=1)
