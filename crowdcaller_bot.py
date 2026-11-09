@@ -72,6 +72,7 @@ BOT_CODENAME = "Unified OSINT Dork & SOCMINT Hub"
 
 try:
     from local_secrets import BOT_TOKEN, GEMINI_API_KEY
+    from local_secrets import GROQ_API_KEY
 except ImportError:
     BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN_HERE")
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -439,6 +440,52 @@ def set_gemini_api_key(new_key):
     os.environ["GEMINI_API_KEY"] = clean_key
     global GEMINI_API_KEY
     GEMINI_API_KEY = clean_key
+
+def get_groq_api_key():
+    """Mendapatkan Groq API Key yang aktif daripada local_secrets.py, admin_config.json, atau os.environ"""
+    ls_path = os.path.join(BASE_DIR, "local_secrets.py")
+    if os.path.exists(ls_path):
+        try:
+            with open(ls_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip().startswith("GROQ_API_KEY"):
+                        parts = line.split("=", 1)
+                        if len(parts) == 2:
+                            clean = parts[1].strip(" \t\r\n\'\"")
+                            if clean and clean.startswith("gsk_") and len(clean) >= 20:
+                                return clean
+        except Exception:
+            pass
+    cfg = load_json_file(ADMIN_CONFIG_PATH, {})
+    k = cfg.get("groq_api_key", "").strip(" \t\r\n\'\"")
+    if k and k.startswith("gsk_"):
+        return k
+    k_env = os.environ.get("GROQ_API_KEY", "").strip(" \t\r\n\'\"")
+    if k_env and k_env.startswith("gsk_"):
+        return k_env
+    return ""
+
+def set_groq_api_key(new_key):
+    """Menyimpan Groq API Key ke dalam admin_config.json dan local_secrets.py serentak"""
+    clean_key = new_key.strip(" \t\r\n\'\"")
+    cfg = load_json_file(ADMIN_CONFIG_PATH, {})
+    cfg["groq_api_key"] = clean_key
+    save_json_file(ADMIN_CONFIG_PATH, cfg)
+    
+    ls_path = os.path.join(BASE_DIR, "local_secrets.py")
+    if os.path.exists(ls_path):
+        try:
+            with open(ls_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            if "GROQ_API_KEY" in content:
+                content = re.sub(r'GROQ_API_KEY\s*=\s*["\x27].*?["\x27]', f'GROQ_API_KEY = "{clean_key}"', content)
+            else:
+                content += f'\nGROQ_API_KEY = "{clean_key}"\n'
+            with open(ls_path, "w", encoding="utf-8") as f:
+                f.write(content)
+        except Exception:
+            pass
+    os.environ["GROQ_API_KEY"] = clean_key
 
 # ==============================================================================
 # SISTEM PENJEJAK ANALITIK & KEKERAPAN PENGGUNA (USER ANALYTICS & STATS)
