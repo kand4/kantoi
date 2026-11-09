@@ -8112,7 +8112,7 @@ def run_bot():
                         continue
 
                     # Arahan Konfigurasi & Status Gemini API: /gemini, /key, /ai, /ai_status
-                    if text.startswith(("/gemini", "/key", "/ai_status", "/ai")):
+                    if text.startswith(("/gemini", "/setgemini", "/gemini_key")):
                         parts = text.split(maxsplit=2)
                         candidate_key = ""
                         has_admin_passcode = False
@@ -8576,7 +8576,7 @@ def run_bot():
                     # ------------------------------------------------------------------
                     # MOD CHAT PERIBADI: KONSULTASI KESELAMATAN SIBER AI (/ai <soalan>)
                     # ------------------------------------------------------------------
-                    if text.startswith(("/ai", "/tanya_ai", "/ask_ai")):
+                    if text.startswith(("/ai", "/tanya", "/ask", "/tanya_ai", "/ask_ai")):
                         parts = text.split(maxsplit=1)
                         if len(parts) > 1 and parts[1].strip():
                             user_q = parts[1].strip()
@@ -8654,7 +8654,7 @@ def run_bot():
                         continue
 
                     # Arahan Hubungi Pasukan Pentadbir KANTOI (/hubungi, /contact, /tanya, /modmail)
-                    if text.startswith(("/hubungi", "/contact", "/tanya", "/modmail", "hubungi", "contact")):
+                    if text.startswith(("/hubungi", "/contact", "/modmail", "hubungi", "contact")):
                         parts = text.split(maxsplit=1)
                         user_query = parts[1].strip() if len(parts) > 1 else ""
                         if user_query:
