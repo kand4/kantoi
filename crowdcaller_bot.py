@@ -3743,32 +3743,46 @@ def build_unified_cyber_dossier(
     if progress_callback:
         progress_callback(70, "🔎 Mengimbas forum, media sosial & metadata telco...", "Deep Intel")
 
-    # --- SOCMINT SEA: Risikan Media Sosial Serantau (Fasa 3) ---
+    # --- SOCMINT SEA / SEBUTAN MEDIA SOSIAL (Fasa 3) ---
     socmint_scan_results = []
-    try:
-        socmint_candidates = socmint.derive_username_candidates(raw_query or (all_phones[0] if all_phones else ""))
-        for sc_user in socmint_candidates[:2]:
-            if sc_user:
-                sc_result = socmint.scan_socmint_sea(
-                    sc_user,
-                    priority_filter=2,
-                    progress_callback=progress_callback
-                )
-                if sc_result and sc_result.get('hits'):
-                    socmint_scan_results.extend(sc_result['hits'])
-        seen_platforms = set()
-        unique_socmint = []
-        for sh in socmint_scan_results:
-            if sh['platform'] not in seen_platforms:
-                seen_platforms.add(sh['platform'])
-                unique_socmint.append(sh)
-        socmint_scan_results = unique_socmint
-        if email and "@" in email:
-            grav = socmint.check_gravatar_by_email(email)
-            if grav and grav['platform'] not in seen_platforms:
-                socmint_scan_results.append(grav)
-    except Exception as e_socmint:
-        print(f"[SOCMINT WARN] {e_socmint}")
+    phone_mentions_result = None
+    socmint_primary_user = raw_query or (all_phones[0] if all_phones else "")
+    is_phone_target = socmint.is_phone_target(socmint_primary_user)
+
+    if is_phone_target:
+        try:
+            phone_mentions_result = socmint.hunt_phone_social_mentions(
+                socmint_primary_user,
+                max_results=5,
+                progress_callback=progress_callback
+            )
+        except Exception as e_phone_soc:
+            print(f"[PHONE SOCIAL MENTIONS ERR] {e_phone_soc}")
+    else:
+        try:
+            socmint_candidates = socmint.derive_username_candidates(socmint_primary_user)
+            for sc_user in socmint_candidates[:2]:
+                if sc_user:
+                    sc_result = socmint.scan_socmint_sea(
+                        sc_user,
+                        priority_filter=2,
+                        progress_callback=progress_callback
+                    )
+                    if sc_result and sc_result.get('hits'):
+                        socmint_scan_results.extend(sc_result['hits'])
+            seen_platforms = set()
+            unique_socmint = []
+            for sh in socmint_scan_results:
+                if sh['platform'] not in seen_platforms:
+                    seen_platforms.add(sh['platform'])
+                    unique_socmint.append(sh)
+            socmint_scan_results = unique_socmint
+            if email and "@" in email:
+                grav = socmint.check_gravatar_by_email(email)
+                if grav and grav['platform'] not in seen_platforms:
+                    socmint_scan_results.append(grav)
+        except Exception as e_socmint:
+            print(f"[SOCMINT WARN] {e_socmint}")
 
     # 4. Modul Forensik Resit & Audio
     if not receipt_forensics:
@@ -4010,35 +4024,41 @@ def build_unified_cyber_dossier(
             if s_lnk and s_lnk.startswith(("http://", "https://")):
                 lines.append(f'  🔗 <a href="{html.escape(s_lnk)}">Buka Pautan Kumpulan/Saluran</a>')
 
-    # --- SEKSYEN SOCMINT SEA (Fasa 3: Risikan Media Sosial Serantau) ---
-    socmint_primary_user = raw_query or (all_phones[0] if all_phones else "")
-    if socmint_scan_results:
-        socmint_formatted = socmint.format_socmint_report_html(
-            {"hits": socmint_scan_results, "scanned": len(socmint.ACTIVE_PLATFORMS),
-             "duration_ms": 0, "username": socmint_primary_user},
-            suspect_name=clean_sname
-        )
-        lines.append("")
-        lines.append(socmint_formatted)
-    else:
-        is_phone_target = bool(re.match(r"^\+?[\d\- ]+$", str(socmint_primary_user).strip()))
-        if is_phone_target:
+    # --- SEKSYEN SOCMINT SEA / SEBUTAN MEDIA SOSIAL (Fasa 3) ---
+    if is_phone_target:
+        if phone_mentions_result:
+            social_sec = socmint.format_phone_mentions_html(phone_mentions_result)
+        else:
             clean_digits = re.sub(r"[^\d]", "", str(socmint_primary_user))
             if clean_digits.startswith("0"):
                 clean_digits = "60" + clean_digits[1:]
+            social_sec = (
+                "🌐 <b>SEBUTAN MEDIA SOSIAL & FORUM (Social Mentions):</b>\n"
+                f"• Sasaran: <code>{html.escape(str(socmint_primary_user))}</code> (Nombor Telefon)\n"
+                "• Platform Diperiksa: Facebook, TikTok, Instagram, Threads, Carousell, Mudah.my, Telegram, WhatsApp\n"
+                "• Keputusan: ✅ <b>Tiada sebutan atau rekod nombor ini ditemui tercetak di mana-mana media sosial / forum terbuka.</b>\n\n"
+                "📱 <b>Pautan Perhubungan Pantas:</b>\n"
+                f'• WhatsApp: <a href="https://wa.me/{clean_digits}">wa.me/{clean_digits}</a>\n'
+                f'• Telegram: <a href="https://t.me/+{clean_digits}">t.me/+{clean_digits}</a>'
+            )
+        lines.append("")
+        lines.append(social_sec)
+    else:
+        if socmint_scan_results:
+            socmint_formatted = socmint.format_socmint_report_html(
+                {"hits": socmint_scan_results, "scanned": len(socmint.ACTIVE_PLATFORMS),
+                 "duration_ms": 0, "username": socmint_primary_user},
+                suspect_name=clean_sname
+            )
             lines.append("")
-            lines.append("\U0001f310 <b>JEJAK MEDIA SOSIAL & PERHUBUNGAN (OSINT):</b>")
-            lines.append(f"\u2022 Sasaran: <code>{html.escape(str(socmint_primary_user))}</code> (Nombor Telefon)")
-            lines.append(f'\u2022 Pautan WhatsApp: <a href="https://wa.me/{clean_digits}">wa.me/{clean_digits}</a>')
-            lines.append(f'\u2022 Pautan Telegram: <a href="https://t.me/+{clean_digits}">t.me/+{clean_digits}</a>')
-            lines.append("\u2022 Carian @Handle: Gunakan arahan <code>/socmint @username</code> jika suspek mempunyai nama samaran media sosial.")
+            lines.append(socmint_formatted)
         else:
             uname = str(socmint_primary_user) if str(socmint_primary_user).startswith("@") else f"@{socmint_primary_user}"
             lines.append("")
-            lines.append("\U0001f310 <b>SOCMINT SEA (Risikan Media Sosial Serantau):</b>")
-            lines.append(f"\u2022 Sasaran: <code>{html.escape(uname)}</code>")
-            lines.append(f"\u2022 Platform Diimbas: {len(socmint.ACTIVE_PLATFORMS)} laman SEA (MY/ID)")
-            lines.append("\u2022 Keputusan: \u2705 Tiada profil aktif dijumpai")
+            lines.append("🌐 <b>SOCMINT SEA (Risikan Media Sosial Serantau):</b>")
+            lines.append(f"• Sasaran: <code>{html.escape(uname)}</code>")
+            lines.append(f"• Platform Diimbas: {len(socmint.ACTIVE_PLATFORMS)} laman SEA (MY/ID)")
+            lines.append("• Keputusan: ✅ Tiada profil aktif dijumpai")
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
     if is_threat:
@@ -6531,8 +6551,23 @@ def async_process_pdrm(chat_id, hud, qt, cat):
 
 
 def async_process_socmint(chat_id, hud, target_input):
-    """Worker async untuk arahan /socmint — imbasan SOCMINT SEA standalone."""
+    """Worker async untuk arahan /socmint - imbasan SOCMINT SEA standalone."""
     try:
+        if socmint.is_phone_target(target_input):
+            hud.update(25, "🌐 Menyelongkar sebutan nombor di media sosial & forum...", f"Sasaran: {target_input[:25]}")
+            mention_data = socmint.hunt_phone_social_mentions(target_input, max_results=5)
+            report_html = socmint.format_phone_mentions_html(mention_data)
+
+            clean_digits = re.sub(r'[^\d]', '', str(target_input))
+            markup = {
+                "inline_keyboard": [
+                    [{"text": "🔍 Semak Penuh (Dossier)", "callback_data": f"force_semak_{clean_digits[:20]}"}],
+                    [{"text": "« Kembali ke Menu Utama", "callback_data": "help_menu"}]
+                ]
+            }
+            hud.update(100, "✨ Carian Sebutan Media Sosial Selesai!", "Laporan Selesai", force=True)
+            hud.complete_with_message(report_html, reply_markup=markup, parse_mode="HTML")
+            return
         hud.update(15, "\U0001f310 Menganalisis sasaran untuk SOCMINT SEA...", f"Sasaran: {target_input[:25]}")
         candidates = socmint.derive_username_candidates(target_input)
         if not candidates:

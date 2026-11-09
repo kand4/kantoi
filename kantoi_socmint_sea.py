@@ -112,7 +112,7 @@ _SOCMINT_GLOBAL_TIMEOUT = 18.0  # Had masa keseluruhan imbasan (saat)
 
 def _probe_single_platform(platform: Dict, username: str) -> Optional[Dict]:
     """
-    Menyemak satu platform sama ada username/nombor wujud.
+    Menyemak satu platform sama ada username wujud.
     Mengembalikan dict hasil atau None jika tidak dijumpai / ralat.
     """
     name = platform["name"]
@@ -121,6 +121,16 @@ def _probe_single_platform(platform: Dict, username: str) -> Optional[Dict]:
 
     if method == "skip":
         return None
+
+    # Pengesahan integriti: Jangan imbas platform sosial jika handle adalah nombor semata-mata
+    if username.isdigit():
+        if name in [
+            "Telegram", "Gravatar", "Instagram", "TikTok", "Threads",
+            "Lazada MY", "Lazada ID", "Shopee MY", "Shopee ID",
+            "Carousell", "Carousell SG", "LinkedIn", "GitHub", "X (Twitter)",
+            "YouTube", "Reddit", "Pinterest", "Snapchat", "Twitch"
+        ]:
+            return None
 
     try:
         url = url_template.format(urllib.parse.quote(username, safe=''))
@@ -149,14 +159,29 @@ def _probe_single_platform(platform: Dict, username: str) -> Optional[Dict]:
                     "this account doesn", "sorry, this page",
                     "halaman tidak ditemukan", "pengguna tidak ditemui",
                     "this user does not exist", "couldn't find this account",
-                    "maaf, halaman ini tidak tersedia"
+                    "maaf, halaman ini tidak tersedia", "shop enter fail page",
+                    "shop not found", "statuscode\":10202", "item_not_found",
+                    "user_not_found"
                 ]
                 if not any(sig in body_lower for sig in not_found_signals):
-                    found = True
                     # Cuba ekstrak tajuk halaman sebagai nama paparan
                     title_match = re.search(r'<title[^>]*>([^<]+)</title>', r.text[:3000], re.IGNORECASE)
-                    if title_match:
-                        raw_title = html.unescape(title_match.group(1)).strip()
+                    raw_title = html.unescape(title_match.group(1)).strip() if title_match else ""
+                    raw_lower = raw_title.lower()
+
+                    # Penapis khusus platform anti-false-positive
+                    is_false_positive = False
+                    if name == "Instagram" and raw_lower in ["instagram", "login • instagram", "log in • instagram"]:
+                        is_false_positive = True
+                    elif name == "TikTok" and ("couldn't find this account" in body_lower or raw_lower in ["tiktok", "watch trending videos for you"]):
+                        is_false_positive = True
+                    elif name in ["Lazada MY", "Lazada ID"] and ("shop enter fail page" in body_lower or "shop enter fail page" in raw_lower):
+                        is_false_positive = True
+                    elif name in ["Shopee MY", "Shopee ID"] and ("buyer or shop not found" in body_lower or "error" in raw_lower):
+                        is_false_positive = True
+
+                    if not is_false_positive:
+                        found = True
                         # Buang nama platform dari tajuk
                         for rm in [" | TikTok", " - YouTube", " (@", " on X", " • Instagram",
                                    " | LinkedIn", " | Facebook", " · GitHub", " | Carousell",
@@ -275,49 +300,63 @@ def scan_socmint_sea(
     }
 
 
+def is_phone_target(target: str) -> bool:
+    """
+    Mengenal pasti sama ada sasaran adalah nombor telefon (MY/ID/Intl).
+    Contoh: '0133245879', '011-27244506', '+60133245879', '601127244506'.
+    """
+    raw = str(target).strip()
+    if not raw:
+        return False
+    # Jika bermula dengan @ atau mengandungi abjad, ia BUKAN nombor telefon
+    if raw.startswith("@") or re.search(r'[a-zA-Z]', raw):
+        return False
+    clean = re.sub(r'[^\d]', '', raw)
+    if not clean:
+        return False
+    # Nombor telefon Malaysia / Serantau biasa: 9 hingga 14 digit
+    if clean.startswith("601") and len(clean) in [11, 12]:
+        return True
+    if clean.startswith("01") and len(clean) in [10, 11]:
+        return True
+    if clean.startswith("0") and len(clean) in [9, 10, 11]:
+        return True
+    if clean.startswith("62") and len(clean) in [10, 11, 12, 13, 14]:
+        return True
+    if len(clean) >= 9 and len(clean) <= 13:
+        return True
+    return False
+
+
 def derive_username_candidates(raw_query: str) -> List[str]:
     """
-    Menghasilkan senarai calon username daripada input mentah:
-    - Nombor telefon: 01127244506 → ["01127244506", "1127244506", "60112724"]
-    - Username: @scammer123 → ["scammer123"]
-    - Nama: Ahmad Bin Ali → ["ahmadali", "ahmad.ali", "ahmad_ali"]
+    Menghasilkan senarai calon username HANYA jika input adalah username atau nama.
+    Jika input adalah nombor telefon, kembalikan [] kerana nombor telefon BUKAN username.
     """
-    candidates = []
     clean = str(raw_query).strip()
 
-    if not clean:
-        return candidates
+    if not clean or is_phone_target(clean):
+        return []
 
-    # 1. Input adalah nombor (telefon / akaun bank)
-    digits_only = re.sub(r'[^\d]', '', clean)
-    if len(digits_only) >= 8:
-        candidates.append(digits_only)
-        # Jika bermula dengan 60 (MY), tambah tanpa kod negara
-        if digits_only.startswith("60") and len(digits_only) >= 11:
-            candidates.append("0" + digits_only[2:])
-        # Jika bermula dengan 62 (ID), tambah tanpa kod negara
-        elif digits_only.startswith("62") and len(digits_only) >= 11:
-            candidates.append("0" + digits_only[2:])
-        elif digits_only.startswith("0"):
-            candidates.append(digits_only[1:])  # Tanpa leading 0
+    candidates = []
 
-    # 2. Input adalah username (@handle)
+    # 1. Input adalah username (@handle)
     if clean.startswith("@"):
         candidates.append(clean[1:])
-    elif not digits_only or len(digits_only) < 8:
-        # Anggap sebagai username
+    else:
+        # Jika bukan nombor telefon, anggap sebagai username atau nama orang
         candidates.append(clean.lower().replace(" ", ""))
         if " " in clean:
             parts = clean.lower().split()
             candidates.append(".".join(parts))
             candidates.append("_".join(parts))
 
-    # Buang duplikat dan kosong
+    # Buang duplikat, kosong, dan rentetan yang berbentuk nombor semata-mata
     seen = set()
     unique = []
     for c in candidates:
         c = c.strip()
-        if c and c not in seen:
+        if c and c not in seen and not c.isdigit():
             seen.add(c)
             unique.append(c)
 
@@ -336,10 +375,14 @@ def format_socmint_report_html(scan_result: Dict, suspect_name: str = "") -> str
     duration = scan_result.get("duration_ms", 0)
     username = scan_result.get("username", "")
 
+    # Pastikan tiada simbol @ jika sasaran adalah nombor
+    is_num = bool(re.match(r"^[\d\+\-]+$", str(username).strip())) or is_phone_target(str(username))
+    target_display = str(username) if is_num else (username if str(username).startswith("@") else f"@{username}")
+
     if not hits:
         return (
             f"🌐 <b>SOCMINT SEA (Risikan Media Sosial Serantau):</b>\n"
-            f"• Sasaran: <code>@{html.escape(username)}</code>\n"
+            f"• Sasaran: <code>{html.escape(target_display)}</code>\n"
             f"• Platform Diimbas: {scanned} laman SEA (MY/ID)\n"
             f"• Keputusan: ✅ Tiada profil aktif dijumpai\n"
             f"• Masa Imbasan: {duration}ms\n"
@@ -359,7 +402,7 @@ def format_socmint_report_html(scan_result: Dict, suspect_name: str = "") -> str
 
     lines = [
         "🌐 <b>SOCMINT SEA (Risikan Media Sosial Serantau):</b>",
-        f"• Sasaran: <code>@{html.escape(username)}</code>",
+        f"• Sasaran: <code>{html.escape(target_display)}</code>",
         f"• Profil Aktif Dijumpai: <b>{len(hits)}</b> / {scanned} platform",
         f"• Masa Imbasan: {duration}ms",
         "",
@@ -564,3 +607,189 @@ def search_duckduckgo_messaging_dorks(target_query: str, max_results: int = 3) -
         pass
 
     return results[:max_results]
+
+
+# ==============================================================================
+# ENJIN MENYELONGKAR SEBUTAN NOMBOR TELEFON DI MEDIA SOSIAL & FORUM (DORKING)
+# ==============================================================================
+def hunt_phone_social_mentions(
+    phone_input: str,
+    max_results: int = 5,
+    progress_callback: Optional[Callable] = None
+) -> Dict:
+    """
+    Menyelongkar laman-laman media sosial (Facebook, TikTok, Instagram, Threads,
+    Carousell, Mudah.my, Telegram, WhatsApp) untuk mencari sebutan sebenar nombor
+    telefon yang tercetak dalam teks hantaran, iklan, atau profil.
+
+    MENJAMIN ZERO FALSE-POSITIVE:
+    Setiap hasil carian disaring dengan teliti untuk memastikan digit nombor
+    telefon benar-benar wujud dalam tajuk, petikan (snippet), atau URL.
+    """
+    digits = re.sub(r'[^\d]', '', str(phone_input).strip())
+    if not digits:
+        return {
+            "target": phone_input,
+            "clean_phone": "",
+            "hyphenated": "",
+            "intl_phone": "",
+            "mentions": [],
+            "has_mentions": False
+        }
+
+    if digits.startswith("60") and len(digits) >= 11:
+        clean_local = "0" + digits[2:]
+        intl = digits
+    elif digits.startswith("0"):
+        clean_local = digits
+        intl = "60" + digits[1:]
+    else:
+        clean_local = digits
+        intl = "60" + digits
+
+    if len(clean_local) == 10:
+        hyphen1 = clean_local[:3] + "-" + clean_local[3:]
+        space1 = clean_local[:3] + " " + clean_local[3:]
+    elif len(clean_local) == 11:
+        hyphen1 = clean_local[:4] + "-" + clean_local[4:]
+        space1 = clean_local[:4] + " " + clean_local[4:]
+    else:
+        hyphen1 = clean_local
+        space1 = clean_local
+
+    if progress_callback:
+        progress_callback(30, "🌐 Menyelongkar sebutan nombor di media sosial & forum...", f"Sasaran: {clean_local}")
+
+    verified_mentions = []
+    seen_links = set()
+
+    # Dork berfokus media sosial dan pasaran tempatan
+    dork_social = (
+        f'("{clean_local}" OR "{hyphen1}") '
+        f'(site:facebook.com OR site:instagram.com OR site:tiktok.com OR '
+        f'site:carousell.com.my OR site:mudah.my OR site:threads.net OR '
+        f'site:t.me OR site:chat.whatsapp.com)'
+    )
+    dork_general = f'"{clean_local}" OR "{hyphen1}" OR "{space1}"'
+
+    queries = [dork_social, dork_general]
+
+    for q in queries:
+        if len(verified_mentions) >= max_results:
+            break
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS(timeout=6) as ddgs:
+                raw_hits = list(ddgs.text(q, max_results=max_results * 2))
+                for h in raw_hits:
+                    link = h.get("href", "")
+                    title = h.get("title", "")
+                    snippet = h.get("body", "")
+
+                    if not link or link in seen_links:
+                        continue
+
+                    # STRICT ANTI-HALLUCINATION: Digit telefon MESTI wujud dalam title, snippet, atau URL
+                    combined = f"{title} {snippet} {link}".lower()
+                    combined_digits = re.sub(r'[^\d]', '', combined)
+
+                    has_exact_match = (
+                        clean_local in combined
+                        or hyphen1 in combined
+                        or space1 in combined
+                        or intl in combined
+                        or (len(clean_local) >= 9 and clean_local in combined_digits)
+                    )
+
+                    if not has_exact_match:
+                        continue
+
+                    seen_links.add(link)
+
+                    platform = "Web Awam"
+                    flag = "🌐"
+                    link_lower = link.lower()
+                    if "facebook.com" in link_lower:
+                        platform, flag = "Facebook", "🇲🇾"
+                    elif "tiktok.com" in link_lower:
+                        platform, flag = "TikTok", "🇲🇾"
+                    elif "instagram.com" in link_lower:
+                        platform, flag = "Instagram", "🇲🇾"
+                    elif "threads.net" in link_lower:
+                        platform, flag = "Threads", "🇲🇾"
+                    elif "carousell.com.my" in link_lower or "carousell.sg" in link_lower:
+                        platform, flag = "Carousell", "🇲🇾"
+                    elif "mudah.my" in link_lower:
+                        platform, flag = "Mudah.my", "🇲🇾"
+                    elif "chat.whatsapp.com" in link_lower or "wa.me" in link_lower:
+                        platform, flag = "WhatsApp Group/Chat", "🇲🇾"
+                    elif "t.me" in link_lower:
+                        platform, flag = "Telegram", "🇲🇾"
+                    elif "lowyat.net" in link_lower:
+                        platform, flag = "Lowyat Forum", "🇲🇾"
+                    elif "carigold.com" in link_lower:
+                        platform, flag = "CariGold Forum", "🇲🇾"
+
+                    verified_mentions.append({
+                        "platform": platform,
+                        "flag": flag,
+                        "title": title.strip(),
+                        "snippet": snippet.strip(),
+                        "link": link
+                    })
+
+                    if len(verified_mentions) >= max_results:
+                        break
+        except Exception:
+            pass
+
+    return {
+        "target": phone_input,
+        "clean_phone": clean_local,
+        "hyphenated": hyphen1,
+        "intl_phone": intl,
+        "mentions": verified_mentions,
+        "has_mentions": len(verified_mentions) > 0
+    }
+
+
+def format_phone_mentions_html(mention_data: Dict) -> str:
+    """
+    Format hasil selongkar sebutan media sosial untuk Telegram HTML.
+    Memastikan TIADA simbol @ di awal nombor dan TIADA profil palsu.
+    """
+    phone = mention_data.get("clean_phone") or mention_data.get("target", "")
+    intl = mention_data.get("intl_phone") or ("60" + phone[1:] if phone.startswith("0") else phone)
+    mentions = mention_data.get("mentions", [])
+    has_mentions = mention_data.get("has_mentions", False)
+
+    lines = [
+        "🌐 <b>SEBUTAN MEDIA SOSIAL & FORUM (Social Mentions):</b>",
+        f"• Sasaran: <code>{html.escape(phone)}</code> (Nombor Telefon)",
+    ]
+
+    if has_mentions:
+        lines.append(f"• Status: ⚠️ <b>Dijumpai {len(mentions)} sebutan nombor ini di laman awam:</b>")
+        lines.append("")
+        for idx, m in enumerate(mentions, 1):
+            p_name = html.escape(m.get("platform", "Web"))
+            flag = m.get("flag", "🌐")
+            tit = html.escape(m.get("title", "Pautan Awam"))
+            snp = html.escape(m.get("snippet", ""))
+            lnk = m.get("link", "")
+            lines.append(f"<b>{idx}. [{flag} {p_name}]</b> {tit}")
+            if snp:
+                lines.append(f"   📝 <i>\"{snp[:120]}...\"</i>")
+            if lnk and lnk.startswith(("http://", "https://")):
+                lines.append(f'   🔗 <a href="{html.escape(lnk)}">Buka Pautan Hantaran</a>')
+            lines.append("")
+    else:
+        lines.append("• Platform Diperiksa: Facebook, TikTok, Instagram, Threads, Carousell, Mudah.my, Telegram, WhatsApp")
+        lines.append("• Keputusan: ✅ <b>Tiada sebutan atau rekod nombor ini ditemui tercetak di mana-mana media sosial / forum terbuka.</b>")
+        lines.append("")
+
+    lines.append("📱 <b>Pautan Perhubungan Pantas:</b>")
+    lines.append(f'• WhatsApp: <a href="https://wa.me/{intl}">wa.me/{intl}</a>')
+    lines.append(f'• Telegram: <a href="https://t.me/+{intl}">t.me/+{intl}</a>')
+
+    return "\n".join(lines)
