@@ -4021,11 +4021,24 @@ def build_unified_cyber_dossier(
         lines.append("")
         lines.append(socmint_formatted)
     else:
-        lines.append("")
-        lines.append("\U0001f310 <b>SOCMINT SEA (Risikan Media Sosial Serantau):</b>")
-        lines.append(f"\u2022 Sasaran: <code>@{html.escape(str(socmint_primary_user))}</code>")
-        lines.append(f"\u2022 Platform Diimbas: {len(socmint.ACTIVE_PLATFORMS)} laman SEA (MY/ID)")
-        lines.append("\u2022 Keputusan: \u2705 Tiada profil aktif dijumpai")
+        is_phone_target = bool(re.match(r"^\+?[\d\- ]+$", str(socmint_primary_user).strip()))
+        if is_phone_target:
+            clean_digits = re.sub(r"[^\d]", "", str(socmint_primary_user))
+            if clean_digits.startswith("0"):
+                clean_digits = "60" + clean_digits[1:]
+            lines.append("")
+            lines.append("\U0001f310 <b>JEJAK MEDIA SOSIAL & PERHUBUNGAN (OSINT):</b>")
+            lines.append(f"\u2022 Sasaran: <code>{html.escape(str(socmint_primary_user))}</code> (Nombor Telefon)")
+            lines.append(f'\u2022 Pautan WhatsApp: <a href="https://wa.me/{clean_digits}">wa.me/{clean_digits}</a>')
+            lines.append(f'\u2022 Pautan Telegram: <a href="https://t.me/+{clean_digits}">t.me/+{clean_digits}</a>')
+            lines.append("\u2022 Carian @Handle: Gunakan arahan <code>/socmint @username</code> jika suspek mempunyai nama samaran media sosial.")
+        else:
+            uname = str(socmint_primary_user) if str(socmint_primary_user).startswith("@") else f"@{socmint_primary_user}"
+            lines.append("")
+            lines.append("\U0001f310 <b>SOCMINT SEA (Risikan Media Sosial Serantau):</b>")
+            lines.append(f"\u2022 Sasaran: <code>{html.escape(uname)}</code>")
+            lines.append(f"\u2022 Platform Diimbas: {len(socmint.ACTIVE_PLATFORMS)} laman SEA (MY/ID)")
+            lines.append("\u2022 Keputusan: \u2705 Tiada profil aktif dijumpai")
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
     if is_threat:
