@@ -24,6 +24,7 @@ __pycache__/
 
 # Old decompilation, dumps & scratch folders
 Kantoi_Win7_Server/
+Kantoi_Win7_Server_Portable/
 smali_*/
 _base_backup/
 harvested_data/

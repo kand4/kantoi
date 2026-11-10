@@ -17,10 +17,15 @@ import json
 import re
 import requests
 
-# Muat turun kunci rahsia
+# Muat turun kunci rahsia secara selamat tanpa mencetuskan ralat jika salah satu pembolehubah tiada
 try:
-    from local_secrets import GROQ_API_KEY, GEMINI_API_KEY
+    import local_secrets
+    GROQ_API_KEY = getattr(local_secrets, "GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
+    GEMINI_API_KEY = getattr(local_secrets, "GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 except ImportError:
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+except Exception:
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
@@ -40,14 +45,14 @@ AVAILABLE_GEMINI_MODELS = [
 
 
 def get_active_groq_key() -> str:
-    """Mendapatkan kunci Groq daripada local_secrets atau os.environ"""
-    k = getattr(sys.modules.get('local_secrets'), 'GROQ_API_KEY', '') or os.environ.get("GROQ_API_KEY", "")
+    """Mendapatkan kunci Groq daripada local_secrets, global atau os.environ"""
+    k = GROQ_API_KEY or getattr(sys.modules.get('local_secrets'), 'GROQ_API_KEY', '') or os.environ.get("GROQ_API_KEY", "")
     return str(k).strip(" \t\r\n\'\"")
 
 
 def get_active_gemini_key() -> str:
-    """Mendapatkan kunci Gemini daripada local_secrets atau os.environ"""
-    k = getattr(sys.modules.get('local_secrets'), 'GEMINI_API_KEY', '') or os.environ.get("GEMINI_API_KEY", "")
+    """Mendapatkan kunci Gemini daripada local_secrets, global atau os.environ"""
+    k = GEMINI_API_KEY or getattr(sys.modules.get('local_secrets'), 'GEMINI_API_KEY', '') or os.environ.get("GEMINI_API_KEY", "")
     return str(k).strip(" \t\r\n\'\"")
 
 

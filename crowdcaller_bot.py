@@ -71,24 +71,24 @@ BOT_RELEASE_DATE = "3 November 2026"
 BOT_CODENAME = "Unified OSINT Dork & SOCMINT Hub"
 
 try:
-    from local_secrets import BOT_TOKEN, GEMINI_API_KEY
-    from local_secrets import GROQ_API_KEY
+    import local_secrets
+    BOT_TOKEN = getattr(local_secrets, "BOT_TOKEN", os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN_HERE"))
+    GEMINI_API_KEY = getattr(local_secrets, "GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
+    GROQ_API_KEY = getattr(local_secrets, "GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
+    ADMIN_PASSCODE = getattr(local_secrets, "ADMIN_PASSCODE", os.environ.get("ADMIN_PASSCODE", "kantoi2026"))
+    CHECKLEAKED_AUTH_TOKEN = getattr(local_secrets, "CHECKLEAKED_AUTH_TOKEN", os.environ.get("CHECKLEAKED_AUTH_TOKEN", ""))
 except ImportError:
     BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN_HERE")
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-except Exception:
-    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-
-try:
-    from local_secrets import ADMIN_PASSCODE
-except ImportError:
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
     ADMIN_PASSCODE = os.environ.get("ADMIN_PASSCODE", "kantoi2026")
-try:
-    from local_secrets import CHECKLEAKED_AUTH_TOKEN
-except Exception:
     CHECKLEAKED_AUTH_TOKEN = os.environ.get("CHECKLEAKED_AUTH_TOKEN", "")
 except Exception:
+    BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN_HERE")
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
     ADMIN_PASSCODE = os.environ.get("ADMIN_PASSCODE", "kantoi2026")
+    CHECKLEAKED_AUTH_TOKEN = os.environ.get("CHECKLEAKED_AUTH_TOKEN", "")
 
 CHANNEL_ID = "@kantoiradar"
 
