@@ -4127,18 +4127,24 @@ def build_unified_cyber_dossier(
 
     # Simpan snapshot dapatan dossier agar boleh dijana sebagai laporan rasmi bila-bila masa
     dossier_full_html = "\n".join(lines)
+    existing_rep = unconfirmed_reports.get(dossier_id) or get_pending_reports().get(dossier_id) or {}
     unconfirmed_reports[dossier_id] = {
-        "user_id": None,
-        "phone_norm": all_phones[0] if all_phones else "TIADA_TEL",
-        "all_phones": all_phones,
-        "bank_account": ", ".join(all_accounts) if all_accounts else "N/A",
-        "all_accounts": all_accounts,
-        "suspect_name": clean_sname or "Tidak Dinyatakan",
-        "bank_name": bank_name,
-        "tactic": tactic,
-        "evidence_summary": evidence_summary,
-        "evidence_text": evidence_summary or raw_query or "",
-        "victim_loss": victim_loss,
+        "user_id": existing_rep.get("user_id"),
+        "username": existing_rep.get("username"),
+        "phone_norm": all_phones[0] if all_phones else existing_rep.get("phone_norm", "TIADA_TEL"),
+        "all_phones": all_phones or existing_rep.get("all_phones", []),
+        "bank_account": ", ".join(all_accounts) if all_accounts else existing_rep.get("bank_account", "N/A"),
+        "all_accounts": all_accounts or existing_rep.get("all_accounts", []),
+        "suspect_name": clean_sname or existing_rep.get("suspect_name", "Tidak Dinyatakan"),
+        "bank_name": bank_name or existing_rep.get("bank_name", "N/A"),
+        "tactic": tactic or existing_rep.get("tactic", "Semakan Keselamatan Siber"),
+        "evidence_summary": evidence_summary or existing_rep.get("evidence_summary"),
+        "evidence_text": evidence_summary or raw_query or existing_rep.get("evidence_text", ""),
+        "victim_loss": victim_loss or existing_rep.get("victim_loss"),
+        "photo_file_id": existing_rep.get("photo_file_id"),
+        "photo_file_ids": existing_rep.get("photo_file_ids") or ([] if not existing_rep.get("photo_file_id") else [existing_rep.get("photo_file_id")]),
+        "msg_id": existing_rep.get("msg_id"),
+        "msg_ids": existing_rep.get("msg_ids") or ([] if not existing_rep.get("msg_id") else [existing_rep.get("msg_id")]),
         "risk_info": risk_info,
         "phone_intel_list": phone_intel_list,
         "acc_intel_list": acc_intel_list,
@@ -5910,44 +5916,67 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
 
         # 1. Pos ke saluran @kantoiradar dengan format terperinci dan lengkap (tidak diringkaskan)
         channel_post = format_channel_approved_post(rep, admin_username)
-        photo_id = rep.get("photo_file_id")
+        # Pengekstrakan bukti imej & ID mesej asal untuk keupayaan Forward terus ke saluran @kantoiradar
+        source_chat_id = rep.get("user_id")
+        msg_ids = rep.get("msg_ids") or ([rep.get("msg_id")] if rep.get("msg_id") else [])
+        photo_ids = rep.get("photo_file_ids") or ([rep.get("photo_file_id")] if rep.get("photo_file_id") else [])
+        
+        forwarded_ok = False
 
-        if photo_id:
-            # Semak had panjang kapsyen foto Telegram (maksimum 1024 aksara)
-            if len(channel_post) <= 1024:
-                api_call("sendPhoto", {
-                    "chat_id": CHANNEL_ID,
-                    "photo": photo_id,
-                    "caption": channel_post,
-                    "parse_mode": "HTML"
-                })
-            else:
-                # Jika laporan terperinci melebihi had 1024 aksara:
-                # Pos 1: Hantar foto dengan label lampiran bukti kemas tanpa menduplikasi tajuk & modus amaran
-                evidence_caption = f"📸 <b>Lampiran Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
-                api_call("sendPhoto", {
-                    "chat_id": CHANNEL_ID,
-                    "photo": photo_id,
-                    "caption": evidence_caption,
-                    "parse_mode": "HTML"
-                })
-                # Pos 2: Hantar teks laporan penuh (sehingga 4096 aksara) tanpa duplikasi tajuk berulang
-                if len(channel_post) <= 4096:
-                    api_call("sendMessage", {
+        # KAEDAH 1 (UTAMA): Majukan (Forward) mesej imej skrinshot asal terus ke saluran @kantoiradar
+        if source_chat_id and msg_ids:
+            forwarded_count = 0
+            for m_id in msg_ids:
+                try:
+                    fwd_res = api_call("forwardMessage", {
                         "chat_id": CHANNEL_ID,
-                        "text": channel_post,
-                        "parse_mode": "HTML",
-                        "disable_web_page_preview": True
+                        "from_chat_id": source_chat_id,
+                        "message_id": m_id
                     })
+                    if fwd_res and fwd_res.get("ok"):
+                        forwarded_count += 1
+                except Exception as e:
+                    print(f"[FORWARD ERR] Gagal forwardMessage {m_id} ke {CHANNEL_ID}: {e}")
+            if forwarded_count > 0:
+                forwarded_ok = True
+                print(f"[FORWARD SUCCESS] Berjaya memajukan {forwarded_count} imej bukti ke {CHANNEL_ID}")
+
+        # KAEDAH 2 (FALLBACK): Jika forwardMessage tidak berjaya (cth: privasi Telegram, mesej dipadam,
+        # atau rekod arkib tanpa msg_id), hantar salinan foto resolusi tinggi terus menggunakan sendPhoto / sendMediaGroup
+        photo_caption_consumed = False
+        if not forwarded_ok and photo_ids:
+            if len(photo_ids) > 1:
+                media = []
+                for idx, pid in enumerate(photo_ids[:10]):
+                    m_item = {"type": "photo", "media": pid}
+                    if idx == 0:
+                        m_item["caption"] = f"📸 <b>Lampiran {len(photo_ids)} Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
+                        m_item["parse_mode"] = "HTML"
+                    media.append(m_item)
+                api_call("sendMediaGroup", {
+                    "chat_id": CHANNEL_ID,
+                    "media": media
+                })
+            elif len(photo_ids) == 1:
+                if len(channel_post) <= 1024:
+                    api_call("sendPhoto", {
+                        "chat_id": CHANNEL_ID,
+                        "photo": photo_ids[0],
+                        "caption": channel_post,
+                        "parse_mode": "HTML"
+                    })
+                    photo_caption_consumed = True
                 else:
-                    for chunk_idx in range(0, len(channel_post), 4000):
-                        api_call("sendMessage", {
-                            "chat_id": CHANNEL_ID,
-                            "text": channel_post[chunk_idx:chunk_idx+4000],
-                            "parse_mode": "HTML",
-                            "disable_web_page_preview": True
-                        })
-        else:
+                    evidence_caption = f"📸 <b>Lampiran Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
+                    api_call("sendPhoto", {
+                        "chat_id": CHANNEL_ID,
+                        "photo": photo_ids[0],
+                        "caption": evidence_caption,
+                        "parse_mode": "HTML"
+                    })
+
+        # Hantar teks laporan analisis komprehensif ke @kantoiradar (jika belum dihantar dalam sendPhoto)
+        if not photo_caption_consumed:
             if len(channel_post) <= 4096:
                 api_call("sendMessage", {
                     "chat_id": CHANNEL_ID,
@@ -6144,6 +6173,32 @@ def handle_admin_batch_decision(action, batch_id, admin_chat_id, admin_username,
             + "\n".join(channel_threat_tags)
         )
 
+        # Keupayaan Forward / Hantar Imej Bukti Batch ke Saluran @kantoiradar
+        b_user_id = batch.get("user_id")
+        b_msg_id = batch.get("msg_id")
+        b_photo_id = batch.get("photo_file_id")
+        b_forwarded = False
+
+        if b_user_id and b_msg_id:
+            try:
+                res_fwd = api_call("forwardMessage", {
+                    "chat_id": CHANNEL_ID,
+                    "from_chat_id": b_user_id,
+                    "message_id": b_msg_id
+                })
+                if res_fwd and res_fwd.get("ok"):
+                    b_forwarded = True
+            except Exception as e:
+                print(f"[BATCH FORWARD ERR] Gagal forwardMessage: {e}")
+
+        if not b_forwarded and b_photo_id:
+            api_call("sendPhoto", {
+                "chat_id": CHANNEL_ID,
+                "photo": b_photo_id,
+                "caption": f"📸 <b>Lampiran Tangkapan Layar Laporan Pukal (Ref: <code>{html.escape(str(batch_id))}</code>)</b>",
+                "parse_mode": "HTML"
+            })
+
         api_call("sendMessage", {
             "chat_id": CHANNEL_ID,
             "text": post_text,
@@ -6232,6 +6287,7 @@ def execute_multi_photo_case(chat_id, username):
         all_captions = [it["caption"] for it in items if it.get("caption") and it["caption"].lower() != "tiada"]
         evidence_text = " | ".join(all_captions) if all_captions else f"Bukti bergambar ({len(items)} tangkapan layar) dilampirkan."
         rep_id = f"REP-{int(time.time()) % 100000:05d}"
+        m_ids = [it.get("msg_id") for it in items if it.get("msg_id")]
         rep_data = {
             "report_id": rep_id,
             "user_id": chat_id,
@@ -6242,6 +6298,8 @@ def execute_multi_photo_case(chat_id, username):
             "evidence_text": evidence_text,
             "photo_file_id": items[0]["file_id"],
             "photo_file_ids": [it["file_id"] for it in items],
+            "msg_id": first_msg_id,
+            "msg_ids": m_ids,
             "status": "PENDING",
             "created_at": int(time.time())
         }
@@ -6275,13 +6333,18 @@ def execute_multi_photo_case(chat_id, username):
                 break
     if found_key:
         p_ids = [it["file_id"] for it in items]
+        m_ids = [it.get("msg_id") for it in items if it.get("msg_id")]
         if found_key in unconfirmed_reports:
             unconfirmed_reports[found_key]["photo_file_id"] = p_ids[0]
             unconfirmed_reports[found_key]["photo_file_ids"] = p_ids
+            unconfirmed_reports[found_key]["msg_id"] = m_ids[0] if m_ids else None
+            unconfirmed_reports[found_key]["msg_ids"] = m_ids
         reports = get_pending_reports()
         if found_key in reports:
             reports[found_key]["photo_file_id"] = p_ids[0]
             reports[found_key]["photo_file_ids"] = p_ids
+            reports[found_key]["msg_id"] = m_ids[0] if m_ids else None
+            reports[found_key]["msg_ids"] = m_ids
             save_json_file(REPORTS_DATA_PATH, reports)
         send_message(chat_id, f"📸 *{len(items)} keping gambar bukti berjaya dilampirkan pada draf laporan anda!*")
         return
@@ -6357,6 +6420,7 @@ def execute_multi_photo_case(chat_id, username):
                         f"Keputusan: {res_url['verdict']}\n"
                         f"Faktor Risiko:\n" + "\n".join(f"- {r}" for r in res_url['reasons'])
                     )
+                    m_ids = [it.get("msg_id") for it in items if it.get("msg_id")]
                     rep_data = {
                         "user_id": chat_id,
                         "username": username,
@@ -6368,7 +6432,9 @@ def execute_multi_photo_case(chat_id, username):
                         "evidence_text": ev_text,
                         "victim_loss": None,
                         "photo_file_id": items[0]["file_id"] if items else None,
-                        "photo_file_ids": [items[0]["file_id"]] if items else [],
+                        "photo_file_ids": [it["file_id"] for it in items],
+                        "msg_id": first_msg_id,
+                        "msg_ids": m_ids,
                         "qr_data": single_qr,
                         "tactic": f"Quishing / Phishing ({res_url.get('target_brand', 'Pautan Palsu')})",
                         "case_summary": f"Kod QR Quishing dikesan: {res_url['url']}",
@@ -6431,6 +6497,7 @@ def execute_multi_photo_case(chat_id, username):
                 combined_evidence = f"[Kapsyen Pengguna]: {' | '.join(captions)}\n\n{combined_evidence}"
 
             p_ids = [it["file_id"] for it in items]
+            m_ids = [it.get("msg_id") for it in items if it.get("msg_id")]
             phone_target_val = cand_phones[0] if cand_phones else "TIADA_TEL"
             rep_data = {
                 "user_id": chat_id,
@@ -6444,6 +6511,8 @@ def execute_multi_photo_case(chat_id, username):
                 "victim_loss": intel.get("victim_loss"),
                 "photo_file_id": p_ids[0] if p_ids else None,
                 "photo_file_ids": p_ids,
+                "msg_id": first_msg_id,
+                "msg_ids": m_ids,
                 "qr_data": intel.get("qr_data"),
                 "email": (intel.get("emails") or [""])[0] if intel.get("emails") else "",
                 "tactic": intel.get("tactic", "Semakan Keselamatan Siber"),
