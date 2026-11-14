@@ -529,80 +529,54 @@ def search_duckduckgo_messaging_dorks(target_query: str, max_results: int = 3) -
     results = []
     seen_links = set()
 
-    # 1. Kaedah Utama: Cuba library DDGS jika tersedia
+    # Kaedah Pure Python: Parse DuckDuckGo Lite tanpa kebergantungan luar (BS4 / DDGS)
     try:
-        from duckduckgo_search import DDGS
-        with DDGS(timeout=5) as ddgs:
-            raw_hits = list(ddgs.text(dork_query, max_results=max_results))
-            for h in raw_hits:
-                link = h.get("href", "")
-                if link and link not in seen_links:
-                    seen_links.add(link)
-                    # Tentukan sumber platform
-                    platform_tag = "MESSAGING"
-                    if "chat.whatsapp.com" in link:
-                        platform_tag = "WhatsApp Group"
-                    elif "wa.me" in link:
-                        platform_tag = "WhatsApp Chat"
-                    elif "t.me" in link:
-                        platform_tag = "Telegram"
-
-                    results.append({
-                        "title": h.get("title", ""),
-                        "snippet": h.get("body", ""),
-                        "link": link,
-                        "source": platform_tag
-                    })
-            if results:
-                return results[:max_results]
-    except Exception:
-        pass
-
-    # 2. Kaedah Sandaran (Fallback): DuckDuckGo HTML Endpoint (Tahan Lasak & Tanpa Kebergantungan Luar)
-    try:
-        from bs4 import BeautifulSoup
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "ms-MY,ms;q=0.9,en-US;q=0.8,en;q=0.7"
         }
-        r = requests.get(
-            "https://html.duckduckgo.com/html/",
-            params={"q": dork_query},
+        r = requests.post(
+            "https://lite.duckduckgo.com/lite/",
+            data={"q": dork_query},
             headers=headers,
-            timeout=5,
-            verify=False
+            timeout=5
         )
-        if r.status_code == 200:
-            soup = BeautifulSoup(r.text, "html.parser")
-            for div in soup.find_all("div", class_="result")[:max_results]:
-                t_elem = div.find("a", class_="result__a")
-                s_elem = div.find("a", class_="result__snippet")
-                if t_elem:
-                    raw_href = t_elem.get("href", "")
-                    # Buang redirect wrapper DuckDuckGo jika ada
-                    actual_link = raw_href
-                    if "uddg=" in raw_href:
-                        m = re.search(r'uddg=([^&]+)', raw_href)
-                        if m:
-                            actual_link = urllib.parse.unquote(m.group(1))
-
-                    if actual_link and actual_link not in seen_links:
-                        seen_links.add(actual_link)
-                        platform_tag = "MESSAGING"
-                        if "chat.whatsapp.com" in actual_link:
-                            platform_tag = "WhatsApp Group"
-                        elif "wa.me" in actual_link:
-                            platform_tag = "WhatsApp Chat"
-                        elif "t.me" in actual_link:
-                            platform_tag = "Telegram"
-
-                        results.append({
-                            "title": t_elem.get_text(strip=True),
-                            "snippet": s_elem.get_text(strip=True) if s_elem else "",
-                            "link": actual_link,
-                            "source": platform_tag
-                        })
+        if r.status_code in (200, 202):
+            current = {}
+            for r_str in r.text.split('<tr'):
+                if "result-link" in r_str:
+                    link_m = re.search(r'href="([^"]+)"', r_str)
+                    title_m = re.search(r"class=['\"]result-link['\"][^>]*>(.*?)</a>", r_str, re.DOTALL)
+                    if link_m and title_m:
+                        raw_href = link_m.group(1)
+                        uddg = re.search(r'uddg=([^&]+)', raw_href)
+                        clean_href = urllib.parse.unquote(uddg.group(1)) if uddg else raw_href
+                        current = {
+                            "link": clean_href,
+                            "title": html.unescape(re.sub(r'<[^>]+>', '', title_m.group(1))).strip(),
+                            "snippet": ""
+                        }
+                elif "result-snippet" in r_str and current:
+                    snip_m = re.search(r"class=['\"]result-snippet['\"][^>]*>(.*?)</td>", r_str, re.DOTALL)
+                    if snip_m:
+                        clean_snip = html.unescape(re.sub(r'<[^>]+>', '', snip_m.group(1))).strip()
+                        current["snippet"] = clean_snip
+                        lnk = current.get("link", "")
+                        if lnk and lnk not in seen_links:
+                            seen_links.add(lnk)
+                            platform_tag = "MESSAGING"
+                            if "chat.whatsapp.com" in lnk:
+                                platform_tag = "WhatsApp Group"
+                            elif "wa.me" in lnk:
+                                platform_tag = "WhatsApp Chat"
+                            elif "t.me" in lnk:
+                                platform_tag = "Telegram"
+                            current["source"] = platform_tag
+                            results.append(current)
+                        current = {}
+                        if len(results) >= max_results:
+                            break
     except Exception:
         pass
 
@@ -670,76 +644,99 @@ def hunt_phone_social_mentions(
         f'site:carousell.com.my OR site:mudah.my OR site:threads.net OR '
         f'site:t.me OR site:chat.whatsapp.com)'
     )
-    dork_general = f'"{clean_local}" OR "{hyphen1}" OR "{space1}"'
+    dork_general = f'{clean_local}'
 
-    queries = [dork_social, dork_general]
+    queries = [dork_general, dork_social]
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "ms-MY,ms;q=0.9,en-US;q=0.8,en;q=0.7"
+    }
 
     for q in queries:
         if len(verified_mentions) >= max_results:
             break
         try:
-            from duckduckgo_search import DDGS
-            with DDGS(timeout=6) as ddgs:
-                raw_hits = list(ddgs.text(q, max_results=max_results * 2))
-                for h in raw_hits:
-                    link = h.get("href", "")
-                    title = h.get("title", "")
-                    snippet = h.get("body", "")
+            r = requests.post(
+                "https://lite.duckduckgo.com/lite/",
+                data={"q": q},
+                headers=headers,
+                timeout=6
+            )
+            if r.status_code in (200, 202):
+                current = {}
+                for r_str in r.text.split('<tr'):
+                    if "result-link" in r_str:
+                        link_m = re.search(r'href="([^"]+)"', r_str)
+                        title_m = re.search(r"class=['\"]result-link['\"][^>]*>(.*?)</a>", r_str, re.DOTALL)
+                        if link_m and title_m:
+                            raw_href = link_m.group(1)
+                            uddg = re.search(r'uddg=([^&]+)', raw_href)
+                            clean_href = urllib.parse.unquote(uddg.group(1)) if uddg else raw_href
+                            current = {
+                                "link": clean_href,
+                                "title": html.unescape(re.sub(r'<[^>]+>', '', title_m.group(1))).strip(),
+                                "snippet": ""
+                            }
+                    elif "result-snippet" in r_str and current:
+                        snip_m = re.search(r"class=['\"]result-snippet['\"][^>]*>(.*?)</td>", r_str, re.DOTALL)
+                        if snip_m:
+                            clean_snip = html.unescape(re.sub(r'<[^>]+>', '', snip_m.group(1))).strip()
+                            current["snippet"] = clean_snip
 
-                    if not link or link in seen_links:
-                        continue
+                            link = current.get("link", "")
+                            title = current.get("title", "")
+                            snippet = current.get("snippet", "")
 
-                    # STRICT ANTI-HALLUCINATION: Digit telefon MESTI wujud dalam title, snippet, atau URL
-                    combined = f"{title} {snippet} {link}".lower()
-                    combined_digits = re.sub(r'[^\d]', '', combined)
+                            if link and link not in seen_links:
+                                combined = f"{title} {snippet} {link}".lower()
+                                combined_digits = re.sub(r'[^\d]', '', combined)
 
-                    has_exact_match = (
-                        clean_local in combined
-                        or hyphen1 in combined
-                        or space1 in combined
-                        or intl in combined
-                        or (len(clean_local) >= 9 and clean_local in combined_digits)
-                    )
+                                has_exact_match = (
+                                    clean_local in combined
+                                    or hyphen1 in combined
+                                    or space1 in combined
+                                    or intl in combined
+                                    or (len(clean_local) >= 9 and clean_local in combined_digits)
+                                )
 
-                    if not has_exact_match:
-                        continue
+                                if has_exact_match:
+                                    seen_links.add(link)
+                                    platform = "Web Awam"
+                                    flag = "🌐"
+                                    link_lower = link.lower()
+                                    if "facebook.com" in link_lower:
+                                        platform, flag = "Facebook", "🇲🇾"
+                                    elif "tiktok.com" in link_lower:
+                                        platform, flag = "TikTok", "🇲🇾"
+                                    elif "instagram.com" in link_lower:
+                                        platform, flag = "Instagram", "🇲🇾"
+                                    elif "threads.net" in link_lower:
+                                        platform, flag = "Threads", "🇲🇾"
+                                    elif "carousell.com.my" in link_lower or "carousell.sg" in link_lower:
+                                        platform, flag = "Carousell", "🇲🇾"
+                                    elif "mudah.my" in link_lower:
+                                        platform, flag = "Mudah.my", "🇲🇾"
+                                    elif "chat.whatsapp.com" in link_lower or "wa.me" in link_lower:
+                                        platform, flag = "WhatsApp Group/Chat", "🇲🇾"
+                                    elif "t.me" in link_lower:
+                                        platform, flag = "Telegram", "🇲🇾"
+                                    elif "lowyat.net" in link_lower:
+                                        platform, flag = "Lowyat Forum", "🇲🇾"
+                                    elif "carigold.com" in link_lower:
+                                        platform, flag = "CariGold Forum", "🇲🇾"
 
-                    seen_links.add(link)
-
-                    platform = "Web Awam"
-                    flag = "🌐"
-                    link_lower = link.lower()
-                    if "facebook.com" in link_lower:
-                        platform, flag = "Facebook", "🇲🇾"
-                    elif "tiktok.com" in link_lower:
-                        platform, flag = "TikTok", "🇲🇾"
-                    elif "instagram.com" in link_lower:
-                        platform, flag = "Instagram", "🇲🇾"
-                    elif "threads.net" in link_lower:
-                        platform, flag = "Threads", "🇲🇾"
-                    elif "carousell.com.my" in link_lower or "carousell.sg" in link_lower:
-                        platform, flag = "Carousell", "🇲🇾"
-                    elif "mudah.my" in link_lower:
-                        platform, flag = "Mudah.my", "🇲🇾"
-                    elif "chat.whatsapp.com" in link_lower or "wa.me" in link_lower:
-                        platform, flag = "WhatsApp Group/Chat", "🇲🇾"
-                    elif "t.me" in link_lower:
-                        platform, flag = "Telegram", "🇲🇾"
-                    elif "lowyat.net" in link_lower:
-                        platform, flag = "Lowyat Forum", "🇲🇾"
-                    elif "carigold.com" in link_lower:
-                        platform, flag = "CariGold Forum", "🇲🇾"
-
-                    verified_mentions.append({
-                        "platform": platform,
-                        "flag": flag,
-                        "title": title.strip(),
-                        "snippet": snippet.strip(),
-                        "link": link
-                    })
-
-                    if len(verified_mentions) >= max_results:
-                        break
+                                    verified_mentions.append({
+                                        "platform": platform,
+                                        "flag": flag,
+                                        "title": title.strip(),
+                                        "snippet": snippet.strip(),
+                                        "link": link
+                                    })
+                                    if len(verified_mentions) >= max_results:
+                                        break
+                            current = {}
         except Exception:
             pass
 
@@ -784,8 +781,10 @@ def format_phone_mentions_html(mention_data: Dict) -> str:
                 lines.append(f'   🔗 <a href="{html.escape(lnk)}">Buka Pautan Hantaran</a>')
             lines.append("")
     else:
-        lines.append("• Platform Diperiksa: Facebook, TikTok, Instagram, Threads, Carousell, Mudah.my, Telegram, WhatsApp")
-        lines.append("• Keputusan: ✅ <b>Tiada sebutan atau rekod nombor ini ditemui tercetak di mana-mana media sosial / forum terbuka.</b>")
+        cse_url = f"https://cse.google.com/cse?cx=53a0041f2f24f4e3b&q={urllib.parse.quote(phone)}#gsc.tab=0&gsc.q={urllib.parse.quote(phone)}"
+        lines.append("• Platform Disaring: Facebook, TikTok, Instagram, Threads, Carousell, Mudah.my, Telegram")
+        lines.append("• Status Imbasan: ℹ️ <i>Imbasan pantas selesai. Untuk memeriksa aduan hantaran Facebook / viral penuh:</i>")
+        lines.append(f'• Carian Menyeluruh: 🌐 <a href="{cse_url}"><b>Buka Carian Penuh Google CSE & FB ({html.escape(phone)})</b></a>')
         lines.append("")
 
     lines.append("📱 <b>Pautan Perhubungan Pantas:</b>")

@@ -94,7 +94,9 @@ CHANNEL_ID = "@kantoiradar"
 
 DB_PATH = os.path.join(BASE_DIR, "kantoi_threats.db")
 if not os.path.exists(DB_PATH):
-    DB_PATH = os.path.join(BASE_DIR, "KantoiApp", "assets", "kantoi_threats.db")
+    alt = os.path.join(BASE_DIR, "KantoiApp", "assets", "kantoi_threats.db")
+    if os.path.exists(alt):
+        DB_PATH = alt
 BACKUP_DB_PATH = os.path.join(BASE_DIR, "lowyat_threats.db")
 COMMUNITY_DB_PATH = os.path.join(BASE_DIR, "community_threats.db")
 
@@ -3450,8 +3452,10 @@ def format_social_media_intel_report(target_q):
         lines.append("🚨 <b>Status Komuniti:</b> <b>TERCATAT DALAM REKOD PERTIKAIAN / BLACKLIST</b>")
     elif snippets:
         lines.append("⚠️ <b>Status Komuniti:</b> <b>ADUAN AKTIF DIKESAN DI FORUM TEMPATAN</b>")
+    elif pdrm_info.get("search_count", 0) >= 50:
+        lines.append(f"⚠️ <b>Status Komuniti:</b> <b>PERHATIAN: DICARI {pdrm_info['search_count']}x DI PDRM SEMAKMULE</b>")
     else:
-        lines.append("✅ <b>Status Komuniti:</b> <b>TIADA ADUAN DIKESAN</b>")
+        lines.append("ℹ️ <b>Status Komuniti:</b> <b>TIADA REKOD DALAM INDEKS TEMPATAN</b>")
         
     if pdrm_info.get("police_reports", 0) > 0:
         lines.append(f"🏛️ <b>PDRM SemakMule:</b> 🚨 <b>{pdrm_info['police_reports']} Laporan Polis Rasmi!</b> (Dicari {pdrm_info['search_count']} kali)")
@@ -3476,14 +3480,16 @@ def format_social_media_intel_report(target_q):
             lines.append("")
         lines.append("⚠️ <i>Akaun/nombor ini pernah dibincangkan oleh komuniti awam. Elakkan sebarang pemindahan wang atau transaksi tanpa perlindungan selamat.</i>")
     else:
+        cse_direct_url = generate_google_cse_url(clean_display)
         lines.extend([
             "📚 <b>Liputan Risikan Enjin KANTOI:</b>",
             "• Forum Lowyat.NET (Dispute Resolution Corner)",
             "• CariGold Forum (Scam Alert)",
             "• Pangkalan Data KenaScam Malaysia",
-            "• Perbincangan Terbuka Facebook & Twitter/X",
+            "• Perbincangan Terbuka Facebook & Media Sosial",
             "",
-            "ℹ️ <i>Tiada aduan jenayah, resit transaksi mencurigakan, atau pertikaian terbuka ditemui di forum komuniti untuk sasaran ini setakat ini.</i>"
+            "ℹ️ <i>Indeks arkib bot belum mengandungi rekod terus. Sila klik pautan Google CSE di bawah untuk membuka semua perbincangan & aduan Facebook secara langsung:</i>",
+            f'🌐 <b>Carian Langsung:</b> <a href="{cse_direct_url}"><b>Buka Arkib Penuh Google CSE & FB ({html.escape(clean_display)})</b></a>'
         ])
         
     # Tambah Jejak DuckDuckGo Messaging Apps (WhatsApp, Telegram)
@@ -3695,7 +3701,8 @@ def build_unified_cyber_dossier(
         cse = fetch_google_cse_snippets(p, max_results=2)
         telco_info = kui.profile_telco_and_carrier(p)
 
-        has_p_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0)
+        p_searches = pdrm_info.get("search_count", 0)
+        has_p_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0) or (p_searches >= 50)
         if has_p_threat:
             is_threat = True
 
@@ -3739,7 +3746,8 @@ def build_unified_cyber_dossier(
         cluster = find_syndicate_cluster(DB_PATH, acc, bank_accounts=acc)
         cse = fetch_google_cse_snippets(acc, max_results=2)
 
-        has_acc_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0)
+        a_searches = pdrm_info.get("search_count", 0)
+        has_acc_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0) or (a_searches >= 50)
         if has_acc_threat:
             is_threat = True
 
@@ -4041,6 +4049,9 @@ def build_unified_cyber_dossier(
             lines.append("")
 
     # Seksyen Media Sosial & Forum Tempatan (Google CSE)
+    primary_target = (all_phones[0] if all_phones else (all_accounts[0] if all_accounts else raw_query or ""))
+    cse_url = generate_google_cse_url(primary_target)
+
     lines.append("🌐 <b>HASIL SEMAKAN MEDIA SOSIAL & FORUM (Google CSE):</b>")
     if combined_cse_snippets:
         for cs in combined_cse_snippets[:4]:
@@ -4054,7 +4065,9 @@ def build_unified_cyber_dossier(
             if s_link and s_link.startswith(("http://", "https://")):
                 lines.append(f'  🔗 <a href="{html.escape(s_link)}">Buka Rekod Pautan</a>')
     else:
-        lines.append("• <i>Tiada aduan pertikaian dikesan di Lowyat, CariGold, FB, atau Telegram.</i>")
+        lines.append("• Pangkalan Arkib Tempatan: <i>Tiada rekod aduan disimpan dalam indeks setempat.</i>")
+        lines.append(f'• Carian Menyeluruh: 🔎 <a href="{cse_url}"><b>Buka Carian Penuh Google CSE & FB ({html.escape(primary_target)})</b></a>')
+        lines.append("  <i>(Menyaring Facebook, Lowyat Forum, CariGold, Telegram & KenaScam)</i>")
 
     # Seksyen Jejak Kumpulan Pemesejan Awam (DuckDuckGo Dork Engine)
     if combined_ddg_snippets:
@@ -4077,13 +4090,16 @@ def build_unified_cyber_dossier(
             social_sec = socmint.format_phone_mentions_html(phone_mentions_result)
         else:
             clean_digits = re.sub(r"[^\d]", "", str(socmint_primary_user))
+            clean_local_fmt = "0" + clean_digits[2:] if clean_digits.startswith("60") else clean_digits
+            phone_cse_url = generate_google_cse_url(clean_local_fmt)
             if clean_digits.startswith("0"):
                 clean_digits = "60" + clean_digits[1:]
             social_sec = (
                 "🌐 <b>SEBUTAN MEDIA SOSIAL & FORUM (Social Mentions):</b>\n"
                 f"• Sasaran: <code>{html.escape(str(socmint_primary_user))}</code> (Nombor Telefon)\n"
-                "• Platform Diperiksa: Facebook, TikTok, Instagram, Threads, Carousell, Mudah.my, Telegram, WhatsApp\n"
-                "• Keputusan: ✅ <b>Tiada sebutan atau rekod nombor ini ditemui tercetak di mana-mana media sosial / forum terbuka.</b>\n\n"
+                "• Platform Disaring: Facebook, TikTok, Instagram, Threads, Carousell, Mudah.my, Telegram\n"
+                "• Status Imbasan: ℹ️ <i>Imbasan pantas selesai. Untuk menyemak hantaran Facebook & aduan viral:</i>\n"
+                f'• Carian Menyeluruh: 🌐 <a href="{phone_cse_url}"><b>Buka Carian Penuh Google CSE & FB ({html.escape(clean_local_fmt)})</b></a>\n\n'
                 "📱 <b>Pautan Perhubungan Pantas:</b>\n"
                 f'• WhatsApp: <a href="https://wa.me/{clean_digits}">wa.me/{clean_digits}</a>\n'
                 f'• Telegram: <a href="https://t.me/+{clean_digits}">t.me/+{clean_digits}</a>'
@@ -4108,8 +4124,15 @@ def build_unified_cyber_dossier(
             lines.append("• Keputusan: ✅ Tiada profil aktif dijumpai")
 
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    if is_threat:
-        lines.append("🚫 <b>AMARAN:</b> Sasaran mempunyai rekod penipuan / indikator risiko tinggi. <b>JANGAN PINDAHKAN SEBARANG WANG!</b>")
+    max_searches = max([pi.get("pdrm", {}).get("search_count", 0) for pi in (phone_intel_list + acc_intel_list)] or [0])
+    total_reps = sum(pi.get("pdrm", {}).get("police_reports", 0) for pi in (phone_intel_list + acc_intel_list))
+    if is_threat or risk_info["score"] >= 50 or total_reps > 0 or max_searches >= 50:
+        if max_searches >= 50 and total_reps == 0:
+            lines.append(f"🚫 <b>AMARAN:</b> Kekerapan carian awam luar biasa di PDRM SemakMule ({max_searches} kali) & petunjuk aduan komuniti dikesan. <b>JANGAN PINDAHKAN SEBARANG WANG!</b>")
+        else:
+            lines.append("🚫 <b>AMARAN:</b> Sasaran mempunyai rekod penipuan / indikator risiko tinggi. <b>JANGAN PINDAHKAN SEBARANG WANG!</b>")
+    elif risk_info["score"] >= 25 or max_searches >= 10:
+        lines.append(f"⚡ <b>PERINGATAN:</b> Terdapat petunjuk waspada atau carian awam ({max_searches}x) terhadap sasaran ini. Sila buat pengesahan teliti sebelum membuat transaksi.")
     else:
         lines.append("ℹ️ <i>Setakat ini tiada rekod penipuan rasmi dikesan. Sentiasa berwaspada ketika membuat transaksi kewangan.</i>")
 
@@ -4636,14 +4659,17 @@ def format_safe_response(query_input, norm_phone):
     cat = "bank" if is_bank else "telefon"
     pdrm_info = query_pdrm_semakmule_live(cat, display_num)
     
-    if pdrm_info.get("has_record") and pdrm_info.get("police_reports", 0) > 0:
+    s_cnt = pdrm_info.get("search_count", 0)
+    p_reps = pdrm_info.get("police_reports", 0)
+
+    if pdrm_info.get("has_record") and p_reps > 0:
         lines = [
             "==================================================",
             "🚨 *AMARAN KRITIKAL: REKOD PDRM CCID DITEMUI!*",
             "==================================================",
             f"Nombor Disemak: `{display_num}`",
-            f"🏛️ *Laporan Polis Rasmi (CCID):* 🚨 *{pdrm_info['police_reports']} Laporan Didaftarkan!*",
-            f"🔍 *Rekod Carian Portal PDRM:* Dicari sebanyak *{pdrm_info['search_count']}* kali.",
+            f"🏛️ *Laporan Polis Rasmi (CCID):* 🚨 *{p_reps} Laporan Didaftarkan!*",
+            f"🔍 *Rekod Carian Portal PDRM:* Dicari sebanyak *{s_cnt}* kali.",
             "",
             "⚠️ *PERHATIAN:*",
             "Walaupun nombor ini belum dimasukkan ke pangkalan data komuniti KANTOI, *PDRM SemakMule mengesahkan terdapat aduan jenayah komersil terhadap akaun/nombor ini!*",
@@ -4651,6 +4677,35 @@ def format_safe_response(query_input, norm_phone):
             "--------------------------------------------------",
             "💡 _Anda boleh menaip laporan mengenai nombor ini untuk dikemaskini ke aplikasi KANTOI._"
         ]
+        return "\n".join(lines)
+    elif s_cnt >= 50:
+        cse_url = generate_google_cse_url(display_num)
+        lines = [
+            "==================================================",
+            "⚠️ *AMARAN: KEKERAPAN CARIAN TINGGI DI PDRM SEMAKMULE!*",
+            "==================================================",
+            f"Nombor Disemak: `{display_num}`",
+            "Status: *WASPADA TINGGI (SUSPICIOUS)*",
+            f"🏛️ *PDRM SemakMule CCID:* 0 Laporan Polis (Dicari *{s_cnt}* kali)",
+            "",
+            "⚠️ *ANALISIS RISIKO AWAM:*",
+            f"Nombor ini telah disemak sebanyak *{s_cnt} kali* di portal rasmi PDRM CCID SemakMule oleh orang awam. Kekerapan carian yang tinggi adalah petunjuk jelas bahawa nombor ini sedang aktif menghubungi mangsa atau dipertikaikan oleh komuniti!",
+            "🚫 *JANGAN PINDAHKAN WANG SEBELUM PENGESAHAN KUKUH!*",
+            "--------------------------------------------------"
+        ]
+        cse_snippets = fetch_google_cse_snippets(display_num)
+        if cse_snippets:
+            lines.append("🌐 *HASIL SEMAKAN MEDIA SOSIAL & FORUM (Google CSE):*")
+            for cs in cse_snippets:
+                lines.append(f"• *[{cs['source']}]* {cs['title']}")
+                if cs.get('snippet'):
+                    lines.append(f"  _{cs['snippet']}_")
+        else:
+            lines.append("🌐 *SEMAKAN MEDIA SOSIAL & FORUM (Google CSE):*")
+            lines.append(f"• _Carian lanjut di Facebook, Lowyat & CariGold:_ [Buka Google CSE]({cse_url})")
+            lines.append("• _Ketik butang Google CSE di bawah untuk paparan carian penuh._")
+        lines.append("--------------------------------------------------")
+        lines.append("ℹ️ _Pangkalan Data KANTOI merangkumi rekod PDRM SemakMule CCID & Komuniti (6,100+ Rekod)._")
         return "\n".join(lines)
 
     lines = [
@@ -4680,8 +4735,9 @@ def format_safe_response(query_input, norm_phone):
             if cs.get('snippet'):
                 lines.append(f"  _{cs['snippet']}_")
     else:
+        cse_url = generate_google_cse_url(display_num)
         lines.append("🌐 *SEMAKAN MEDIA SOSIAL & FORUM (Google CSE):*")
-        lines.append("• _Tiada rekod aduan dikesan di Lowyat, CariGold atau Facebook._")
+        lines.append(f"• _Carian lanjut di Facebook, Lowyat & CariGold:_ [Buka Google CSE]({cse_url})")
         lines.append("• _Ketik butang Google CSE di bawah untuk carian lanjut._")
     lines.append("--------------------------------------------------")
     lines.append("ℹ️ _Pangkalan Data KANTOI merangkumi rekod PDRM SemakMule CCID & Komuniti (6,100+ Rekod)._")
