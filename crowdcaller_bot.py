@@ -3452,8 +3452,8 @@ def format_social_media_intel_report(target_q):
         lines.append("🚨 <b>Status Komuniti:</b> <b>TERCATAT DALAM REKOD PERTIKAIAN / BLACKLIST</b>")
     elif snippets:
         lines.append("⚠️ <b>Status Komuniti:</b> <b>ADUAN AKTIF DIKESAN DI FORUM TEMPATAN</b>")
-    elif pdrm_info.get("search_count", 0) >= 50:
-        lines.append(f"⚠️ <b>Status Komuniti:</b> <b>PERHATIAN: DICARI {pdrm_info['search_count']}x DI PDRM SEMAKMULE</b>")
+    elif pdrm_info.get("search_count", 0) >= 30:
+        lines.append(f"🚨 <b>Status Komuniti:</b> <b>BAHAYA: DICARI {pdrm_info['search_count']}x DI PDRM SEMAKMULE</b>")
     else:
         lines.append("ℹ️ <b>Status Komuniti:</b> <b>TIADA REKOD DALAM INDEKS TEMPATAN</b>")
         
@@ -3702,7 +3702,7 @@ def build_unified_cyber_dossier(
         telco_info = kui.profile_telco_and_carrier(p)
 
         p_searches = pdrm_info.get("search_count", 0)
-        has_p_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0) or (p_searches >= 50)
+        has_p_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0) or (p_searches >= 30)
         if has_p_threat:
             is_threat = True
 
@@ -3747,7 +3747,7 @@ def build_unified_cyber_dossier(
         cse = fetch_google_cse_snippets(acc, max_results=2)
 
         a_searches = pdrm_info.get("search_count", 0)
-        has_acc_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0) or (a_searches >= 50)
+        has_acc_threat = (rec_kantoi is not None) or (pdrm_info.get("police_reports", 0) > 0) or (a_searches >= 30)
         if has_acc_threat:
             is_threat = True
 
@@ -4126,9 +4126,9 @@ def build_unified_cyber_dossier(
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━")
     max_searches = max([pi.get("pdrm", {}).get("search_count", 0) for pi in (phone_intel_list + acc_intel_list)] or [0])
     total_reps = sum(pi.get("pdrm", {}).get("police_reports", 0) for pi in (phone_intel_list + acc_intel_list))
-    if is_threat or risk_info["score"] >= 50 or total_reps > 0 or max_searches >= 50:
-        if max_searches >= 50 and total_reps == 0:
-            lines.append(f"🚫 <b>AMARAN:</b> Kekerapan carian awam luar biasa di PDRM SemakMule ({max_searches} kali) & petunjuk aduan komuniti dikesan. <b>JANGAN PINDAHKAN SEBARANG WANG!</b>")
+    if is_threat or risk_info["score"] >= 50 or total_reps > 0 or max_searches >= 30:
+        if max_searches >= 30 and total_reps == 0:
+            lines.append(f"🚫 <b>AMARAN BAHAYA:</b> Kekerapan carian awam luar biasa di PDRM SemakMule ({max_searches} kali - Kategori Bahaya) & petunjuk aduan komuniti dikesan. <b>JANGAN PINDAHKAN SEBARANG WANG!</b>")
         else:
             lines.append("🚫 <b>AMARAN:</b> Sasaran mempunyai rekod penipuan / indikator risiko tinggi. <b>JANGAN PINDAHKAN SEBARANG WANG!</b>")
     elif risk_info["score"] >= 25 or max_searches >= 10:
@@ -4678,19 +4678,19 @@ def format_safe_response(query_input, norm_phone):
             "💡 _Anda boleh menaip laporan mengenai nombor ini untuk dikemaskini ke aplikasi KANTOI._"
         ]
         return "\n".join(lines)
-    elif s_cnt >= 50:
+    elif s_cnt >= 30:
         cse_url = generate_google_cse_url(display_num)
         lines = [
             "==================================================",
-            "⚠️ *AMARAN: KEKERAPAN CARIAN TINGGI DI PDRM SEMAKMULE!*",
+            "🚨 *AMARAN BAHAYA: KEKERAPAN CARIAN TINGGI DI PDRM SEMAKMULE!*",
             "==================================================",
             f"Nombor Disemak: `{display_num}`",
-            "Status: *WASPADA TINGGI (SUSPICIOUS)*",
+            "Status: *BAHAYA / RISIKO TINGGI (SUSPICIOUS)*",
             f"🏛️ *PDRM SemakMule CCID:* 0 Laporan Polis (Dicari *{s_cnt}* kali)",
             "",
             "⚠️ *ANALISIS RISIKO AWAM:*",
-            f"Nombor ini telah disemak sebanyak *{s_cnt} kali* di portal rasmi PDRM CCID SemakMule oleh orang awam. Kekerapan carian yang tinggi adalah petunjuk jelas bahawa nombor ini sedang aktif menghubungi mangsa atau dipertikaikan oleh komuniti!",
-            "🚫 *JANGAN PINDAHKAN WANG SEBELUM PENGESAHAN KUKUH!*",
+            f"Nombor ini telah disemak sebanyak *{s_cnt} kali* di portal rasmi PDRM CCID SemakMule oleh orang awam. Mengikut piawaian KANTOI, carian melebihi 30 kali sudah dikategorikan sebagai *BAHAYA* kerana ia merupakan petunjuk jelas bahawa nombor ini aktif menghubungi mangsa dan mencurigakan!",
+            "🚫 *JANGAN SESEKALI PINDAHKAN WANG KEPADA PIHAK INI!*",
             "--------------------------------------------------"
         ]
         cse_snippets = fetch_google_cse_snippets(display_num)

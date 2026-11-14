@@ -524,16 +524,12 @@ def calculate_scam_risk_score(phone_intel_list, acc_intel_list, qr_intel=None, r
         pts = min(50, 30 + (pdrm_reports * 5))
         total_score += pts
         factors.append(f"🚨 <b>{pdrm_reports} Laporan Polis PDRM SemakMule</b> (+{pts}%)")
-    elif pdrm_searches >= 100:
+    elif pdrm_searches >= 30:
         pts = 50
         total_score += pts
-        factors.append(f"🚨 <b>Kekerapan Carian PDRM SemakMule Luar Biasa ({pdrm_searches}x Carian Awam)</b> (+{pts}%)")
-    elif pdrm_searches >= 50:
-        pts = 35
-        total_score += pts
-        factors.append(f"⚠️ <b>Kekerapan Carian PDRM SemakMule Kerap ({pdrm_searches}x Carian Awam)</b> (+{pts}%)")
-    elif pdrm_searches >= 20:
-        pts = 20
+        factors.append(f"🚨 <b>Kekerapan Carian PDRM SemakMule Bahaya ({pdrm_searches}x Carian Awam)</b> (+{pts}%)")
+    elif pdrm_searches >= 15:
+        pts = 25
         total_score += pts
         factors.append(f"⚡ <b>Tumpuan Carian Awam SemakMule ({pdrm_searches}x Carian Awam)</b> (+{pts}%)")
     elif pdrm_searches >= 5:
@@ -590,12 +586,12 @@ def calculate_scam_risk_score(phone_intel_list, acc_intel_list, qr_intel=None, r
         action = "JANGAN SESEKALI PINDAHKAN WANG! SEKAT SERTA-MERTA!"
         icon = "🚨"
     elif final_score >= 50:
-        grade = "🟠 TINGGI (HIGH RISK)"
-        action = "PETUNJUK KUAT PENIPUAN (CARIAN AWAM TINGGI). ELAKKAN SEBARANG TRANSAKSI!" if pdrm_searches >= 100 and pdrm_reports == 0 else "PETUNJUK KUAT PENIPUAN. ELAKKAN SEBARANG TRANSAKSI!"
-        icon = "⚠️"
+        grade = "🟠 TINGGI (HIGH RISK / BAHAYA)"
+        action = "PETUNJUK KUAT PENIPUAN (CARIAN AWAM TINGGI). ELAKKAN SEBARANG TRANSAKSI!" if pdrm_searches >= 30 and pdrm_reports == 0 else "PETUNJUK KUAT PENIPUAN. ELAKKAN SEBARANG TRANSAKSI!"
+        icon = "🚨"
     elif final_score >= 25:
         grade = "🟡 SEDERHANA (MEDIUM RISK / WASPADA)"
-        action = "PERLU BERWASPADA. TERDAPAT REKOD CARIAN AWAM MENCURIGAKAN." if pdrm_searches >= 20 else "PERLU BERWASPADA. MINTA PENGESAHAN IDENTITI RASMI."
+        action = "PERLU BERWASPADA. TERDAPAT REKOD CARIAN AWAM MENCURIGAKAN." if pdrm_searches >= 15 else "PERLU BERWASPADA. MINTA PENGESAHAN IDENTITI RASMI."
         icon = "⚡"
     else:
         grade = "🟢 RENDAH (LOW RISK / REKOD BERSIH)"
@@ -634,12 +630,10 @@ def generate_syndicate_ascii_tree(phone_intel_list, acc_intel_list, risk_info, s
         p_searches = pi.get("pdrm", {}).get("search_count", 0)
         if p_reps > 0:
             p_stat = f"🚨 {p_reps} Laporan PDRM"
-        elif p_searches >= 100:
-            p_stat = f"🚨 Dicari {p_searches}x SemakMule (Awas)"
-        elif p_searches >= 50:
-            p_stat = f"⚠️ Dicari {p_searches}x SemakMule (Kerap)"
+        elif p_searches >= 30:
+            p_stat = f"🚨 Dicari {p_searches}x SemakMule (Bahaya)"
         elif p_searches >= 10:
-            p_stat = f"⚡ Dicari {p_searches}x SemakMule"
+            p_stat = f"⚠️ Dicari {p_searches}x SemakMule (Awas)"
         else:
             p_stat = "Rekod Bersih"
         all_nodes.append(f"📱 {p} [{tel}] ── {p_stat}")
@@ -652,12 +646,10 @@ def generate_syndicate_ascii_tree(phone_intel_list, acc_intel_list, risk_info, s
         a_searches = ai.get("pdrm", {}).get("search_count", 0)
         if a_reps > 0:
             a_stat = f"🚨 {a_reps} Kes Keldai"
-        elif a_searches >= 100:
-            a_stat = f"🚨 Dicari {a_searches}x SemakMule (Awas)"
-        elif a_searches >= 50:
-            a_stat = f"⚠️ Dicari {a_searches}x SemakMule (Kerap)"
+        elif a_searches >= 30:
+            a_stat = f"🚨 Dicari {a_searches}x SemakMule (Bahaya)"
         elif a_searches >= 10:
-            a_stat = f"⚡ Dicari {a_searches}x SemakMule"
+            a_stat = f"⚠️ Dicari {a_searches}x SemakMule (Awas)"
         else:
             a_stat = "Rekod Bersih"
         cl = ai.get("cluster", {})
