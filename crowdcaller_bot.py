@@ -1625,6 +1625,7 @@ def analyze_image_with_gemini(image_path, api_key=None, user_id=None):
         '  "phone_numbers": ["senarai nombor telefon unik cth 011xxxxxxxx, 014xxxxxxxx"],\n'
         '  "suspect_name": "nama scammer, nama profil WhatsApp tanpa ~, nama servis (cth OFFICIAL MIDMAN MAZE), atau pengirim Telegram",\n'
         '  "email": "alamat emel jika ada atau null",\n'
+        '  "physical_address": "alamat premis/kedai/syarikat fizikal jika ada atau null",\n'
         '  "bank_name": "nama bank jika ada atau null",\n'
         '  "account_number": "nombor akaun bank keldai jika ada atau null",\n'
         '  "scam_tactic": "kategori penipuan terperinci",\n'
@@ -1820,6 +1821,7 @@ def analyze_multi_images_with_gemini(image_paths, api_key=None, captions=None, u
         '  ],\n'
         '  "victim_loss": "Jumlah kerugian mangsa jika dinyatakan (contoh: RM 350.00) atau null",\n'
         '  "emails": ["Alamat emel jika ada"],\n'
+        '  "physical_address": "Alamat premis/kedai/syarikat fizikal jika ada atau null",\n'
         '  "evidence_details": "Poin-poin penting fakta kes daripada perbualan, kronologi atau transaksi"\n'
         "}\n"
         "PENTING: Jangan sertakan teks di luar JSON. Berikan JSON SAHAJA."
@@ -2100,6 +2102,7 @@ def extract_multi_image_case_intel(image_paths, captions=None, user_id=None, pro
         final_phones = list(offline_data.get("phone_numbers") or [])
         final_accounts_raw = offline_data.get("bank_accounts") or []
         final_emails = list(offline_data.get("emails") or [])
+        final_address = offline_data.get("physical_address", "")
         final_ev_text = offline_data.get("evidence_details", "")
         final_victim_loss = None
         loss_m = re.search(r'\b(?:RM|MYR)\s*(\d+(?:[,.]\d{2})?)\b', final_ev_text, re.IGNORECASE)
@@ -2133,6 +2136,7 @@ def extract_multi_image_case_intel(image_paths, captions=None, user_id=None, pro
                     cand_accounts.append(cd)
         final_accounts_raw = gemini_data.get("bank_accounts") or []
         final_emails = list(gemini_data.get("emails") or [])
+        final_address = gemini_data.get("physical_address", "")
         final_ev_text = gemini_data.get("evidence_details", "")
 
     # 4. Integrasikan maklumat kod QR jika ada
@@ -2218,6 +2222,7 @@ def extract_multi_image_case_intel(image_paths, captions=None, user_id=None, pro
         "all_accounts": cand_accounts,
         "bank_accounts": bank_formatted_str,
         "emails": final_emails,
+        "physical_address": final_address,
         "evidence_text": final_ev_text,
         "qr_detected": bool(all_qr_data),
         "qr_data": primary_qr,
@@ -2661,6 +2666,46 @@ def sync_channel_history(channel="kantoiradar", max_pages=15):
 
     return total_synced
 
+def is_valid_physical_address(addr):
+    """
+    Mengesahkan sama ada teks adalah alamat fizikal premis/syarikat/lokasi yang sah.
+    Menolak status penafian, pautan web, nama forum, dan penanda saluran seperti
+    'Disahkan di Saluran Telegram', 'Laporan Disahkan Komuniti', 'CariGold Forum', dll.
+    """
+    if not addr or not isinstance(addr, str):
+        return False
+    s = addr.strip()
+    if len(s) < 8 or len(s) > 200:
+        return False
+    s_lower = s.lower()
+
+    # Senarai kata kunci bukan alamat fizikal
+    invalid_keywords = [
+        "disahkan", "saluran", "telegram", "carigold", "forum", "facebook", "fb group",
+        "laporan", "komuniti", "akaun keldai", "scam", "penipu", "didaftarkan", "arkib",
+        "ref:", "rep-", "suspek", "pelaburan", "sms", "call", "panggilan", "whatsapp",
+        "tipu", "pinjaman", "broker", "vending", "insurance", "reload", "http://", "https://",
+        "www.", "t.me/", "tiada", "none", "unknown", "tidak dinyatakan", "rujuk",
+        "rekod bersih", "senarai", "verified", "kantoiradar", "crowdcaller", "blacklist",
+        "polis", "pdrm", "semakmule", "ccid"
+    ]
+    for inv in invalid_keywords:
+        if inv in s_lower:
+            return False
+
+    if s_lower in ["malaysia", "singapore", "indonesia", "thailand", "brunei", "n/a", "-"]:
+        return False
+
+    # Mesti mempunyai sekurang-kurangnya SATU penanda alamat fizikal yang lazim
+    address_patterns = [
+        r'\bjalan\b', r'\bjln\b', r'\blorong\b', r'\blrg\b', r'\bpersiaran\b', r'\blebuh\b',
+        r'\btaman\b', r'\btmn\b', r'\bkampung\b', r'\bkg\b', r'\bbandar\b', r'\bbdr\b',
+        r'\bseksyen\b', r'\bpresint\b', r'\bflat\b', r'\bkondo\b', r'\bcondo\b', r'\bapartment\b',
+        r'\btingkat\b', r'\bblok\b', r'\bblock\b', r'\blot\b', r'\bno\b', r'\bno\.', r'nο',
+        r'\b\d{5}\b'  # Poskod 5 digit
+    ]
+    return any(re.search(pat, s_lower) for pat in address_patterns)
+
 def query_threat(query_text, check_channel_fallback=True):
     if not query_text or not str(query_text).strip():
         return None, ""
@@ -2713,17 +2758,19 @@ def query_threat(query_text, check_channel_fallback=True):
                     if (norm_phone and (norm_phone == r_phone or norm_phone in all_p)) or (clean_digits and len(clean_digits) >= 8 and clean_digits in str(r_bank)):
                         s_name = rep.get("suspect_name") or "Suspek Komuniti"
                         source_str = f"Risikan Komuniti KANTOI (Ref: {r_id})"
+                        rep_addr = rep.get("address", "")
+                        clean_addr = rep_addr if is_valid_physical_address(rep_addr) else "N/A"
                         match = (
                             r_phone or norm_phone,
                             s_name,
                             "LAPORAN_KOMUNITI_DISAHKAN",
                             r_bank or "N/A",
-                            "Laporan Disahkan Komuniti",
+                            clean_addr,
                             source_str,
                             "https://t.me/kantoiradar",
                             r_phone or norm_phone
                         )
-                        insert_approved_threat(r_phone or norm_phone, s_name, "LAPORAN_KOMUNITI_DISAHKAN", r_bank, source_str, r_phone or norm_phone)
+                        insert_approved_threat(r_phone or norm_phone, s_name, "LAPORAN_KOMUNITI_DISAHKAN", r_bank, source_str, r_phone or norm_phone, address=clean_addr)
                         break
         except Exception:
             pass
@@ -2744,7 +2791,7 @@ def query_threat(query_text, check_channel_fallback=True):
                     "Suspek Siaran Saluran @kantoiradar",
                     "SALURAN_KANTOI_VERIFIED",
                     clean_digits if not norm_phone else "Rujuk Saluran",
-                    "Disahkan di Saluran Telegram",
+                    "N/A",
                     source_lbl,
                     p_link,
                     norm_phone or clean_digits
@@ -2756,7 +2803,8 @@ def query_threat(query_text, check_channel_fallback=True):
                     category="SALURAN_KANTOI_VERIFIED",
                     bank_accounts=clean_digits if not norm_phone else "N/A",
                     source=f"{source_lbl} - {p_link}",
-                    all_phones=norm_phone or clean_digits
+                    all_phones=norm_phone or clean_digits,
+                    address="N/A"
                 )
                 print(f"[CHANNEL AUTO-HEAL] Berjaya memulihkan rekod {search_target} dari pos {p_link} ke SQLite!")
         except Exception as e:
@@ -2764,7 +2812,8 @@ def query_threat(query_text, check_channel_fallback=True):
 
     return match, norm_phone
 
-def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, source, all_phones=None):
+def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, source, all_phones=None, address=None):
+    valid_addr = address.strip() if is_valid_physical_address(address) else "N/A"
     dbs = [COMMUNITY_DB_PATH, DB_PATH, BACKUP_DB_PATH]
     for db in dbs:
         if not os.path.exists(db):
@@ -2783,7 +2832,7 @@ def insert_approved_threat(phone_norm, suspect_name, category, bank_accounts, so
                 all_phones or phone_norm,
                 bank_accounts or "N/A",
                 "N/A",
-                "Laporan Disahkan Komuniti",
+                valid_addr,
                 "Telegram @kantoiradar",
                 category or "COMMUNITY_VERIFIED_SCAMMER",
                 source or "Sumbangan Komuniti KANTOI (Disahkan Admin)"
@@ -3550,6 +3599,7 @@ def build_unified_cyber_dossier(
     suspect_name="Tidak Dinyatakan",
     bank_name="N/A",
     email="",
+    physical_address="",
     tactic="Semakan Keselamatan Siber",
     source_badge="🤖 AI Vision & Matrix OCR",
     tmp_id=None,
@@ -3723,15 +3773,17 @@ def build_unified_cyber_dossier(
         except Exception:
             pass
 
-        p_addr = rec_kantoi[4] if rec_kantoi and len(rec_kantoi) > 4 and rec_kantoi[4] else ""
-        p_maps = ""
-        if p_addr and p_addr.strip() and p_addr.strip().lower() not in ["n/a", "-", "none", "malaysia", "didaftarkan oleh pengguna"]:
-            p_maps = f"https://maps.google.com/?q={urllib.parse.quote(p_addr.strip())}"
+        # Pengekstrakan & Pengesahan Alamat Fizikal Premis (Hanya jika sah)
+        raw_p_addr = rec_kantoi[4] if rec_kantoi and len(rec_kantoi) > 4 and rec_kantoi[4] else ""
+        p_addr = raw_p_addr.strip() if is_valid_physical_address(raw_p_addr) else ""
+        if not p_addr and physical_address and is_valid_physical_address(physical_address):
+            p_addr = physical_address.strip()
+        p_maps = f"https://www.google.com/maps?q={urllib.parse.quote(p_addr)}" if p_addr else ""
 
         phone_intel_list.append({
             "phone": p,
             "rec_kantoi": rec_kantoi,
-            "address": p_addr if p_maps else "",
+            "address": p_addr,
             "maps_url": p_maps,
             "pdrm": pdrm_info,
             "cluster": cluster,
@@ -3768,16 +3820,17 @@ def build_unified_cyber_dossier(
             else:
                 eff_bank = "Akaun Bank"
 
-        acc_addr = rec_kantoi[4] if rec_kantoi and len(rec_kantoi) > 4 and rec_kantoi[4] else ""
-        acc_maps = ""
-        if acc_addr and acc_addr.strip() and acc_addr.strip().lower() not in ["n/a", "-", "none", "malaysia", "didaftarkan oleh pengguna"]:
-            acc_maps = f"https://maps.google.com/?q={urllib.parse.quote(acc_addr.strip())}"
+        raw_acc_addr = rec_kantoi[4] if rec_kantoi and len(rec_kantoi) > 4 and rec_kantoi[4] else ""
+        acc_addr = raw_acc_addr.strip() if is_valid_physical_address(raw_acc_addr) else ""
+        if not acc_addr and physical_address and is_valid_physical_address(physical_address) and not any(pi.get("address") for pi in phone_intel_list):
+            acc_addr = physical_address.strip()
+        acc_maps = f"https://www.google.com/maps?q={urllib.parse.quote(acc_addr)}" if acc_addr else ""
 
         acc_intel_list.append({
             "account": acc,
             "bank": eff_bank,
             "bank_inference": bank_inference,
-            "address": acc_addr if acc_maps else "",
+            "address": acc_addr,
             "maps_url": acc_maps,
             "rec_kantoi": rec_kantoi,
             "pdrm": pdrm_info,
@@ -4608,8 +4661,8 @@ def format_threat_response(record, query_input):
         ]
     if bank_accounts and bank_accounts.strip() and bank_accounts != "N/A":
         lines.append(f"🏦 *AKAUN BANK*     : {bank_accounts}")
-    if address and address.strip() and address != "N/A":
-        lines.append(f"📍 *ALAMAT*         : {address}")
+    if address and is_valid_physical_address(address):
+        lines.append(f"📍 *ALAMAT*         : {address.strip()}")
     if source and source.strip():
         lines.append(f"📚 *SUMBER SITASI*  : {source}")
     if evidence_links and evidence_links.strip() and evidence_links != "N/A":
@@ -6589,6 +6642,7 @@ def execute_multi_photo_case(chat_id, username):
                 suspect_name=target_name,
                 bank_name=target_bank,
                 email=(intel.get("emails") or [""])[0] if intel.get("emails") else "",
+                physical_address=intel.get("physical_address", ""),
                 tactic=intel.get("tactic", "Semakan Keselamatan Siber"),
                 source_badge=intel.get("source_badge", "🧠 AI Vision (Multi-Bukti)"),
                 tmp_id=tmp_id,
