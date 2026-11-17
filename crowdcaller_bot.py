@@ -5174,6 +5174,20 @@ def submit_heavy_task(user_id, task_func, *args, **kwargs):
     WORKER_POOL.submit(_wrapped)
     return True
 
+def clean_telegram_html(text: str) -> str:
+    """
+    Membersihkan teks HTML agar mematuhi spesifikasi ketat Telegram Bot API:
+    - Menukarkan &#x27;, &#39;, &apos; kepada tanda petik tunggal ' biasa
+    - Menukarkan &nbsp; kepada ruang kosong biasa
+    - Memastikan simbol & yang bukan entiti sah (&lt;, &gt;, &amp;, &quot;) di-escape kepada &amp;
+    """
+    if not text:
+        return ""
+    t = text.replace("&#x27;", "'").replace("&#39;", "'").replace("&apos;", "'")
+    t = t.replace("&nbsp;", " ")
+    t = re.sub(r'&(?!(?:lt|gt|amp|quot);)', '&amp;', t)
+    return t
+
 def api_call(method, payload=None, files=None, max_retries=2):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/{method}"
     for attempt in range(max_retries + 1):
@@ -5209,7 +5223,9 @@ def api_call(method, payload=None, files=None, max_retries=2):
             return {"ok": False, "description": str(e)}
     return {"ok": False, "description": "Max retries exceeded"}
 
-def send_message(chat_id, text, reply_markup=None, parse_mode="Markdown", disable_web_page_preview=True):
+def send_message(chat_id, text, reply_markup=None, parse_mode="Markdown", disable_web_page_preview=True, reply_to_message_id=None):
+    if text and str(parse_mode).lower() == "html":
+        text = clean_telegram_html(text)
     # Auto-Pagination untuk teks panjang melebihi had Telegram (3800 aksara)
     if text and len(text) > 3800 and str(parse_mode).lower() in ["html", "markdown"]:
         pages = kui.split_telegram_html(text)
@@ -5225,6 +5241,8 @@ def send_message(chat_id, text, reply_markup=None, parse_mode="Markdown", disabl
                     "parse_mode": parse_mode,
                     "disable_web_page_preview": disable_web_page_preview
                 }
+                if reply_to_message_id and idx == 0:
+                    payload["reply_to_message_id"] = reply_to_message_id
                 if markup: payload["reply_markup"] = markup
                 last_res = api_call("sendMessage", payload)
             return last_res
@@ -5235,19 +5253,35 @@ def send_message(chat_id, text, reply_markup=None, parse_mode="Markdown", disabl
         "parse_mode": parse_mode,
         "disable_web_page_preview": disable_web_page_preview
     }
+    if reply_to_message_id:
+        payload["reply_to_message_id"] = reply_to_message_id
     if reply_markup:
         payload["reply_markup"] = reply_markup
     res = api_call("sendMessage", payload)
-    if not res.get("ok") and "parse" in str(res.get("description", "")).lower():
-        clean_text = re.sub(r'<[^>]+>', '', text).replace('*', '').replace('_', '').replace('`', '')
-        plain_payload = {
-            "chat_id": chat_id,
-            "text": clean_text,
-            "disable_web_page_preview": disable_web_page_preview
-        }
-        if reply_markup:
-            plain_payload["reply_markup"] = reply_markup
-        return api_call("sendMessage", plain_payload)
+    if not res.get("ok"):
+        desc = str(res.get("description", "")).lower()
+        if "reply" in desc and "not found" in desc:
+            payload.pop("reply_to_message_id", None)
+            res = api_call("sendMessage", payload)
+            if res.get("ok"):
+                return res
+            desc = str(res.get("description", "")).lower()
+        if "parse" in desc or "entity" in desc or not res.get("ok"):
+            clean_text = re.sub(r'<[^>]+>', '', text).replace('*', '').replace('_', '').replace('`', '')
+            plain_payload = {
+                "chat_id": chat_id,
+                "text": clean_text,
+                "disable_web_page_preview": disable_web_page_preview
+            }
+            if reply_to_message_id:
+                plain_payload["reply_to_message_id"] = reply_to_message_id
+            if reply_markup:
+                plain_payload["reply_markup"] = reply_markup
+            fallback_res = api_call("sendMessage", plain_payload)
+            if not fallback_res.get("ok") and reply_to_message_id:
+                plain_payload.pop("reply_to_message_id", None)
+                fallback_res = api_call("sendMessage", plain_payload)
+            return fallback_res
     return res
 
 def edit_message(chat_id, message_id, text, reply_markup=None, parse_mode="Markdown", disable_web_page_preview=True):
@@ -5705,12 +5739,42 @@ def format_channel_approved_post(rep, admin_username):
     qr_data = rep.get("qr_data")
     tactic = rep.get("tactic") or "Laporan Komuniti Disahkan"
     
+    # JIKA LAPORAN MEMPUNYAI HASIL IMBASAN / DOSSIER LENGKAP YANG TELAH DIJANAKAN (cth: Quishing QR Scan atau AI Vision Dossier)
+    formatted_rep = rep.get("formatted_report")
+    if formatted_rep and formatted_rep.strip():
+        raw_rep = formatted_rep.strip()
+        lines = []
+        if "AMARAN RASMI KANTOI RADAR" not in raw_rep:
+            lines.extend([
+                "🚨 <b>AMARAN RASMI KANTOI RADAR: LAPORAN DISAHKAN</b>",
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                f"🛡️ <b>STATUS:</b> 🚨 <b>SAH SEBAGAI ANCAMAN PENIPUAN (DILULUSKAN MOD)</b>",
+                f"🆔 <b>Rujukan Kes:</b> <code>{html.escape(str(rep_id))}</code>",
+                f"🛡️ <b>Pengesahan:</b> Disahkan Oleh Pentadbir KANTOI (@{html.escape(str(reviewed_by))})",
+                ""
+            ])
+        lines.append(raw_rep)
+        if "@kantoiradar" not in raw_rep:
+            lines.extend([
+                "",
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                "⚠️ <b>PERINGATAN AWAM:</b>",
+                "JANGAN buka sebarang pautan mencurigakan atau serahkan maklumat peribadi (OTP / PIN / Kata Laluan).",
+                "📲 <i>Buka Tab Pertahanan Aplikasi KANTOI untuk perlindungan masa nyata.</i>",
+                "💬 <i>Bantu komuniti: Hantar bukti scammer terus ke Bot Risikan: @crowdcallerbot</i>",
+                "📢 <i>Saluran Rasmi: @kantoiradar | Kod Sumber: https://github.com/kand4/kantoi</i>\n",
+                "#KANTOI_UPDATE #PDRM #SEMAKMULE #SCAMALERT #QUISHING"
+            ])
+            if phone_norm and phone_norm != "N/A" and phone_norm != "TIADA_TEL":
+                lines.append(f"{html.escape(str(phone_norm))} | {html.escape(str(suspect_name))} | LAPORAN_DISAHKAN")
+        return clean_telegram_html("\n".join(lines))
+    
     lines = [
         "🚨 <b>AMARAN RASMI KANTOI RADAR: LAPORAN SCAMMER DISAHKAN</b>",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━",
         f"🛡️ <b>STATUS:</b> 🚨 <b>SAH SEBAGAI ANCAMAN PENIPUAN (DILULUSKAN MOD)</b>",
         f"🆔 <b>Rujukan Kes:</b> <code>{html.escape(str(rep_id))}</code>",
-        "🛡️ <b>Pengesahan:</b> Disahkan Oleh Pentadbir KANTOI",
+        f"🛡️ <b>Pengesahan:</b> Disahkan Oleh Pentadbir KANTOI (@{html.escape(str(reviewed_by))})",
         ""
     ]
     
@@ -5777,7 +5841,7 @@ def format_channel_approved_post(rep, admin_username):
     lines.append("#KANTOI_UPDATE #PDRM #SEMAKMULE #SCAMALERT")
     lines.append(f"{html.escape(str(phone_norm))} | {html.escape(str(suspect_name))} | LAPORAN_KOMUNITI_DISAHKAN | {html.escape(str(bank_account or 'Tiada'))}")
     
-    return "\n".join(lines)
+    return clean_telegram_html("\n".join(lines))
 
 REJECTION_PRESET_REASONS = {
     "1": "Bukti tidak mencukupi atau tiada tangkapan layar/slip transaksi disertakan.",
@@ -6031,6 +6095,7 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
         photo_ids = rep.get("photo_file_ids") or ([rep.get("photo_file_id")] if rep.get("photo_file_id") else [])
         
         forwarded_ok = False
+        last_fwd_msg_id = None
 
         # KAEDAH 1 (UTAMA): Majukan (Forward) mesej imej skrinshot asal terus ke saluran @kantoiradar
         if source_chat_id and msg_ids:
@@ -6044,11 +6109,12 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
                     })
                     if fwd_res and fwd_res.get("ok"):
                         forwarded_count += 1
+                        last_fwd_msg_id = fwd_res.get("result", {}).get("message_id")
                 except Exception as e:
                     print(f"[FORWARD ERR] Gagal forwardMessage {m_id} ke {CHANNEL_ID}: {e}")
             if forwarded_count > 0:
                 forwarded_ok = True
-                print(f"[FORWARD SUCCESS] Berjaya memajukan {forwarded_count} imej bukti ke {CHANNEL_ID}")
+                print(f"[FORWARD SUCCESS] Berjaya memajukan {forwarded_count} imej bukti ke {CHANNEL_ID} (Last Msg ID: {last_fwd_msg_id})")
 
         # KAEDAH 2 (FALLBACK): Jika forwardMessage tidak berjaya (cth: privasi Telegram, mesej dipadam,
         # atau rekod arkib tanpa msg_id), hantar salinan foto resolusi tinggi terus menggunakan sendPhoto / sendMediaGroup
@@ -6062,45 +6128,52 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
                         m_item["caption"] = f"📸 <b>Lampiran {len(photo_ids)} Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
                         m_item["parse_mode"] = "HTML"
                     media.append(m_item)
-                api_call("sendMediaGroup", {
+                mg_res = api_call("sendMediaGroup", {
                     "chat_id": CHANNEL_ID,
                     "media": media
                 })
+                if mg_res and mg_res.get("ok") and isinstance(mg_res.get("result"), list) and mg_res["result"]:
+                    last_fwd_msg_id = mg_res["result"][-1].get("message_id")
             elif len(photo_ids) == 1:
                 if len(channel_post) <= 1024:
-                    api_call("sendPhoto", {
+                    sp_res = api_call("sendPhoto", {
                         "chat_id": CHANNEL_ID,
                         "photo": photo_ids[0],
                         "caption": channel_post,
                         "parse_mode": "HTML"
                     })
-                    photo_caption_consumed = True
+                    if sp_res and sp_res.get("ok"):
+                        photo_caption_consumed = True
+                    else:
+                        evidence_caption = f"📸 <b>Lampiran Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
+                        sp2 = api_call("sendPhoto", {
+                            "chat_id": CHANNEL_ID,
+                            "photo": photo_ids[0],
+                            "caption": evidence_caption,
+                            "parse_mode": "HTML"
+                        })
+                        if sp2 and sp2.get("ok"):
+                            last_fwd_msg_id = sp2.get("result", {}).get("message_id")
                 else:
                     evidence_caption = f"📸 <b>Lampiran Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
-                    api_call("sendPhoto", {
+                    sp_res = api_call("sendPhoto", {
                         "chat_id": CHANNEL_ID,
                         "photo": photo_ids[0],
                         "caption": evidence_caption,
                         "parse_mode": "HTML"
                     })
+                    if sp_res and sp_res.get("ok"):
+                        last_fwd_msg_id = sp_res.get("result", {}).get("message_id")
 
         # Hantar teks laporan analisis komprehensif ke @kantoiradar (jika belum dihantar dalam sendPhoto)
         if not photo_caption_consumed:
-            if len(channel_post) <= 4096:
-                api_call("sendMessage", {
-                    "chat_id": CHANNEL_ID,
-                    "text": channel_post,
-                    "parse_mode": "HTML",
-                    "disable_web_page_preview": True
-                })
-            else:
-                for chunk_idx in range(0, len(channel_post), 4000):
-                    api_call("sendMessage", {
-                        "chat_id": CHANNEL_ID,
-                        "text": channel_post[chunk_idx:chunk_idx+4000],
-                        "parse_mode": "HTML",
-                        "disable_web_page_preview": True
-                    })
+            send_message(
+                CHANNEL_ID,
+                channel_post,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+                reply_to_message_id=last_fwd_msg_id
+            )
 
         # 2. Masukkan ke dalam SQLite KANTOI (simpan semua nombor telefon kes)
         all_phones_list = rep.get("all_phones") or [phone_norm]
@@ -6111,7 +6184,8 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
             category="LAPORAN_KOMUNITI_DISAHKAN",
             bank_accounts=bank_account,
             source=f"Risikan Komuniti KANTOI (Ref: {rep_id})",
-            all_phones=all_phones_str
+            all_phones=all_phones_str,
+            address=rep.get("physical_address")
         )
 
         # 3. Notifikasi kepada pengirim laporan
@@ -6539,6 +6613,7 @@ def execute_multi_photo_case(chat_id, username):
                         "bank_account": f"Pautan Phishing ({res_url['domain']})",
                         "all_accounts": [],
                         "evidence_text": ev_text,
+                        "formatted_report": "\n".join(lines),
                         "victim_loss": None,
                         "photo_file_id": items[0]["file_id"] if items else None,
                         "photo_file_ids": [it["file_id"] for it in items],
@@ -6651,6 +6726,9 @@ def execute_multi_photo_case(chat_id, username):
                 image_count=len(temp_paths),
                 victim_loss=intel.get("victim_loss")
             )
+            rep_data["formatted_report"] = dossier_html
+            unconfirmed_reports[tmp_id] = rep_data
+            save_pending_report(tmp_id, rep_data)
 
             hud.update(100, "✨ Analisis Selesai! Menyusun Dossier Bersepadu...", "Dossier 1-Paparan Sedia")
             hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
