@@ -316,7 +316,7 @@ def save_json_file(path, data):
         try:
             tmp_path = path + f".tmp.{os.getpid()}"
             with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+                json.dump(data, f, ensure_ascii=False, indent=2, default=str)
             if os.path.exists(tmp_path):
                 try:
                     os.replace(tmp_path, path)
@@ -4229,6 +4229,7 @@ def build_unified_cyber_dossier(
         "has_qr": has_qr,
         "qr_data": qr_data,
         "dossier_html": dossier_full_html,
+        "formatted_report": dossier_full_html,
         "dossier_kb": None
     }
 
@@ -5245,6 +5246,18 @@ def send_message(chat_id, text, reply_markup=None, parse_mode="Markdown", disabl
                     payload["reply_to_message_id"] = reply_to_message_id
                 if markup: payload["reply_markup"] = markup
                 last_res = api_call("sendMessage", payload)
+                if not (last_res and last_res.get("ok")):
+                    payload.pop("reply_to_message_id", None)
+                    last_res = api_call("sendMessage", payload)
+                if not (last_res and last_res.get("ok")):
+                    plain_p = re.sub(r'<[^>]+>', '', p).replace('*', '').replace('_', '').replace('`', '')
+                    plain_payload = {
+                        "chat_id": chat_id,
+                        "text": plain_p,
+                        "disable_web_page_preview": disable_web_page_preview
+                    }
+                    if markup: plain_payload["reply_markup"] = markup
+                    last_res = api_call("sendMessage", plain_payload)
             return last_res
 
     payload = {
@@ -5459,6 +5472,7 @@ class ProgressHUD:
         self.chat_id = chat_id
         self.reply_to_msg_id = reply_to_msg_id
         self.msg_id = None
+        self.sent_msg_ids = []
         self.last_update_time = 0
         self.last_percent = -1
         self.last_text = ""
@@ -5503,20 +5517,36 @@ class ProgressHUD:
 
     def complete_with_message(self, final_text, reply_markup=None, parse_mode="HTML"):
         with self.lock:
+            self.sent_msg_ids = []
             pages = kui.split_telegram_html(final_text)
             if len(pages) <= 1:
                 if self.msg_id:
                     res = edit_message(self.chat_id, self.msg_id, pages[0], reply_markup=reply_markup, parse_mode=parse_mode)
                     if res.get("ok"):
+                        self.sent_msg_ids.append(self.msg_id)
                         return res
-                return send_message(self.chat_id, pages[0], reply_markup=reply_markup, parse_mode=parse_mode)
+                res = send_message(self.chat_id, pages[0], reply_markup=reply_markup, parse_mode=parse_mode)
+                mid = res.get("result", {}).get("message_id") if isinstance(res, dict) and res.get("ok") else None
+                if mid:
+                    self.sent_msg_ids.append(mid)
+                return res
             else:
                 # Berbilang Halaman (Multi-Page Split): Bahagian 1 edit HUD, selebihnya mesej berangkai
                 first_page = pages[0]
                 if self.msg_id:
-                    edit_message(self.chat_id, self.msg_id, first_page, parse_mode=parse_mode)
+                    r1 = edit_message(self.chat_id, self.msg_id, first_page, parse_mode=parse_mode)
+                    if r1.get("ok"):
+                        self.sent_msg_ids.append(self.msg_id)
+                    else:
+                        r1b = send_message(self.chat_id, first_page, parse_mode=parse_mode)
+                        m1 = r1b.get("result", {}).get("message_id") if isinstance(r1b, dict) and r1b.get("ok") else None
+                        if m1:
+                            self.sent_msg_ids.append(m1)
                 else:
-                    send_message(self.chat_id, first_page, parse_mode=parse_mode)
+                    r1 = send_message(self.chat_id, first_page, parse_mode=parse_mode)
+                    m1 = r1.get("result", {}).get("message_id") if isinstance(r1, dict) and r1.get("ok") else None
+                    if m1:
+                        self.sent_msg_ids.append(m1)
 
                 last_res = None
                 for idx, p in enumerate(pages[1:]):
@@ -5524,6 +5554,9 @@ class ProgressHUD:
                     is_last = (idx == len(pages[1:]) - 1)
                     markup = reply_markup if is_last else None
                     last_res = send_message(self.chat_id, p, reply_markup=markup, parse_mode=parse_mode)
+                    mp = last_res.get("result", {}).get("message_id") if isinstance(last_res, dict) and last_res.get("ok") else None
+                    if mp:
+                        self.sent_msg_ids.append(mp)
                 return last_res
 
 # ==============================================================================
@@ -5740,7 +5773,7 @@ def format_channel_approved_post(rep, admin_username):
     tactic = rep.get("tactic") or "Laporan Komuniti Disahkan"
     
     # JIKA LAPORAN MEMPUNYAI HASIL IMBASAN / DOSSIER LENGKAP YANG TELAH DIJANAKAN (cth: Quishing QR Scan atau AI Vision Dossier)
-    formatted_rep = rep.get("formatted_report")
+    formatted_rep = rep.get("formatted_report") or rep.get("dossier_html")
     if formatted_rep and formatted_rep.strip():
         raw_rep = formatted_rep.strip()
         lines = []
@@ -6066,9 +6099,9 @@ def perform_admin_quick_audit(rep_id):
     )
     return audit_msg
 
-def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message_id, reason=None):
+def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message_id, reason=None, rep_override=None):
     reports = get_pending_reports()
-    rep = reports.get(rep_id)
+    rep = reports.get(rep_id) or rep_override
     if not rep:
         return "Ralat: Rekod laporan tidak ditemui atau telah diproses."
 
@@ -6087,17 +6120,22 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
         rep["reviewed_at"] = int(time.time())
         save_pending_report(rep_id, rep)
 
-        # 1. Pos ke saluran @kantoiradar dengan format terperinci dan lengkap (tidak diringkaskan)
+        # 1. Pos ke saluran @kantoiradar
         channel_post = format_channel_approved_post(rep, admin_username)
-        # Pengekstrakan bukti imej & ID mesej asal untuk keupayaan Forward terus ke saluran @kantoiradar
         source_chat_id = rep.get("user_id")
         msg_ids = rep.get("msg_ids") or ([rep.get("msg_id")] if rep.get("msg_id") else [])
         photo_ids = rep.get("photo_file_ids") or ([rep.get("photo_file_id")] if rep.get("photo_file_id") else [])
-        
-        forwarded_ok = False
-        last_fwd_msg_id = None
 
-        # KAEDAH 1 (UTAMA): Majukan (Forward) mesej imej skrinshot asal terus ke saluran @kantoiradar
+        # Senarai ID mesej laporan imbasan yang dijanakan oleh bot sendiri
+        bot_report_msg_ids = list(rep.get("bot_report_msg_ids") or [])
+        if rep.get("bot_report_msg_id") and rep.get("bot_report_msg_id") not in bot_report_msg_ids:
+            bot_report_msg_ids.append(rep.get("bot_report_msg_id"))
+        bot_report_chat_id = rep.get("bot_report_chat_id") or source_chat_id
+
+        forwarded_photo_ok = False
+        last_photo_msg_id = None
+
+        # === LANGKAH A: Forward / Hantar foto bukti (QR / skrinshot) ke saluran ===
         if source_chat_id and msg_ids:
             forwarded_count = 0
             for m_id in msg_ids:
@@ -6109,17 +6147,14 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
                     })
                     if fwd_res and fwd_res.get("ok"):
                         forwarded_count += 1
-                        last_fwd_msg_id = fwd_res.get("result", {}).get("message_id")
+                        last_photo_msg_id = fwd_res.get("result", {}).get("message_id")
                 except Exception as e:
-                    print(f"[FORWARD ERR] Gagal forwardMessage {m_id} ke {CHANNEL_ID}: {e}")
+                    print(f"[FORWARD ERR] Gagal forwardMessage foto {m_id} ke {CHANNEL_ID}: {e}")
             if forwarded_count > 0:
-                forwarded_ok = True
-                print(f"[FORWARD SUCCESS] Berjaya memajukan {forwarded_count} imej bukti ke {CHANNEL_ID} (Last Msg ID: {last_fwd_msg_id})")
+                forwarded_photo_ok = True
+                print(f"[FORWARD SUCCESS] {forwarded_count} imej bukti dimajukan ke {CHANNEL_ID}")
 
-        # KAEDAH 2 (FALLBACK): Jika forwardMessage tidak berjaya (cth: privasi Telegram, mesej dipadam,
-        # atau rekod arkib tanpa msg_id), hantar salinan foto resolusi tinggi terus menggunakan sendPhoto / sendMediaGroup
-        photo_caption_consumed = False
-        if not forwarded_ok and photo_ids:
+        if not forwarded_photo_ok and photo_ids:
             if len(photo_ids) > 1:
                 media = []
                 for idx, pid in enumerate(photo_ids[:10]):
@@ -6133,47 +6168,76 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
                     "media": media
                 })
                 if mg_res and mg_res.get("ok") and isinstance(mg_res.get("result"), list) and mg_res["result"]:
-                    last_fwd_msg_id = mg_res["result"][-1].get("message_id")
+                    last_photo_msg_id = mg_res["result"][-1].get("message_id")
+                    forwarded_photo_ok = True
             elif len(photo_ids) == 1:
-                if len(channel_post) <= 1024:
-                    sp_res = api_call("sendPhoto", {
-                        "chat_id": CHANNEL_ID,
-                        "photo": photo_ids[0],
-                        "caption": channel_post,
-                        "parse_mode": "HTML"
-                    })
-                    if sp_res and sp_res.get("ok"):
-                        photo_caption_consumed = True
-                    else:
-                        evidence_caption = f"📸 <b>Lampiran Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
-                        sp2 = api_call("sendPhoto", {
-                            "chat_id": CHANNEL_ID,
-                            "photo": photo_ids[0],
-                            "caption": evidence_caption,
-                            "parse_mode": "HTML"
-                        })
-                        if sp2 and sp2.get("ok"):
-                            last_fwd_msg_id = sp2.get("result", {}).get("message_id")
-                else:
-                    evidence_caption = f"📸 <b>Lampiran Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
-                    sp_res = api_call("sendPhoto", {
-                        "chat_id": CHANNEL_ID,
-                        "photo": photo_ids[0],
-                        "caption": evidence_caption,
-                        "parse_mode": "HTML"
-                    })
-                    if sp_res and sp_res.get("ok"):
-                        last_fwd_msg_id = sp_res.get("result", {}).get("message_id")
+                evidence_caption = f"📸 <b>Lampiran Bukti Tangkapan Layar Kes (Ref: <code>{html.escape(str(rep_id))}</code>)</b>"
+                sp_res = api_call("sendPhoto", {
+                    "chat_id": CHANNEL_ID,
+                    "photo": photo_ids[0],
+                    "caption": evidence_caption,
+                    "parse_mode": "HTML"
+                })
+                if sp_res and sp_res.get("ok"):
+                    last_photo_msg_id = sp_res.get("result", {}).get("message_id")
+                    forwarded_photo_ok = True
 
-        # Hantar teks laporan analisis komprehensif ke @kantoiradar (jika belum dihantar dalam sendPhoto)
-        if not photo_caption_consumed:
-            send_message(
+        # === LANGKAH B (UTAMA): Forward TERUS mesej laporan imbasan bot (@crowdcallerbot) ke saluran ===
+        report_sent_ok = False
+        report_method = "NONE"
+        if bot_report_msg_ids and bot_report_chat_id:
+            sent_pages = 0
+            for r_mid in bot_report_msg_ids:
+                # 1. Cuba forwardMessage dahulu (paling natif, bebas ralat HTML, terus kekalkan format asal bot)
+                try:
+                    fwd_rep = api_call("forwardMessage", {
+                        "chat_id": CHANNEL_ID,
+                        "from_chat_id": bot_report_chat_id,
+                        "message_id": r_mid
+                    })
+                    if fwd_rep and fwd_rep.get("ok"):
+                        sent_pages += 1
+                        report_method = "Forwarded"
+                        print(f"[CHANNEL POST] forwardMessage laporan bot ({r_mid}) berjaya ke {CHANNEL_ID}")
+                        continue
+                    print(f"[CHANNEL POST] forwardMessage laporan ({r_mid}) gagal: {fwd_rep}")
+                except Exception as e:
+                    print(f"[CHANNEL POST ERR] forwardMessage laporan ({r_mid}): {e}")
+
+                # 2. Sandaran copyMessage (tanpa key reply_markup supaya butang dibuang secara sah)
+                try:
+                    copy_res = api_call("copyMessage", {
+                        "chat_id": CHANNEL_ID,
+                        "from_chat_id": bot_report_chat_id,
+                        "message_id": r_mid
+                    })
+                    if copy_res and copy_res.get("ok"):
+                        sent_pages += 1
+                        report_method = "Copied"
+                        print(f"[CHANNEL POST] copyMessage laporan bot ({r_mid}) berjaya ke {CHANNEL_ID}")
+                        continue
+                    print(f"[CHANNEL POST] copyMessage laporan ({r_mid}) gagal: {copy_res}")
+                except Exception as e:
+                    print(f"[CHANNEL POST ERR] copyMessage laporan ({r_mid}): {e}")
+
+            if sent_pages > 0:
+                report_sent_ok = True
+
+        # === LANGKAH C (SANDARAN MUKTAMAD): Hantar teks laporan penuh jika forward/copy tidak tersedia ===
+        if not report_sent_ok:
+            print(f"[CHANNEL POST] Sandaran: Menghantar teks laporan ke {CHANNEL_ID}...")
+            sm_res = send_message(
                 CHANNEL_ID,
                 channel_post,
                 parse_mode="HTML",
                 disable_web_page_preview=True,
-                reply_to_message_id=last_fwd_msg_id
+                reply_to_message_id=last_photo_msg_id
             )
+            if sm_res and sm_res.get("ok"):
+                report_sent_ok = True
+                report_method = "Sent"
+            else:
+                report_method = f"Gagal ({(sm_res or {}).get('description', 'Unknown')[:60]})"
 
         # 2. Masukkan ke dalam SQLite KANTOI (simpan semua nombor telefon kes)
         all_phones_list = rep.get("all_phones") or [phone_norm]
@@ -6188,22 +6252,22 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
             address=rep.get("physical_address")
         )
 
-        # 3. Notifikasi kepada pengirim laporan
-        if user_chat_id:
+        # 3. Notifikasi kepada pengirim laporan (elak spam jika admin sendiri yang luluskan terus)
+        if user_chat_id and str(user_chat_id) != str(admin_chat_id):
             user_msg = (
                 f"🎉 <b>TERIMA KASIH! LAPORAN ANDA TELAH DILULUSKAN!</b>\n\n"
-                f"Nombor: <code>{phone_norm}</code>\n"
+                f"Nombor: <code>{html.escape(str(phone_norm))}</code>\n"
                 f"Status: <b>Telah disahkan oleh Admin KANTOI</b>\n\n"
                 f"📢 Maklumat ini telah disiarkan ke saluran @kantoiradar dan kini dimasukkan ke dalam enjin risikan KANTOI untuk melindungi orang ramai."
             )
-            api_call("sendMessage", {
-                "chat_id": user_chat_id,
-                "text": user_msg,
-                "parse_mode": "HTML"
-            })
+            send_message(user_chat_id, user_msg, parse_mode="HTML")
 
-        edit_message(admin_chat_id, message_id, f"✅ *DILULUSKAN & DISIARKAN KE @KANTOIRADAR*\nRef ID: `{rep_id}`\nOleh Admin: @{admin_username}")
-        return "Berjaya! Laporan diluluskan, disimpan ke database dan disiarkan ke saluran."
+        edit_message(
+            admin_chat_id,
+            message_id,
+            f"✅ *DILULUSKAN & DISIARKAN KE @KANTOIRADAR*\nRef ID: `{rep_id}`\nTeks Laporan: `{report_method}`\nOleh Admin: @{admin_username}"
+        )
+        return f"Berjaya! Laporan disiarkan ke @kantoiradar (Teks: {report_method})."
 
     elif action == "reject":
         rep["status"] = "REJECTED"
@@ -6382,12 +6446,7 @@ def handle_admin_batch_decision(action, batch_id, admin_chat_id, admin_username,
                 "parse_mode": "HTML"
             })
 
-        api_call("sendMessage", {
-            "chat_id": CHANNEL_ID,
-            "text": post_text,
-            "parse_mode": "HTML",
-            "disable_web_page_preview": True
-        })
+        send_message(CHANNEL_ID, post_text, parse_mode="HTML", disable_web_page_preview=True)
 
         if user_chat_id:
             api_call("sendMessage", {
@@ -6653,7 +6712,21 @@ def execute_multi_photo_case(chat_id, username):
                 ])
 
                 hud.update(100, "✨ Analisis Pautan Selesai!", "Anti-Quishing")
-                hud.complete_with_message("\n".join(lines), reply_markup={"inline_keyboard": inline_kb}, parse_mode="HTML")
+                hud_res = hud.complete_with_message("\n".join(lines), reply_markup={"inline_keyboard": inline_kb}, parse_mode="HTML")
+                # Simpan ID mesej laporan bot untuk keupayaan forward terus ke saluran
+                sent_ids = list(getattr(hud, "sent_msg_ids", []) or [])
+                if not sent_ids:
+                    mid = hud_res.get("result", {}).get("message_id") if isinstance(hud_res, dict) and hud_res.get("ok") else None
+                    if mid:
+                        sent_ids.append(mid)
+                    elif hud.msg_id:
+                        sent_ids.append(hud.msg_id)
+                if sent_ids and is_danger and tmp_id:
+                    rep_data["bot_report_msg_id"] = sent_ids[-1]
+                    rep_data["bot_report_msg_ids"] = sent_ids
+                    rep_data["bot_report_chat_id"] = chat_id
+                    unconfirmed_reports[tmp_id] = rep_data
+                    save_pending_report(tmp_id, rep_data)
                 return
 
         # Jalankan sintesis kes multi-imej
@@ -6731,7 +6804,21 @@ def execute_multi_photo_case(chat_id, username):
             save_pending_report(tmp_id, rep_data)
 
             hud.update(100, "✨ Analisis Selesai! Menyusun Dossier Bersepadu...", "Dossier 1-Paparan Sedia")
-            hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
+            hud_res = hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
+            # Simpan semua ID mesej laporan bot (termasuk multi-halaman) untuk forward terus ke saluran
+            sent_ids = list(getattr(hud, "sent_msg_ids", []) or [])
+            if not sent_ids:
+                mid = hud_res.get("result", {}).get("message_id") if isinstance(hud_res, dict) and hud_res.get("ok") else None
+                if mid:
+                    sent_ids.append(mid)
+                elif hud.msg_id:
+                    sent_ids.append(hud.msg_id)
+            if sent_ids:
+                rep_data["bot_report_msg_id"] = sent_ids[-1]
+                rep_data["bot_report_msg_ids"] = sent_ids
+                rep_data["bot_report_chat_id"] = chat_id
+                unconfirmed_reports[tmp_id] = rep_data
+                save_pending_report(tmp_id, rep_data)
         else:
             # Tiada entiti dikesan
             active_k, src_label, k_type = get_effective_gemini_key(chat_id)
@@ -6789,7 +6876,26 @@ def async_process_unified_dossier(chat_id, msg_id, hud, raw_query, is_admin=Fals
             progress_callback=lambda pct, title, sub: hud.update(pct, title, sub)
         )
         hud.update(100, "✨ Analisis Selesai! Menyusun Kad Risikan...", "Sedia", force=True)
-        hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
+        hud_res = hud.complete_with_message(dossier_html, reply_markup=dossier_kb, parse_mode="HTML")
+        sent_ids = list(getattr(hud, "sent_msg_ids", []) or [])
+        if not sent_ids:
+            mid = hud_res.get("result", {}).get("message_id") if isinstance(hud_res, dict) and hud_res.get("ok") else None
+            if mid:
+                sent_ids.append(mid)
+            elif hud.msg_id:
+                sent_ids.append(hud.msg_id)
+        if sent_ids and isinstance(dossier_kb, dict):
+            for row in dossier_kb.get("inline_keyboard", []):
+                for btn in row:
+                    cb = str(btn.get("callback_data") or "")
+                    if cb.startswith(("cfrm_direct_", "cfrm_")):
+                        ref_k = cb.replace("cfrm_direct_", "").replace("cfrm_", "")
+                        if ref_k in unconfirmed_reports:
+                            unconfirmed_reports[ref_k]["bot_report_msg_id"] = sent_ids[-1]
+                            unconfirmed_reports[ref_k]["bot_report_msg_ids"] = sent_ids
+                            unconfirmed_reports[ref_k]["bot_report_chat_id"] = chat_id
+                            save_pending_report(ref_k, unconfirmed_reports[ref_k])
+                        break
     except Exception as e:
         print(f"[ASYNC DOSSIER ERR] {e}")
         try:
@@ -7106,8 +7212,15 @@ def run_bot():
                                 rep_id = f"REP-{int(time.time()) % 100000:05d}"
                                 rep_data["report_id"] = rep_id
                                 rep_data["created_at"] = int(time.time())
+                                # Pastikan ID mesej laporan bot yang diklik admin sentiasa disimpan untuk forwardMessage terus ke saluran
+                                existing_bot_ids = list(rep_data.get("bot_report_msg_ids") or [])
+                                if cb_msg_id and cb_msg_id not in existing_bot_ids:
+                                    existing_bot_ids.append(cb_msg_id)
+                                rep_data["bot_report_msg_ids"] = existing_bot_ids
+                                rep_data["bot_report_msg_id"] = cb_msg_id or rep_data.get("bot_report_msg_id")
+                                rep_data["bot_report_chat_id"] = cb_chat_id or rep_data.get("bot_report_chat_id")
                                 save_pending_report(rep_id, rep_data)
-                                msg = handle_admin_decision("approve", rep_id, cb_chat_id, username, cb_msg_id)
+                                msg = handle_admin_decision("approve", rep_id, cb_chat_id, username, cb_msg_id, rep_override=rep_data)
                                 answer_callback(cb_id, msg, alert=True)
                             else:
                                 answer_callback(cb_id, "Sesi laporan telah tamat tempoh.", alert=True)
