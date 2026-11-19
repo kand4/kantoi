@@ -4069,17 +4069,20 @@ def build_unified_cyber_dossier(
             q_verdict = qr_url_res.get("verdict", "N/A") if qr_url_res else "N/A"
             q_sev = qr_url_res.get("severity", "INFO") if qr_url_res else "INFO"
 
+            disp_q_url = defang_url(q_url) if qr_danger else q_url
+            disp_q_dom = defang_domain(q_dom) if qr_danger else q_dom
             lines.append("📷 <b>KOD QR PAUTAN WEB (QUISHING / URL):</b>")
-            lines.append(f"• <b>Pautan:</b> <code>{html.escape(q_url)}</code>")
-            if q_dom:
-                lines.append(f"• <b>Domain:</b> <code>{html.escape(q_dom)}</code>")
+            lines.append(f"• <b>Pautan:</b> <code>{html.escape(disp_q_url)}</code>")
+            if disp_q_dom:
+                lines.append(f"• <b>Domain:</b> <code>{html.escape(disp_q_dom)}</code>")
 
             badge_icon = "🚨" if q_sev in ["CRITICAL", "HIGH"] else ("⚠️" if q_sev == "MEDIUM" else "✅")
             lines.append(f"• <b>Status Pautan:</b> {badge_icon} <b>{html.escape(q_verdict)}</b>")
 
             if qr_url_res and qr_url_res.get("reasons"):
                 for rsn in qr_url_res["reasons"]:
-                    lines.append(f"  └ <i>{html.escape(rsn)}</i>")
+                    safe_rsn = defang_text_urls(rsn, [q_dom]) if qr_danger else rsn
+                    lines.append(f"  └ <i>{html.escape(safe_rsn)}</i>")
 
             if qr_url_res and qr_url_res.get("safety_note"):
                 lines.append("")
@@ -5175,6 +5178,71 @@ def submit_heavy_task(user_id, task_func, *args, **kwargs):
     WORKER_POOL.submit(_wrapped)
     return True
 
+WHITELISTED_SAFE_DOMAINS = {
+    "t.me",
+    "telegram.org",
+    "github.com",
+    "google.com",
+    "maps.google.com",
+    "whatsapp.com",
+    "api.whatsapp.com",
+    "wa.me",
+    "touchngo.com.my",
+    "tngdigital.com.my",
+    "pdrm.gov.my",
+    "bnm.gov.my",
+    "mcmc.gov.my",
+    "cybersecurity.my",
+    "cyber999.my",
+    "semakmule.rmp.gov.my"
+}
+
+def is_whitelisted_domain(url_or_domain: str) -> bool:
+    if not url_or_domain:
+        return False
+    low = url_or_domain.lower()
+    for wd in WHITELISTED_SAFE_DOMAINS:
+        if wd in low:
+            return True
+    return False
+
+def defang_url(url: str) -> str:
+    """
+    Menyahaktifkan pautan berniat jahat / phishing agar Telegram Antispam tidak menyekat siaran (PEER_FLOOD)
+    dan mengelakkan pengguna daripada tertekan pautan bahaya secara tidak sengaja.
+    Contoh: https://goformreg.online/tngchmpp/ -> hxxps://goformreg[.]online/tngchmpp/
+    """
+    if not url or is_whitelisted_domain(url):
+        return url
+    u = re.sub(r'^http://', 'hxxp://', url, flags=re.IGNORECASE)
+    u = re.sub(r'^https://', 'hxxps://', u, flags=re.IGNORECASE)
+    parts = u.split('/', 3)
+    if len(parts) >= 3 and ('hxxp:' in parts[0] or 'hxxps:' in parts[0]):
+        parts[2] = parts[2].replace('.', '[.]')
+        return '/'.join(parts)
+    return u.replace('.', '[.]')
+
+def defang_domain(domain: str) -> str:
+    if not domain or is_whitelisted_domain(domain):
+        return domain
+    return domain.replace('.', '[.]')
+
+def defang_text_urls(text: str, target_domains=None) -> str:
+    """
+    Mengimbas dan menyahaktifkan sebarang URL berbahaya dalam teks tanpa mengubah pautan rasmi yang sah.
+    """
+    if not text:
+        return ""
+    def _sub_url(m):
+        raw_u = m.group(0)
+        return defang_url(raw_u)
+    t = re.sub(r'https?://[^\s<>"]+', _sub_url, text)
+    if target_domains:
+        for d in target_domains:
+            if d and not is_whitelisted_domain(d):
+                t = t.replace(d, defang_domain(d))
+    return t
+
 def clean_telegram_html(text: str) -> str:
     """
     Membersihkan teks HTML agar mematuhi spesifikasi ketat Telegram Bot API:
@@ -5247,17 +5315,21 @@ def send_message(chat_id, text, reply_markup=None, parse_mode="Markdown", disabl
                 if markup: payload["reply_markup"] = markup
                 last_res = api_call("sendMessage", payload)
                 if not (last_res and last_res.get("ok")):
-                    payload.pop("reply_to_message_id", None)
-                    last_res = api_call("sendMessage", payload)
-                if not (last_res and last_res.get("ok")):
-                    plain_p = re.sub(r'<[^>]+>', '', p).replace('*', '').replace('_', '').replace('`', '')
-                    plain_payload = {
-                        "chat_id": chat_id,
-                        "text": plain_p,
-                        "disable_web_page_preview": disable_web_page_preview
-                    }
-                    if markup: plain_payload["reply_markup"] = markup
-                    last_res = api_call("sendMessage", plain_payload)
+                    p_desc = str((last_res or {}).get("description", "")).lower()
+                    if "flood" in p_desc or "blocked" in p_desc or "unauthorized" in p_desc:
+                        return last_res
+                    if "reply" in p_desc:
+                        payload.pop("reply_to_message_id", None)
+                        last_res = api_call("sendMessage", payload)
+                    if not (last_res and last_res.get("ok")):
+                        plain_p = re.sub(r'<[^>]+>', '', p).replace('*', '').replace('_', '').replace('`', '')
+                        plain_payload = {
+                            "chat_id": chat_id,
+                            "text": plain_p,
+                            "disable_web_page_preview": disable_web_page_preview
+                        }
+                        if markup: plain_payload["reply_markup"] = markup
+                        last_res = api_call("sendMessage", plain_payload)
             return last_res
 
     payload = {
@@ -5273,13 +5345,15 @@ def send_message(chat_id, text, reply_markup=None, parse_mode="Markdown", disabl
     res = api_call("sendMessage", payload)
     if not res.get("ok"):
         desc = str(res.get("description", "")).lower()
+        if "flood" in desc or "blocked" in desc or "unauthorized" in desc:
+            return res
         if "reply" in desc and "not found" in desc:
             payload.pop("reply_to_message_id", None)
             res = api_call("sendMessage", payload)
             if res.get("ok"):
                 return res
             desc = str(res.get("description", "")).lower()
-        if "parse" in desc or "entity" in desc or not res.get("ok"):
+        if any(k in desc for k in ["parse", "entity", "tag", "byte offset", "unsupported"]) or not res.get("ok"):
             clean_text = re.sub(r'<[^>]+>', '', text).replace('*', '').replace('_', '').replace('`', '')
             plain_payload = {
                 "chat_id": chat_id,
@@ -5291,7 +5365,7 @@ def send_message(chat_id, text, reply_markup=None, parse_mode="Markdown", disabl
             if reply_markup:
                 plain_payload["reply_markup"] = reply_markup
             fallback_res = api_call("sendMessage", plain_payload)
-            if not fallback_res.get("ok") and reply_to_message_id:
+            if not fallback_res.get("ok") and reply_to_message_id and "reply" in str(fallback_res.get("description", "")).lower():
                 plain_payload.pop("reply_to_message_id", None)
                 fallback_res = api_call("sendMessage", plain_payload)
             return fallback_res
@@ -5800,7 +5874,15 @@ def format_channel_approved_post(rep, admin_username):
             ])
             if phone_norm and phone_norm != "N/A" and phone_norm != "TIADA_TEL":
                 lines.append(f"{html.escape(str(phone_norm))} | {html.escape(str(suspect_name))} | LAPORAN_DISAHKAN")
-        return clean_telegram_html("\n".join(lines))
+        
+        target_domains = []
+        if qr_data and qr_data.get("domain"):
+            target_domains.append(qr_data["domain"])
+        if rep.get("qr_data") and rep["qr_data"].get("domain"):
+            target_domains.append(rep["qr_data"]["domain"])
+        if rep.get("domain"):
+            target_domains.append(rep["domain"])
+        return clean_telegram_html(defang_text_urls("\n".join(lines), target_domains=target_domains))
     
     lines = [
         "🚨 <b>AMARAN RASMI KANTOI RADAR: LAPORAN SCAMMER DISAHKAN</b>",
@@ -5840,10 +5922,10 @@ def format_channel_approved_post(rep, admin_username):
     if qr_data:
         if qr_data.get("url"):
             lines.append("📷 <b>KOD QR / PAUTAN WEB (QUISHING):</b>")
-            lines.append(f"• <b>Pautan:</b> <code>{html.escape(str(qr_data['url']))}</code>")
+            lines.append(f"• <b>Pautan:</b> <code>{html.escape(defang_url(str(qr_data['url'])))}</code>")
             u_res = inspect_url_phishing(qr_data["url"])
             if u_res.get("domain"):
-                lines.append(f"• <b>Domain:</b> <code>{html.escape(str(u_res['domain']))}</code>")
+                lines.append(f"• <b>Domain:</b> <code>{html.escape(defang_domain(str(u_res['domain'])))}</code>")
             lines.append(f"• <b>Keputusan:</b> <b>{html.escape(str(u_res.get('verdict', 'Mencurigakan')))}</b>")
             if u_res.get("safety_note"):
                 lines.append("")
@@ -5874,7 +5956,14 @@ def format_channel_approved_post(rep, admin_username):
     lines.append("#KANTOI_UPDATE #PDRM #SEMAKMULE #SCAMALERT")
     lines.append(f"{html.escape(str(phone_norm))} | {html.escape(str(suspect_name))} | LAPORAN_KOMUNITI_DISAHKAN | {html.escape(str(bank_account or 'Tiada'))}")
     
-    return clean_telegram_html("\n".join(lines))
+    target_domains = []
+    if qr_data and qr_data.get("domain"):
+        target_domains.append(qr_data["domain"])
+    if rep.get("qr_data") and rep["qr_data"].get("domain"):
+        target_domains.append(rep["qr_data"]["domain"])
+    if rep.get("domain"):
+        target_domains.append(rep["domain"])
+    return clean_telegram_html(defang_text_urls("\n".join(lines), target_domains=target_domains))
 
 REJECTION_PRESET_REASONS = {
     "1": "Bukti tidak mencukupi atau tiada tangkapan layar/slip transaksi disertakan.",
@@ -6182,62 +6271,71 @@ def handle_admin_decision(action, rep_id, admin_chat_id, admin_username, message
                     last_photo_msg_id = sp_res.get("result", {}).get("message_id")
                     forwarded_photo_ok = True
 
-        # === LANGKAH B (UTAMA): Forward TERUS mesej laporan imbasan bot (@crowdcallerbot) ke saluran ===
+        # === LANGKAH B: Hantar Teks Laporan Rasmi Saluran (@kantoiradar) ===
         report_sent_ok = False
         report_method = "NONE"
-        if bot_report_msg_ids and bot_report_chat_id:
-            sent_pages = 0
-            for r_mid in bot_report_msg_ids:
-                # 1. Cuba forwardMessage dahulu (paling natif, bebas ralat HTML, terus kekalkan format asal bot)
-                try:
-                    fwd_rep = api_call("forwardMessage", {
-                        "chat_id": CHANNEL_ID,
-                        "from_chat_id": bot_report_chat_id,
-                        "message_id": r_mid
-                    })
-                    if fwd_rep and fwd_rep.get("ok"):
-                        sent_pages += 1
-                        report_method = "Forwarded"
-                        print(f"[CHANNEL POST] forwardMessage laporan bot ({r_mid}) berjaya ke {CHANNEL_ID}")
-                        continue
-                    print(f"[CHANNEL POST] forwardMessage laporan ({r_mid}) gagal: {fwd_rep}")
-                except Exception as e:
-                    print(f"[CHANNEL POST ERR] forwardMessage laporan ({r_mid}): {e}")
 
-                # 2. Sandaran copyMessage (tanpa key reply_markup supaya butang dibuang secara sah)
-                try:
-                    copy_res = api_call("copyMessage", {
-                        "chat_id": CHANNEL_ID,
-                        "from_chat_id": bot_report_chat_id,
-                        "message_id": r_mid
-                    })
-                    if copy_res and copy_res.get("ok"):
-                        sent_pages += 1
-                        report_method = "Copied"
-                        print(f"[CHANNEL POST] copyMessage laporan bot ({r_mid}) berjaya ke {CHANNEL_ID}")
-                        continue
-                    print(f"[CHANNEL POST] copyMessage laporan ({r_mid}) gagal: {copy_res}")
-                except Exception as e:
-                    print(f"[CHANNEL POST ERR] copyMessage laporan ({r_mid}): {e}")
+        # Berikan jeda seketika selepas foto dihantar bagi mengelakkan lonjakan kadar (burst rate limit)
+        if forwarded_photo_ok:
+            time.sleep(1.0)
 
-            if sent_pages > 0:
-                report_sent_ok = True
+        # 1. Hantar teks laporan rasmi komprehensif (Defanged & Bebas PEER_FLOOD) terus ke Saluran
+        # Nota: Jangan sertakan reply_to_message_id untuk mengelakkan ralat Telegram Channel
+        print(f"[CHANNEL POST] Menghantar laporan rasmi ke {CHANNEL_ID}...")
+        sm_res = send_message(
+            CHANNEL_ID,
+            channel_post,
+            parse_mode="HTML",
+            disable_web_page_preview=True
+        )
+        if sm_res and sm_res.get("ok"):
+            report_sent_ok = True
+            report_method = "Sent"
+            print(f"[CHANNEL POST] Laporan rasmi berjaya disiarkan ke {CHANNEL_ID}")
+        else:
+            err_desc = str((sm_res or {}).get("description", "Unknown"))
+            print(f"[CHANNEL POST ERR] send_message ke saluran gagal ({err_desc}). Mencuba sandaran copyMessage/forwardMessage...")
+            
+            # 2. Sandaran jika send_message gagal: Cuba copyMessage / forwardMessage dari mesej asal bot
+            if bot_report_msg_ids and bot_report_chat_id:
+                sent_pages = 0
+                for r_mid in bot_report_msg_ids:
+                    time.sleep(0.5)
+                    try:
+                        copy_res = api_call("copyMessage", {
+                            "chat_id": CHANNEL_ID,
+                            "from_chat_id": bot_report_chat_id,
+                            "message_id": r_mid
+                        })
+                        if copy_res and copy_res.get("ok"):
+                            sent_pages += 1
+                            report_method = "Copied"
+                            print(f"[CHANNEL POST] copyMessage laporan bot ({r_mid}) berjaya ke {CHANNEL_ID}")
+                            continue
+                        print(f"[CHANNEL POST] copyMessage laporan ({r_mid}) gagal: {copy_res}")
+                    except Exception as e_cp:
+                        print(f"[CHANNEL POST ERR] copyMessage ({r_mid}): {e_cp}")
+                    
+                    try:
+                        fwd_rep = api_call("forwardMessage", {
+                            "chat_id": CHANNEL_ID,
+                            "from_chat_id": bot_report_chat_id,
+                            "message_id": r_mid
+                        })
+                        if fwd_rep and fwd_rep.get("ok"):
+                            sent_pages += 1
+                            report_method = "Forwarded"
+                            print(f"[CHANNEL POST] forwardMessage laporan bot ({r_mid}) berjaya ke {CHANNEL_ID}")
+                            continue
+                        print(f"[CHANNEL POST] forwardMessage laporan ({r_mid}) gagal: {fwd_rep}")
+                    except Exception as e_fwd:
+                        print(f"[CHANNEL POST ERR] forwardMessage ({r_mid}): {e_fwd}")
+                        
+                if sent_pages > 0:
+                    report_sent_ok = True
 
-        # === LANGKAH C (SANDARAN MUKTAMAD): Hantar teks laporan penuh jika forward/copy tidak tersedia ===
         if not report_sent_ok:
-            print(f"[CHANNEL POST] Sandaran: Menghantar teks laporan ke {CHANNEL_ID}...")
-            sm_res = send_message(
-                CHANNEL_ID,
-                channel_post,
-                parse_mode="HTML",
-                disable_web_page_preview=True,
-                reply_to_message_id=last_photo_msg_id
-            )
-            if sm_res and sm_res.get("ok"):
-                report_sent_ok = True
-                report_method = "Sent"
-            else:
-                report_method = f"Gagal ({(sm_res or {}).get('description', 'Unknown')[:60]})"
+            report_method = f"Gagal ({(sm_res or {}).get('description', 'Unknown')[:60]})"
 
         # 2. Masukkan ke dalam SQLite KANTOI (simpan semua nombor telefon kes)
         all_phones_list = rep.get("all_phones") or [phone_norm]
@@ -6622,23 +6720,30 @@ def execute_multi_photo_case(chat_id, username):
                 
                 if is_safe_tng:
                     title_text = "PERISAI KANTOI: PAUTAN TOUCH 'N GO EWALLET SAH DISAHKAN"
+                    disp_url = res_url['url']
+                    disp_dom = res_url['domain']
                 elif is_danger:
                     title_text = "PERISAI KANTOI: KOD QR PHISHING (QUISHING) DIKESAN!"
+                    disp_url = defang_url(res_url['url'])
+                    disp_dom = defang_domain(res_url['domain'])
                 else:
                     title_text = "HASIL IMBASAN KOD QR: PAUTAN (URL)"
+                    disp_url = res_url['url']
+                    disp_dom = res_url['domain']
 
                 lines = [
                     f"{badge} <b>{title_text}</b>",
                     "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-                    f"🔗 <b>Pautan Terkandung:</b> <code>{html.escape(res_url['url'])}</code>",
-                    f"🌐 <b>Domain Pendaratan:</b> <code>{html.escape(res_url['domain'])}</code>",
+                    f"🔗 <b>Pautan Terkandung:</b> <code>{html.escape(disp_url)}</code>",
+                    f"🌐 <b>Domain Pendaratan:</b> <code>{html.escape(disp_dom)}</code>",
                     f"🛡️ <b>Keputusan:</b> <b>{html.escape(res_url['verdict'])}</b>",
                     ""
                 ]
                 if res_url.get("reasons"):
                     lines.append("⚠️ <b>Faktor Penilaian Risiko:</b>")
                     for rsn in res_url["reasons"]:
-                        lines.append(f"   • {html.escape(rsn)}")
+                        safe_rsn = defang_text_urls(rsn, [res_url['domain']]) if is_danger else rsn
+                        lines.append(f"   • {html.escape(safe_rsn)}")
                     lines.append("")
 
                 if res_url.get("safety_note"):
